@@ -10,13 +10,21 @@ Last update: 2026-09-29
 - [x] **M0 Documents + index + retrieval test** (no LLM): venv, pinned requirements,
       `.env.example`, `config.py`, 20 documents, `load_docs.py`, `embeddings.py`,
       `vectorstore.py`, `main.py config|index|search`, `docs/setup.md`, `docs/corpus.md`.
-- [ ] **M1 LLM + Jev + LangSmith tests**
+- [x] **M1 LLM + Jev + LangSmith tests**: `llm.py` (client, `structured()` with fallbacks,
+      tokens and cost, running total in `.spend.json`), `jev.py`, `schemas.py`, `prompts.py`,
+      `main.py llm-test|jev-test`. LangSmith not checked yet: no key (see known issues).
 - [ ] **M2 Graph v1** (answer and abstain)
 - [ ] **M3 Conflicts + replaced docs**
 - [ ] **M4 Eval**
 - [ ] **M5 Hardening + docs**
 
 ## Last verified outputs
+
+- `python main.py llm-test` → method `json_schema`, 1.8 s, 951 in / 66 out tokens, $0.000128:
+  `[D03] Helios Dynamics offers 16 weeks of fully paid parental leave.`,
+  `[D04] Employees receive 12 weeks of paid parental leave at full salary.`, `[D13] None`.
+- `python main.py jev-test` → 10/10 as expected (rel D03 0.98, D04 0.95, TX 0.93, D16 0.01;
+  D03–D04 disagree 1.00; D03–TX agree 1.00; pairs with D16 unrelated 1.00). 0.4 s, $0.0000578.
 
 - `python main.py index` → `Rebuilt collection 'helios_docs' (embedded mode): 20 points.`
   Second run → `Reused ... 20 points. Reason: index is up to date.`
@@ -34,11 +42,15 @@ Last update: 2026-09-29
 
 ## Next step
 
-M1: `llm.py`, `jev.py`, `schemas.py`, `main.py llm-test` and `jev-test`.
+M2: `graph.py` (retrieve → extract_claims → judge → reconcile → answer | abstain), `render.py`,
+`main.py ask`. Q1 and Q5 must pass.
 
 ## Known issues
 
-- No LangSmith key in `.env` yet, so tracing cannot be checked. Everything must work without it.
+- No LangSmith key in `.env` yet, so the traces cannot be checked. Tracing is off by default,
+  and it is also turned off when `LANGSMITH_TRACING=true` is set without a key. Everything works
+  without it. To check: add `LANGSMITH_API_KEY` and `LANGSMITH_TRACING=true` to `.env`, run
+  `llm-test` and `jev-test`, and look for the runs in the `rag-conflicts` project.
 - Changed from the plan: cutoff 0.58 instead of 0.45, and a new `SCORE_MARGIN` (0.10). Reason in
   `docs/pipeline.md` and `docs/decisions.md` (17a).
 
@@ -46,5 +58,6 @@ M1: `llm.py`, `jev.py`, `schemas.py`, `main.py llm-test` and `jev-test`.
 
 | date | what | cost (USD) |
 |---|---|---|
-| 2026-09-29 | one Jev test call | 0.00002 |
-| **total** | | **0.00002** |
+| 2026-09-29 | one Jev test call (by hand, before M0) | 0.00002 |
+| 2026-09-29 | M1: two small probe calls, `llm-test`, `jev-test` | 0.00020 |
+| **total** | | **0.00022** |

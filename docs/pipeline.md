@@ -141,6 +141,14 @@ Response (shortened):
 The step writes `relevance = {"D03": 0.96, "D04": 0.93}` and
 `pairs = [{"doc_a": "D03", "doc_b": "D04", "relation": "disagree", "p_disagree": 0.88}]`.
 
+What we actually saw (`python main.py jev-test`, 2026-09-29): the reply comes from
+`typesafe/jev-1.13-20260917`, provider `TypeSafe`, in about 0.4 seconds. The format is exactly the
+one above. `noul` is the probability of "yes". Each `choice` answer has `choice`, `confidence` and
+`probabilities` over the three options. On clear cases the probabilities are 0.00 or 1.00, and
+relevance is above 0.9 or below 0.05, so the 0.6 thresholds are not sensitive. A call with 4
+documents and 6 pairs (10 questions) used 1,377 input and 343 output tokens and cost $0.0000578.
+`src/jev.py` checks that every question we asked has an answer; if not, it counts as a failure.
+
 If the call fails for any reason (timeout, HTTP error, unexpected format), the step runs again
 with the LLM as judge: a structured-output prompt that returns `relevant: true/false` per document
 and a list of pairs that disagree. The result is mapped onto the same two fields with

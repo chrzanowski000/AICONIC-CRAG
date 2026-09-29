@@ -21,7 +21,7 @@ from src import jev
 from src.llm import structured
 from src.load_docs import doc_map
 from src.prompts import answer_messages, assess_messages, extract_claims_messages
-from src.quantities import numbers_clash, quantities
+from src.quantities import clashing_units, numbers_clash, quantities, show_values
 from src.render import render
 from src.schemas import Answer, Assessment, Citation, Claims, FinalOutput, OutdatedNote
 from src.vectorstore import RetrievedDoc, retrieve as vector_retrieve
@@ -209,7 +209,7 @@ def _citation(doc: RetrievedDoc, claims: dict) -> Citation:
                     claim=claims.get(doc["doc_id"]) or "(no claim extracted)")
 
 
-_DOC_ID = re.compile(r"\[(D\d{2})\]")
+_DOC_ID = re.compile(r"\bD\d{2}\b")
 
 
 def disputed_numbers(docs: list[RetrievedDoc]) -> dict[str, dict[str, set[float]]]:
@@ -224,11 +224,27 @@ def disputed_numbers(docs: list[RetrievedDoc]) -> dict[str, dict[str, set[float]
         if a["topic"] != b["topic"]:
             continue
         qa, qb = numbers[a["doc_id"]], numbers[b["doc_id"]]
-        for unit in set(qa) & set(qb):
-            if qa[unit] != qb[unit]:
-                found.setdefault(unit, {})[a["doc_id"]] = qa[unit]
-                found[unit][b["doc_id"]] = qb[unit]
+        for unit in clashing_units(qa, qb):
+            found.setdefault(unit, {})[a["doc_id"]] = qa[unit]
+            found[unit][b["doc_id"]] = qb[unit]
     return found
+
+
+def check_answer(text: str, allowed: list[str], disputed: dict) -> tuple[list, list, list]:
+    """(allowed doc ids cited, doc ids cited that are not allowed, disputed units stated)."""
+    ids = list(dict.fromkeys(_DOC_ID.findall(text)))
+    cited = [i for i in ids if i in allowed]
+    bad = [i for i in ids if i not in allowed]
+    leaked = sorted(set(quantities(text)) & set(disputed))
+    return cited, bad, leaked
+
+
+def _numbers_note(units: list[str], disputed: dict, by_id: dict) -> str:
+    """Both values of each disputed number the answer still states, built by code."""
+    parts = [f"{unit}: " + "; ".join(f"[{i}] ({by_id[i]['date']}) {show_values(values)}"
+                                     for i, values in disputed[unit].items())
+             for unit in units]
+    return "Note: the documents give different values for " + ", ".join(parts) + ". " + NOT_SETTLED
 
 
 def answer(state: RAGState) -> dict:
@@ -241,28 +257,20 @@ def answer(state: RAGState) -> dict:
     messages = answer_messages(state["question"], docs, claims)
     disputed = disputed_numbers(docs)
 
-    text, cited, leaked = None, [], []
     for attempt in range(2):  # one more try if a citation or a number is wrong
-        out = structured(Answer, messages)
-        text, raw_cites = out.answer.strip(), [c.strip("[] ") for c in out.citations]
-        in_text = _DOC_ID.findall(text)
-        bad = sorted({c for c in raw_cites + in_text if c not in allowed})
-        cited = [c for c in dict.fromkeys(raw_cites + in_text) if c in allowed]
-        leaked = sorted(set(quantities(text)) & set(disputed))
-        if bad:
-            log.warning("Answer cited documents that are not allowed: %s", bad)
-        if leaked:
-            log.warning("Answer states a number the documents disagree on: %s", leaked)
+        text = structured(Answer, messages).answer.strip()
+        cited, bad, leaked = check_answer(text, allowed, disputed)
         if cited and not bad and not leaked:
             break
         if attempt == 0:
+            log.warning("Answer needs a fix (cited %s, not allowed %s, disputed numbers %s). "
+                        "Asking once more.", cited, bad, leaked)
             fix = []
             if not cited or bad:
                 fix.append(f"Use only these document ids as citations: {', '.join(allowed)}.")
             if leaked:
                 fix.append(f"Leave out any {' / '.join(leaked)} figure: the documents give "
                            "different values for it, and the question does not ask about it.")
-            log.warning("Asking once more for the answer.")
             messages = messages + [HumanMessage(" ".join(fix))]
     if not cited:
         return _finish(state, FinalOutput(
@@ -270,19 +278,13 @@ def answer(state: RAGState) -> dict:
             reason="An answer was written but could not be tied to the documents, so it is not shown.",
         ))
 
-    note = None
-    if leaked:  # still there after the retry: show both values, built by code
-        parts = [f"{unit}: " + "; ".join(
-            f"[{i}] ({by_id[i]['date']}) " + "/".join(f"{v:g}" for v in sorted(vals))
-            for i, vals in disputed[unit].items()) for unit in leaked]
-        note = ("Note: the documents give different values for " + ", ".join(parts)
-                + ". " + NOT_SETTLED)
     result = FinalOutput(
         status="answered",
         answer=text,
         citations=[_citation(by_id[c], claims) for c in cited],
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
-        reason=note,
+        # a disputed number still there after the retry: show both values
+        reason=_numbers_note(leaked, disputed, by_id) if leaked else None,
     )
     return _finish(state, result)
 

@@ -54,9 +54,15 @@ branch `simplification` (less code, same results).
     claims fallback (start of each doc; it would bring back the false disputes), the plain-text
     answer fallback, `LLM_STRUCTURED_METHODS` and `JUDGE_FALLBACK` (Jev failing always hands over
     to the LLM judge). A parse or API error now stops the run with a one-line `ERROR`; the list
-    of such errors is shared by `main.py` and `eval.py`. `src/llm.py` 209 → 142 lines. Checked:
+    of such errors is shared by `main.py` and `eval.py`. `src/llm.py` 209 → 132 lines. Checked:
     `pytest` 34 passed; `llm-test` OK; bad model id → one-line error, exit 2; Jev made to fail →
     LLM judges, Q3 still DISPUTED; `eval.py` (Jev) 18/18 PASS.
+  - Step 4, answer: the citations are the `Dxx` ids written in the answer text; the separate
+    `citations` list in the `Answer` object is gone (two sources for one fact). The checks on the
+    answer are one function, `check_answer`, with 3 unit tests; the "both values" note is built by
+    `_numbers_note`. `src/quantities.py` gives `clashing_units` and `show_values`, so the "same
+    unit, different number" rule is written once. Docs now describe the retry the way the code
+    does it. Checked: `pytest` 37 passed; `eval.py` 18/18 PASS and `JUDGE=llm eval.py` 18/18 PASS.
 
 ## Last verified outputs (2026-09-29)
 
@@ -151,7 +157,7 @@ paraphrases checked by hand in M3). After changing `questions.json`, delete the 
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.00898 |
-| **total** | | **0.06959** |
+| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.01590 |
+| **total** | | **0.07651** |
 
-Budget: $4.00. Left: about $3.93.
+Budget: $4.00. Left: about $3.92.

@@ -1,6 +1,6 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
-from src.graph import disputed_numbers, newest_in_chain, reconcile, same_chain
+from src.graph import check_answer, disputed_numbers, newest_in_chain, reconcile, same_chain
 from src.load_docs import doc_map
 from src.vectorstore import _to_retrieved
 
@@ -73,3 +73,20 @@ def test_reconcile_abstains_when_nothing_is_relevant():
     out = reconcile(_state({"D03": None, "D16": "11 public holidays."}, {"D16": 0.03}))
     assert out["route"] == "abstain"
     assert out["relevant_ids"] == []
+
+
+WEEKS = {"week": {"D03": {16.0}, "D04": {12.0}}}
+
+
+def test_check_answer_accepts_a_clean_answer():
+    text = "Yes, adoption is covered [D03]. It also covers foster care [D03, D04]."
+    assert check_answer(text, ["D03", "D04"], WEEKS) == (["D03", "D04"], [], [])
+
+
+def test_check_answer_finds_ids_that_are_not_allowed():
+    assert check_answer("Two approvals [D14] [D15].", ["D14"], {}) == (["D14"], ["D15"], [])
+
+
+def test_check_answer_finds_a_disputed_number():
+    assert check_answer("Leave is paid for 16 weeks [D03].", ["D03", "D04"], WEEKS) == (
+        ["D03"], [], ["week"])

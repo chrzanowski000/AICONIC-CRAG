@@ -82,14 +82,21 @@ def quantities(text: str | None) -> Quantities:
     return found
 
 
-def _show(values: set[float]) -> str:
+def show_values(values: set[float]) -> str:
+    """{12.0, 16.0} -> "12/16"."""
     return "/".join(f"{v:g}" for v in sorted(values))
+
+
+def clashing_units(qa: Quantities, qb: Quantities) -> list[str]:
+    """The units that both give, with different numbers."""
+    return sorted(unit for unit in qa.keys() & qb.keys() if qa[unit] != qb[unit])
 
 
 def numbers_clash(a: str, b: str) -> str | None:
     """If both texts give different numbers for the same unit, say how ("16 vs 12 week")."""
     qa, qb = quantities(a), quantities(b)
-    for unit in sorted(qa.keys() & qb.keys()):
-        if qa[unit] != qb[unit]:
-            return f"{_show(qa[unit])} vs {_show(qb[unit])} {unit}"
-    return None
+    units = clashing_units(qa, qb)
+    if not units:
+        return None
+    unit = units[0]
+    return f"{show_values(qa[unit])} vs {show_values(qb[unit])} {unit}"

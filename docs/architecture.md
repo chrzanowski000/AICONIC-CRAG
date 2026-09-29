@@ -88,5 +88,5 @@ them with the values in use.
 | no document scores above the cutoff | abstain at once, no model call |
 | the LLM reply cannot be parsed, or the LLM call fails | the run stops with a one-line `ERROR (...)` message, exit code 2 |
 | Jev call fails (error, timeout, bad format) | the LLM judges with structured output; `judge_used=llm` |
-| the answer cites a doc that is not allowed | drop it; if none left, ask once more; then abstain |
+| the answer cites no allowed doc, or a doc that is not allowed | ask once more; then leave out the ids that are not allowed, and abstain if no allowed id is left |
 | Qdrant folder locked by another process | clear error message with three ways out |

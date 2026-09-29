@@ -212,14 +212,16 @@ of your base salary [D03]."
 
 Python then checks the answer:
 
-1. Every citation must be one of the allowed ids.
+1. The citations are the document ids written in the answer text (`[D03]`, also `[D03, D04]`).
+   There must be at least one, and every one must be one of the allowed ids.
 2. **Number check on the answer.** Python lists the numbers that the current documents on the
    same topic give differently in their full text (for D03 and D04: weeks, 16 vs 12). If the
    answer states one of them, it picked a side on something the question did not ask about.
 3. If either check fails, the model is asked once more, told what to fix ("Leave out any week
-   figure: the documents give different values for it..."). If the citations are still wrong,
-   the system abstains. If the number is still there, the answer is kept but Python adds a note
-   below it with both values and their dates.
+   figure: the documents give different values for it..."). After that try: if no allowed id
+   is cited, the system abstains; ids that are not allowed are left out of the sources. If the
+   number is still there, the answer is kept but Python adds a note below it with both values
+   and their dates.
 
 The number check on the answer fired once in each full eval run (the model restated D04's
 "12 weeks" in an answer about pay) and the second try was clean both times.

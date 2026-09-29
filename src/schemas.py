@@ -26,10 +26,9 @@ class Answer(BaseModel):
     answer: str = Field(
         description=(
             "2-4 sentences; every factual statement ends with the id of its source document in "
-            "square brackets, e.g. [D14]"
+            "square brackets, e.g. [D14]. These ids are the citations."
         )
     )
-    citations: list[str] = Field(description="doc ids actually used")
 
 
 # LLM judge (used when JUDGE=llm, or when Jev fails)

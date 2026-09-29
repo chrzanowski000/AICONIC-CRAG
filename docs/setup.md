@@ -5,7 +5,7 @@
 - Python 3.12 (tested on WSL2 Ubuntu, CPU only, no GPU needed).
 - An OpenRouter key with a little credit. A full demo run costs well under one cent.
 - About 100 MB of disk: 65 MB for the embedding model, a few MB for the Qdrant data.
-- Optional: a LangSmith key, if you want traces and the LangSmith eval.
+- Optional: a LangSmith key, if you want traces and the LangSmith eval (see below).
 - Optional: Docker, if you want to run Qdrant as a server.
 
 ## Install
@@ -44,6 +44,28 @@ python main.py search "parental leave"   # retrieval test, no model calls, costs
 
 Every setting is in `config.py` and can be changed in `.env` or in the shell with the same name,
 for example `JUDGE=llm python main.py ask "..."`. `python main.py config` prints them all.
+
+## LangSmith (optional)
+
+Tracing is **off** by default. To use it:
+
+1. Put your key in `.env` under exactly this name: `LANGSMITH_API_KEY=lsv2_...`
+   (`LANG_SMITH_API_KEY` or other spellings are not read).
+2. Switch tracing on, for one command or for good:
+   ```bash
+   LANGSMITH_TRACING=true python main.py ask "How many weeks of paid parental leave does Helios Dynamics offer?"
+   LANGSMITH_TRACING=true python eval.py      # also creates the dataset and runs an experiment
+   ```
+   or add `LANGSMITH_TRACING=true` to `.env`.
+3. Traces go to the project `rag-conflicts` (change it with `LANGSMITH_PROJECT`). Each command
+   ends with `Traces sent to LangSmith project 'rag-conflicts'.`
+
+If `LANGSMITH_TRACING=true` is set but the key is missing, every command prints
+`WARNING: LANGSMITH_TRACING=true but no LANGSMITH_API_KEY is set, so tracing is off.` and runs
+without tracing.
+
+Keys from the EU region also need `LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com` in
+`.env`. The default is the US server.
 
 ## Qdrant server mode (optional)
 

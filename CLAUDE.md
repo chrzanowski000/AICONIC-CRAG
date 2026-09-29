@@ -30,7 +30,8 @@ It is judged on one thing: it must work. Simple and working beats pretty.
 - Python 3.12, CPU only.
 - LangChain (`langchain-core`, `langchain-openai`, `langchain-qdrant`) for building blocks.
 - LangGraph for the pipeline (a state graph with typed state and conditional edges).
-- LangSmith for tracing and eval. Optional: everything works with tracing off.
+- LangSmith for tracing and eval. Optional: everything works with tracing off. Tracing is off by
+  default; turn it on with `LANGSMITH_TRACING=true` (key in `.env` as `LANGSMITH_API_KEY`).
 - Qdrant as the vector store. Embedded mode by default (`./qdrant_data`), server mode by config.
 - FastEmbed for local embeddings (`BAAI/bge-small-en-v1.5`).
 - OpenRouter for the LLM (`openai/gpt-6-luna`) and for the Jev decision model

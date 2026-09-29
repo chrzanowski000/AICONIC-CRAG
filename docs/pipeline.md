@@ -310,8 +310,23 @@ best score 0.541) is stopped at the search and costs nothing.
 
 ## Tracing and cost
 
-Every step, both LLM calls and the Jev call are sent to LangSmith when `LANGSMITH_TRACING=true`.
-With tracing off, nothing changes. A full run of the five demo questions costs about $0.0007
+Every step, both LLM calls and the Jev call are sent to LangSmith when `LANGSMITH_TRACING=true`
+(off by default; see `setup.md`). With tracing off, nothing is sent and nothing changes. One
+`ask` shows up in the project `rag-conflicts` as one trace (tag `ask`, metadata `question_id`,
+`judge`, `llm`):
+
+```
+ask
+├─ retrieve
+├─ extract_claims
+│  └─ RunnableSequence (structured output) → ChatOpenAI
+├─ judge
+│  └─ jev_judge            metadata: cost, jev_model, questions
+├─ reconcile
+└─ conflict_report         (or answer, with a second ChatOpenAI call, or abstain)
+```
+
+A full run of the five demo questions costs about $0.0007
 (measured: two LLM calls per answered question, one per disputed question or per question where
 no document gives a claim, none for a question that is dropped at retrieval, plus about $0.00002
 per Jev call).

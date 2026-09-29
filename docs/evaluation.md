@@ -141,17 +141,30 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
    thread keeps it simple);
 3. prints the experiment name and URL.
 
+```bash
+LANGSMITH_TRACING=true python eval.py
+LANGSMITH_TRACING=true JUDGE=llm python eval.py
+```
+
 Every check should score 1 in the experiment. The graph runs are traced with
-`run_name="ask"`, the tag `eval`, and metadata `question_id` and `judge`; the Jev call shows up as
-a `jev_judge` run with its cost in the metadata.
+`run_name="ask"`, the tag `eval`, and metadata `question_id`, `judge` and `llm`; the Jev call
+shows up as a `jev_judge` run with its cost in the metadata.
 
 The dataset is created once. If you change `questions.json`, delete the dataset in LangSmith (or
 set a new `EVAL_DATASET_NAME`) so it is created again.
 
-Status: this part is written against the langsmith 0.14.1 API but has **not been run yet**,
-because no LangSmith key was available. See `STATUS.md`.
+First runs (2026-09-29):
+
+| experiment | judge | runs | errors | feedback scores |
+|---|---|---|---|---|
+| `rag-conflicts-jev-4af5fc19` | Jev | 18 | 0 | 126 of 126 are 1 (7 checks × 18 questions) |
+| `rag-conflicts-llm-07eb37b5` | LLM | 18 | 0 | 126 of 126 are 1 |
+
+The first run created the dataset `rag-conflicts-demo` (18 examples); the second one reused it.
+The local table passed 18/18 in both runs as well.
 
 ## Cost
 
 One full eval (18 questions) costs about $0.003 with Jev and $0.004 with the LLM judge. The
-LangSmith eval runs the pipeline a second time, so it doubles that.
+LangSmith eval runs the pipeline a second time, so it doubles that (measured: $0.006 with Jev,
+$0.008 with the LLM judge).

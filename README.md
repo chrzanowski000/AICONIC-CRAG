@@ -96,6 +96,10 @@ python eval.py                   # PASS/FAIL for all questions; exit code 1 on a
 Every setting lives in `config.py` and can be changed in `.env` or the shell, for example
 `JUDGE=llm python eval.py`. Token use and cost are printed after every run.
 
+LangSmith tracing is off by default. With `LANGSMITH_API_KEY` in `.env`, add
+`LANGSMITH_TRACING=true` to a command to trace it; `LANGSMITH_TRACING=true python eval.py` also
+runs a LangSmith experiment on the same checks.
+
 ## Results
 
 `python eval.py` passes all 18 questions with Jev as judge and with the LLM as judge: real

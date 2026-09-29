@@ -5,8 +5,8 @@ Last update: 2026-09-29
 ## Milestones
 
 - [x] **M-1 Repo bootstrap**: remote, `.gitignore`, `STATUS.md`, `README.md` stub,
-      `docs/decisions.md`, `docs/architecture.md`.
-      `docs/research.md` and `docs/models.md` are still being written; they land in their own commit.
+      `docs/decisions.md`, `docs/architecture.md`, `docs/research.md` (31 sources),
+      `docs/models.md` + `docs/models_price_vs_score.png`, `requirements-dev.txt`.
 - [x] **M0 Documents + index + retrieval test** (no LLM): venv, pinned requirements,
       `.env.example`, `config.py`, 20 documents, `load_docs.py`, `embeddings.py`,
       `vectorstore.py`, `main.py config|index|search`, `docs/setup.md`, `docs/corpus.md`.

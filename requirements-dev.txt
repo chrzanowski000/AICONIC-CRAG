@@ -1,0 +1,2 @@
+# Only needed to redraw docs/models_price_vs_score.png
+matplotlib==3.11.2

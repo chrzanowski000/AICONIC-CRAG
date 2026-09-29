@@ -244,6 +244,7 @@ abstain         STATUS: ABSTAINED. The documents do not cover this. Closest: D07
 ## Tracing and cost
 
 Every step, both LLM calls and the Jev call are sent to LangSmith when `LANGSMITH_TRACING=true`.
-With tracing off, nothing changes. A full run of the five demo questions costs about $0.006
-(two LLM calls per answered question, one per disputed question, none for a question that is
-dropped at retrieval, plus about $0.00002 per Jev call).
+With tracing off, nothing changes. A full run of the five demo questions costs about $0.0007
+(measured: two LLM calls per answered question, one per disputed question or per question where
+no document gives a claim, none for a question that is dropped at retrieval, plus about $0.00002
+per Jev call).

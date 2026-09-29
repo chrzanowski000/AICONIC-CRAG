@@ -3,3 +3,6 @@ matplotlib==3.11.2
 
 # Only needed for LangGraph Studio (`langgraph dev`)
 langgraph-cli[inmem]==0.4.32
+
+# Unit tests (`pytest`)
+pytest==9.1.1

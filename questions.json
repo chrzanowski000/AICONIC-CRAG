@@ -1,47 +1,20 @@
 [
-  {
-    "id": "Q1",
-    "demo": true,
-    "question": "How many approvals does a pull request need before it can be merged?",
-    "expected": {"status": "answered", "cites": ["D14"], "answer_contains": ["2", "two"]}
-  },
-  {
-    "id": "Q2",
-    "demo": true,
-    "question": "How many days per week can employees work remotely?",
-    "expected": {"status": "answered", "cites": ["D02"], "outdated": [["D01", "D02"]],
-                 "answer_contains": ["3", "three"]}
-  },
-  {
-    "id": "Q3",
-    "demo": true,
-    "question": "How many weeks of paid parental leave does Helios Dynamics offer?",
-    "expected": {"status": "disputed", "versions": ["D03", "D04"]}
-  },
-  {
-    "id": "Q4",
-    "demo": true,
-    "question": "What is the daily meal allowance for business travel?",
-    "expected": {"status": "disputed", "versions": ["D05", "D06"]}
-  },
-  {
-    "id": "Q5",
-    "demo": true,
-    "question": "What is the policy on bringing pets to the office?",
-    "expected": {"status": "abstained"}
-  },
-  {
-    "id": "Q6",
-    "demo": false,
-    "question": "What is the Kestrel X2 flight time?",
-    "expected": {"status": "answered", "cites": ["D10"], "outdated": [["D09", "D10"]],
-                 "answer_contains": ["45"]}
-  },
-  {
-    "id": "Q7",
-    "demo": false,
-    "question": "Where is the headquarters located?",
-    "expected": {"status": "answered", "cites": ["D08"], "outdated": [["D07", "D08"]],
-                 "answer_contains": ["400 Meridian"]}
-  }
+  {"id": "Q1", "demo": true, "note": "clean answer", "question": "How many approvals does a pull request need before it can be merged?", "expected": {"status": "answered", "cites": ["D14"], "answer_contains": ["2", "two"]}},
+  {"id": "Q2", "demo": true, "note": "replaced doc", "question": "How many days per week can employees work remotely?", "expected": {"status": "answered", "cites": ["D02"], "outdated": [["D01", "D02"]], "answer_contains": ["3", "three"]}},
+  {"id": "Q3", "demo": true, "note": "real dispute", "question": "How many weeks of paid parental leave does Helios Dynamics offer?", "expected": {"status": "disputed", "versions": ["D03", "D04"]}},
+  {"id": "Q4", "demo": true, "note": "real dispute", "question": "What is the daily meal allowance for business travel?", "expected": {"status": "disputed", "versions": ["D05", "D06"]}},
+  {"id": "Q5", "demo": true, "note": "no answer", "question": "What is the policy on bringing pets to the office?", "expected": {"status": "abstained"}},
+  {"id": "Q6", "demo": false, "note": "replaced doc", "question": "What is the Kestrel X2 flight time?", "expected": {"status": "answered", "cites": ["D10"], "outdated": [["D09", "D10"]], "answer_contains": ["45"]}},
+  {"id": "Q7", "demo": false, "note": "replaced doc", "question": "Where is the headquarters located?", "expected": {"status": "answered", "cites": ["D08"], "outdated": [["D07", "D08"]], "answer_contains": ["400 Meridian"]}},
+  {"id": "Q8", "demo": false, "note": "real dispute (spare)", "question": "How often do I need to change my password?", "expected": {"status": "disputed", "versions": ["D11", "D12"]}},
+  {"id": "Q9", "demo": false, "note": "docs agree", "question": "How much does the Kestrel X2 weigh?", "expected": {"status": "answered", "cites_any": ["D10", "D18"], "answer_contains": ["1.2"]}},
+  {"id": "Q10", "demo": false, "note": "docs agree", "question": "What is the maximum payload of the Kestrel X2?", "expected": {"status": "answered", "cites_any": ["D10", "D18"], "answer_contains": ["300"]}},
+  {"id": "Q11", "demo": false, "note": "disputed pair agrees on the point asked", "question": "Does parental leave cover adoption?", "expected": {"status": "answered", "cites_any": ["D03", "D04"], "answer_contains": ["adopt"], "answer_excludes": ["16", "12"]}},
+  {"id": "Q12", "demo": false, "note": "docs agree", "question": "Is multi-factor sign-in required?", "expected": {"status": "answered", "cites_any": ["D11", "D12"], "answer_contains": ["required", "yes"]}},
+  {"id": "Q13", "demo": false, "note": "disputed pair agrees on the point asked", "question": "Can I split my parental leave?", "expected": {"status": "answered", "cites_any": ["D03", "D04"], "answer_contains": ["split", "block", "yes"], "answer_excludes": ["16", "12"]}},
+  {"id": "Q14", "demo": false, "note": "disputed pair agrees on the point asked", "question": "Do I keep my salary during parental leave?", "expected": {"status": "answered", "cites_any": ["D03", "D04"], "answer_contains": ["full", "100%"], "answer_excludes": ["16", "12"]}},
+  {"id": "Q15", "demo": false, "note": "docs add different facts", "question": "What should I do during a Sev1 incident and who is on call?", "expected": {"status": "answered", "cites_any": ["D15", "D20"]}},
+  {"id": "Q16", "demo": false, "note": "only one doc answers", "question": "Do I keep my health insurance during parental leave?", "expected": {"status": "answered", "cites": ["D04"], "answer_contains": ["yes", "continue"]}},
+  {"id": "Q17", "demo": false, "note": "only one doc answers", "question": "How long must passwords be?", "expected": {"status": "answered", "cites": ["D11"], "answer_contains": ["14"]}},
+  {"id": "Q18", "demo": false, "note": "replaced doc with the same value", "question": "What are the HQ office opening hours?", "expected": {"status": "answered", "cites": ["D08"], "outdated": [["D07", "D08"]], "answer_contains": ["7:00"]}}
 ]

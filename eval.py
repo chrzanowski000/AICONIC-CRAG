@@ -34,9 +34,11 @@ def status_matches(inputs: dict, outputs: dict, reference_outputs: dict) -> dict
 
 
 def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+    """`cites`: every one of these must be cited. `cites_any`: at least one of these."""
     key = "cites_required_docs"
-    required = reference_outputs.get("cites")
-    if not required:
+    required = reference_outputs.get("cites") or []
+    any_of = reference_outputs.get("cites_any") or []
+    if not required and not any_of:
         return _na(key)
     citations = outputs.get("citations") or []
     cited = {c["doc_id"] for c in citations}
@@ -44,6 +46,8 @@ def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) ->
     undated = [c["doc_id"] for c in citations if not c.get("date") or not c.get("source")]
     if missing:
         return _result(key, False, f"missing citations {missing}; cited {sorted(cited)}")
+    if any_of and not cited & set(any_of):
+        return _result(key, False, f"cites none of {any_of}; cited {sorted(cited)}")
     if undated:
         return _result(key, False, f"citations without date or source: {undated}")
     return _result(key, True, f"cited {sorted(cited)}")
@@ -121,8 +125,21 @@ def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
     return _result(key, False, f"none of {options} in the answer")
 
 
+def answer_excludes(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+    """The answer must not state these (for example a number the documents disagree on)."""
+    key = "answer_excludes"
+    banned = reference_outputs.get("answer_excludes")
+    if not banned:
+        return _na(key)
+    answer = (outputs.get("answer") or "").lower()
+    hit = [b for b in banned if b.lower() in answer]
+    if hit:
+        return _result(key, False, f"answer states {hit}")
+    return _result(key, True, f"avoids {banned}")
+
+
 CHECKS = [status_matches, cites_required_docs, disputed_shows_both_sides, marks_outdated,
-          abstained_cleanly, answer_contains]
+          abstained_cleanly, answer_contains, answer_excludes]
 
 
 def load_questions() -> list[dict]:

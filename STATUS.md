@@ -19,10 +19,17 @@ Last update: 2026-09-29
       `main.py demo [--all]`, number check tightened (ignores "X2", "7:00"), thresholds set from
       measured probabilities (`JEV_RELEVANT_P` and `JEV_DISAGREE_P` 0.6 → 0.5), real traces in
       `docs/pipeline.md`.
-- [ ] **M4 Eval**
+- [x] **M4 Eval**: `eval.py` with six shared checks (LangSmith evaluator signature), local
+      PASS/FAIL table, exit code 1 on any FAIL, optional LangSmith dataset + experiment,
+      `docs/evaluation.md`. The LangSmith part is written but not run yet (no key).
 - [ ] **M5 Hardening + docs**
 
 ## Last verified outputs
+
+- `python eval.py` → 7/7 PASS, exit 0, judge Jev, $0.00116.
+- `JUDGE=llm python eval.py` → 7/7 PASS, exit 0, $0.00148.
+- `JEV_DISAGREE_P=1.01 NUMERIC_BACKSTOP=false python eval.py` → Q3 and Q4 FAIL, exit 1 (the eval
+  catches a system that gives one answer to a disputed question).
 
 - `python main.py demo --all` (`JUDGE=jev`) → Q1 answered [D14]; Q2 answered [D02] + outdated
   D01 (2024-03-01) → D02 (2025-06-15); Q3 disputed D03/D04; Q4 disputed D05/D06; Q5 abstained;
@@ -43,8 +50,8 @@ Last update: 2026-09-29
 
 ## Next step
 
-M4: `eval.py` with the shared check functions; must pass for `JUDGE=jev` and `JUDGE=llm`;
-optional LangSmith dataset + experiment; `docs/evaluation.md`.
+M5: force the structured-output fallbacks, point `JEV_URL` at a bad URL, check the stale-lock
+message, run `QDRANT_MODE=server` against Docker Qdrant, final pass over README and docs.
 
 ## Known issues
 
@@ -63,4 +70,5 @@ optional LangSmith dataset + experiment; `docs/evaluation.md`.
 | 2026-09-29 | M1: two small probe calls, `llm-test`, `jev-test` | 0.00020 |
 | 2026-09-29 | M2: `ask` on 7 questions | 0.00115 |
 | 2026-09-29 | M3: demo runs (jev, llm, soft judge) and 16 extra questions | 0.00693 |
-| **total** | | **0.00830** |
+| 2026-09-29 | M4: eval runs (jev, llm, negative test) + one ask | 0.00385 |
+| **total** | | **0.01215** |

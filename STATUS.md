@@ -13,12 +13,18 @@ Last update: 2026-09-29
 - [x] **M1 LLM + Jev + LangSmith tests**: `llm.py` (client, `structured()` with fallbacks,
       tokens and cost, running total in `.spend.json`), `jev.py`, `schemas.py`, `prompts.py`,
       `main.py llm-test|jev-test`. LangSmith not checked yet: no key (see known issues).
-- [ ] **M2 Graph v1** (answer and abstain)
+- [x] **M2 Graph v1**: `graph.py` (all steps, incl. the reconcile rules and the conflict report),
+      `render.py` (answer + a trace of every step when `SHOW_SCORES=true`), `main.py ask`.
 - [ ] **M3 Conflicts + replaced docs**
 - [ ] **M4 Eval**
 - [ ] **M5 Hardening + docs**
 
 ## Last verified outputs
+
+- `python main.py ask` on Q1 → ANSWERED, "A pull request needs 2 approvals ... [D14]", cites D14
+  (Jev relevance 0.98; D15 and D20 gave no claim). Q5 (pets) → ABSTAINED: D02 and D01 gave no
+  claim, judge skipped, closest D02 (0.636), D01 (0.587), D07 (0.566). Q2, Q3, Q4, Q6, Q7 also
+  give the expected result already (details in M3).
 
 - `python main.py llm-test` → method `json_schema`, 1.8 s, 951 in / 66 out tokens, $0.000128:
   `[D03] Helios Dynamics offers 16 weeks of fully paid parental leave.`,
@@ -42,8 +48,8 @@ Last update: 2026-09-29
 
 ## Next step
 
-M2: `graph.py` (retrieve → extract_claims → judge → reconcile → answer | abstain), `render.py`,
-`main.py ask`. Q1 and Q5 must pass.
+M3: `questions.json`, `main.py demo`, check the number check, write the real traces into
+`docs/pipeline.md`.
 
 ## Known issues
 
@@ -60,4 +66,5 @@ M2: `graph.py` (retrieve → extract_claims → judge → reconcile → answer |
 |---|---|---|
 | 2026-09-29 | one Jev test call (by hand, before M0) | 0.00002 |
 | 2026-09-29 | M1: two small probe calls, `llm-test`, `jev-test` | 0.00020 |
-| **total** | | **0.00022** |
+| 2026-09-29 | M2: `ask` on 7 questions | 0.00115 |
+| **total** | | **0.00137** |

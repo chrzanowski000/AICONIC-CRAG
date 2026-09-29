@@ -59,7 +59,7 @@ class RAGState(TypedDict):
     best_score: float                  # best similarity score among the first hits
     closest: list[dict]                # top search hits before the cutoff: {doc_id, score}, for "I don't know"
     claims: dict[str, str | None]      # doc_id -> one-sentence claim, or None if the doc says nothing
-    judge_used: Literal["jev", "llm"]  # which judge actually ran
+    judge_used: Literal["jev", "llm", "none"]  # which judge ran; "none" = no doc had a claim
     relevance: dict[str, float]        # doc_id -> probability the doc answers the question
     pairs: list[dict]                  # {doc_a, doc_b, relation, p_disagree} for each compared pair
     relevant_ids: list[str]            # after reconcile
@@ -116,6 +116,9 @@ It only asks for a short, literal restatement per document, with numbers copied 
 These sentences are what the user sees in a dispute report, so they must be short and exact.
 
 ### 3. `judge` (Jev)
+
+If no document has a claim, nothing is sent to the judge (`judge_used = "none"`) and the route
+will be `abstain`. This is what happens to the pets question.
 
 One HTTP call to `POST https://openrouter.ai/api/alpha/decisions`. We send the question plus the
 list of `{id, source, date, claim}` and a set of questions built from it:

@@ -118,6 +118,15 @@ def cmd_jev_test(args) -> None:
           f"{usage.output_tokens} out   cost: ${usage.cost:.7f}")
 
 
+def cmd_ask(args) -> None:
+    from src.graph import run
+    from src.render import show
+    from src.vectorstore import ensure_index
+
+    ensure_index()
+    print(show(run(args.question, tags=["ask"])))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Helios RAG demo")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -132,6 +141,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("search", help="retrieval test, no model calls")
     p.add_argument("question")
     p.set_defaults(func=cmd_search)
+
+    p = sub.add_parser("ask", help="run the full pipeline on one question")
+    p.add_argument("question")
+    p.set_defaults(func=cmd_ask)
 
     sub.add_parser("llm-test", help="one structured-output call (Claims) through OpenRouter"
                    ).set_defaults(func=cmd_llm_test)

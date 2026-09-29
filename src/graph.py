@@ -135,6 +135,13 @@ def _clean_claim(value: str | None) -> str | None:
     return value
 
 
+def _text_start(text: str, limit: int = 300) -> str:
+    """The first `limit` characters of a doc, without markdown headings, on one line."""
+    body = " ".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    body = " ".join(body.replace("**", "").split())
+    return body if len(body) <= limit else body[:limit].rsplit(" ", 1)[0] + " ..."
+
+
 def extract_claims(state: RAGState) -> dict:
     docs = state["retrieved"]
     ids = [d["doc_id"] for d in docs]
@@ -144,7 +151,7 @@ def extract_claims(state: RAGState) -> dict:
         claims = {i: by_id.get(i) for i in ids}
     except StructuredOutputError as err:
         log.warning("Claims could not be parsed (%s). Using the start of each doc instead.", err)
-        claims = {d["doc_id"]: d["text"][:300] for d in docs}
+        claims = {d["doc_id"]: _text_start(d["text"]) for d in docs}
     return {"claims": claims}
 
 

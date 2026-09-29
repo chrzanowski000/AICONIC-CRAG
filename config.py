@@ -138,5 +138,9 @@ def as_dict() -> dict:
     for name, value in globals().items():
         if not name.isupper() or name in ("ROOT", "SECRET_NAMES"):
             continue
-        out[name] = _mask(value) if name in SECRET_NAMES else value
+        if name in SECRET_NAMES:
+            value = _mask(value)
+        elif value == "":
+            value = "(empty: not sent)"
+        out[name] = value
     return out

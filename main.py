@@ -195,17 +195,22 @@ def finish_run() -> None:
 def main(argv: list[str] | None = None) -> int:
     setup_logging()
     args = build_parser().parse_args(argv)
+    from src.jev import JevError
+    from src.llm import StructuredOutputError
+    from src.load_docs import CorpusError
+    from src.vectorstore import LockedStorageError
+
+    # Known problems get a short message instead of a long traceback.
+    known = (LockedStorageError, JevError, StructuredOutputError, CorpusError)
+    code = 0
     try:
         args.func(args)
+    except known as err:
+        print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
+        code = 2
+    finally:
         finish_run()
-    except Exception as err:  # show a short message instead of a long traceback
-        from src.vectorstore import LockedStorageError
-
-        if isinstance(err, LockedStorageError):
-            print(f"ERROR: {err}", file=sys.stderr)
-            return 2
-        raise
-    return 0
+    return code
 
 
 if __name__ == "__main__":

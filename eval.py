@@ -191,17 +191,24 @@ def main() -> int:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
     from src.graph import build_graph
-    from src.llm import USAGE, record_spend
-    from src.vectorstore import ensure_index
+    from src.jev import JevError
+    from src.llm import USAGE, StructuredOutputError, record_spend
+    from src.load_docs import CorpusError
+    from src.vectorstore import LockedStorageError, ensure_index
 
-    ensure_index()
-    build_graph()
-    questions = load_questions()
-    ok = run_local(questions)
-    if config.TRACING_ON:
-        run_langsmith(questions)
-    else:
-        print("LangSmith eval skipped (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY to run it).")
+    try:
+        ensure_index()
+        build_graph()
+        questions = load_questions()
+        ok = run_local(questions)
+        if config.TRACING_ON:
+            run_langsmith(questions)
+        else:
+            print("LangSmith eval skipped (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY "
+                  "to run it).")
+    except (LockedStorageError, JevError, StructuredOutputError, CorpusError) as err:
+        print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
+        ok = False
     print()
     print(USAGE.summary())
     print(record_spend())

@@ -130,15 +130,26 @@ def _json_mode_instructions(schema: type[BaseModel]) -> str:
     )
 
 
-def _try_native(llm, schema, messages, method: str):
-    runnable = llm.with_structured_output(
-        schema, method=method, include_raw=True, strict=True if method == "json_schema" else None
-    )
+def _try_json_schema(llm, schema, messages):
+    runnable = llm.with_structured_output(schema, method="json_schema", strict=True,
+                                          include_raw=True)
     out = runnable.invoke(messages)
     USAGE.add_llm(out.get("raw"))
     if out.get("parsed") is None:
-        raise StructuredOutputError(f"{method}: could not parse: {out.get('parsing_error')}")
+        raise StructuredOutputError(f"json_schema: could not parse: {out.get('parsing_error')}")
     return out["parsed"]
+
+
+def _try_function_calling(llm, schema, messages):
+    # Not with_structured_output(method="function_calling"): that always sends
+    # parallel_tool_calls=false, which some OpenRouter hosts do not list, so with
+    # require_parameters=true no host is found (HTTP 404).
+    raw = llm.bind_tools([schema], tool_choice=schema.__name__).invoke(messages)
+    USAGE.add_llm(raw)
+    calls = [c for c in raw.tool_calls if c["name"] == schema.__name__]
+    if not calls:
+        raise StructuredOutputError("function_calling: the model did not call the tool")
+    return schema.model_validate(calls[0]["args"])
 
 
 def _try_json_mode(llm, schema, messages):
@@ -170,10 +181,12 @@ def structured(schema: type[BaseModel], messages: list[BaseMessage], llm=None):
     errors = []
     for method in methods:
         try:
-            if method == "json_mode":
+            if method == "json_schema":
+                result = _try_json_schema(llm, schema, messages)
+            elif method == "function_calling":
+                result = _try_function_calling(llm, schema, messages)
+            elif method == "json_mode":
                 result = _try_json_mode(llm, schema, messages)
-            elif method in ("json_schema", "function_calling"):
-                result = _try_native(llm, schema, messages, method)
             else:
                 raise ValueError(f"Unknown structured output method '{method}'")
         except Exception as err:  # any failure: log it and try the next method

@@ -57,6 +57,7 @@ class RAGState(TypedDict, total=False):
 # --- "replaces" links ------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
 def _replaced_by() -> dict[str, str]:
     """old doc id -> id of the doc that replaces it, for the whole corpus."""
     return {doc.metadata["supersedes"]: doc_id
@@ -128,7 +129,7 @@ def _judge_with_llm(question: str, docs: list[RetrievedDoc], claims: dict) -> di
             relevance[item.doc_id] = 1.0 if item.relevant else 0.0
     pairs = []
     for c in out.conflicts:
-        if c.doc_a in ids and c.doc_b in ids and c.doc_a != c.doc_b and not same_chain(c.doc_a, c.doc_b):
+        if c.doc_a in ids and c.doc_b in ids and c.doc_a != c.doc_b:
             pairs.append({"doc_a": c.doc_a, "doc_b": c.doc_b, "relation": "disagree",
                           "p_disagree": 1.0, "note": c.description})
     return {"relevance": relevance, "pairs": pairs}
@@ -181,15 +182,13 @@ def reconcile(state: RAGState) -> dict:
                          "new_date": new_meta["date"]})
         if newest in by_id and newest not in current:
             current.append(newest)
-    outdated_ids = {o["old_id"] for o in outdated}
-    current = [i for i in current if i not in outdated_ids]
 
-    # 3. disputes: the judge says the two current docs disagree
+    # 3. disputes: the judge says the two current docs disagree. Two current docs are never in the
+    #    same "replaces" chain (each is the newest of its own chain), so no link check is needed.
     disputes, seen = [], set()
     for pair in state.get("pairs", []):
         a, b = pair["doc_a"], pair["doc_b"]
-        if (pair["p_disagree"] >= config.JEV_DISAGREE_P and a in current and b in current
-                and not same_chain(a, b)):
+        if pair["p_disagree"] >= config.JEV_DISAGREE_P and a in current and b in current:
             disputes.append({"doc_a": a, "doc_b": b,
                              "description": f"judge ({state.get('judge_used')}): disagree, "
                                             f"p={pair['p_disagree']:.2f}"})
@@ -198,9 +197,7 @@ def reconcile(state: RAGState) -> dict:
     # 4. number check: same topic, different numbers for the same thing, no dispute yet
     if config.NUMERIC_BACKSTOP:
         for a, b in itertools.combinations(current, 2):
-            if frozenset((a, b)) in seen or same_chain(a, b):
-                continue
-            if by_id[a]["topic"] != by_id[b]["topic"]:
+            if frozenset((a, b)) in seen or by_id[a]["topic"] != by_id[b]["topic"]:
                 continue
             clash = numbers_clash(claims.get(a) or "", claims.get(b) or "")
             if clash:
@@ -232,7 +229,7 @@ _DOC_ID = re.compile(r"\[(D\d{2})\]")
 
 
 def disputed_numbers(docs: list[RetrievedDoc]) -> dict[str, dict[str, set[float]]]:
-    """Numbers that current same-topic docs give differently in their full text.
+    """Numbers that same-topic docs give differently in their full text. `docs` are current docs.
 
     {"week": {"D03": {16.0}, "D04": {12.0}}}. The answer must not state these: the question did
     not ask about them (else the route would be "conflict"), and stating one would pick a side.
@@ -240,7 +237,7 @@ def disputed_numbers(docs: list[RetrievedDoc]) -> dict[str, dict[str, set[float]
     found: dict[str, dict[str, set[float]]] = {}
     numbers = {d["doc_id"]: quantities(d["text"]) for d in docs}
     for a, b in itertools.combinations(docs, 2):
-        if a["topic"] != b["topic"] or same_chain(a["doc_id"], b["doc_id"]):
+        if a["topic"] != b["topic"]:
             continue
         qa, qb = numbers[a["doc_id"]], numbers[b["doc_id"]]
         for unit in set(qa) & set(qb):

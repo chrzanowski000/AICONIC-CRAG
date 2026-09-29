@@ -43,6 +43,12 @@ branch `simplification` (less code, same results).
     the `EXPAND_BY_TOPIC` / `EXPAND_BY_SUPERSEDES` flags. New corpus check instead: a doc and the
     doc it replaces must share a topic. New `tests/test_load_docs.py` (4 tests). Checked:
     retrieval gives the same docs as `main` for 25 questions; `pytest` 30 passed; `demo` 5/5.
+  - Step 2, rules: removed checks that can never be true (two current docs are never in the same
+    "replaces" chain, and a current doc is never also outdated). `_replaced_by` is built once.
+    The unit test for "a replaced doc gives no number dispute" tested an input the pipeline never
+    makes; it is replaced by 5 `reconcile` tests (outdated, judge dispute, number check, agree,
+    abstain). Checked: `reconcile` and `disputed_numbers` give the same output as `main` on 2000
+    random states (all three routes); `pytest` 34 passed.
 
 ## Last verified outputs (2026-09-29)
 

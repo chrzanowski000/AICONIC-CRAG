@@ -180,9 +180,9 @@ This is where "outdated" and "disputed" are told apart. On purpose, this is not 
    already fetched it).
 3. `disputes` = pairs with `p_disagree ≥ JEV_DISAGREE_P` (0.5) where both documents are relevant,
    neither is outdated, and they are not in the same "replaces" chain.
-4. Number check: if two relevant, current documents on the same topic have claims with different
-   numbers and no dispute was recorded, add one anyway ("numeric mismatch (backstop)"). This
-   catches a judge that is too soft.
+4. Number check (`src/quantities.py`): if two relevant, current documents on the same topic have
+   claims with different numbers for the same unit and no dispute was recorded, add one anyway
+   ("numeric mismatch (backstop)"). This catches a judge that is too soft.
 5. Route: no relevant document → `abstain`; any dispute → `conflict`; otherwise `answer`.
 
 How the thresholds were set (M3, from the printed traces of 7 demo questions and 16 paraphrases):

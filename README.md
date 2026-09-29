@@ -91,6 +91,7 @@ python main.py jev-test          # one Jev decision call on a fixed example
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
+python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
 ```
 

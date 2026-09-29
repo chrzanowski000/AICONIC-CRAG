@@ -57,6 +57,7 @@ class RAGState(TypedDict):
     question: str
     retrieved: list[RetrievedDoc]      # docs in context: id, title, source, date, topic, supersedes, text, score
     best_score: float                  # best similarity score among the first hits
+    closest: list[dict]                # top search hits before the cutoff: {doc_id, score}, for "I don't know"
     claims: dict[str, str | None]      # doc_id -> one-sentence claim, or None if the doc says nothing
     judge_used: Literal["jev", "llm"]  # which judge actually ran
     relevance: dict[str, float]        # doc_id -> probability the doc answers the question
@@ -73,8 +74,9 @@ class RAGState(TypedDict):
 ### 1. `retrieve`
 
 1. Turn the question into a vector locally (`BAAI/bge-small-en-v1.5`, 384 numbers, cosine).
-2. Ask Qdrant for the 6 closest documents with scores. Drop anything below `SCORE_THRESHOLD`
-   (start at 0.45). If nothing is left, go straight to `abstain`. No LLM call is spent.
+2. Ask Qdrant for the 6 closest documents with scores. Keep a hit only if its score is at least
+   `SCORE_THRESHOLD` (0.58) **and** at most `SCORE_MARGIN` (0.10) below the best hit. If nothing
+   is left, go straight to `abstain`. No LLM call is spent.
 3. **Add related docs.** This is the step that makes sure both sides of a conflict are present:
    - every document with the same `topic` as a hit is added (found by a metadata filter, not by
      similarity), and
@@ -84,7 +86,17 @@ class RAGState(TypedDict):
 Why add related docs: the two documents of a dispute (say "16 weeks" vs "12 weeks" of parental
 leave) look almost the same to the search, so it usually finds both. But "usually" is not good
 enough for a system whose whole point is to notice the second one. The topic filter makes it
-certain.
+certain. It really happens: for the parental leave question D03 scores 0.888 and D04 0.788, just
+under the margin. D04 is dropped by the search and added back by the topic filter.
+
+How the two numbers were chosen (`python main.py search "<q>"` prints the scores): the embedding
+model gives even unrelated documents a cosine score of about 0.50 to 0.65, so no single cutoff
+separates good from bad documents. The best hit of every answerable test question (including
+paraphrases like "Who needs to approve my PR?") scored 0.62 or more; clearly unanswerable
+questions (stock price, salary, dental cover) topped out at about 0.54. So the cutoff is 0.58.
+It only throws out questions that are clearly off. The margin keeps the context small: for the
+demo questions it leaves just the documents about the question (2 or 3), not ten loosely related
+ones. The judge's relevance check, not the score, is the real gate.
 
 ### 2. `extract_claims` (LLM)
 

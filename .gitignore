@@ -10,3 +10,6 @@ models/
 
 # Secrets
 .env
+
+# Running total of money spent
+.spend.json

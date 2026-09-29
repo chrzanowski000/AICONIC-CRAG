@@ -34,6 +34,7 @@ decision changes, change it here first.
 | # | decision | why |
 |---|---|---|
 | 17 | Vector search with k=6 and a score cutoff, then add every doc with the same `topic` and every doc linked by `supersedes`. | Both sides of a dispute must be in context. A metadata filter makes that certain, not just likely. |
+| 17a | Cutoff 0.58, plus a margin: drop hits more than 0.10 below the best hit. | The embedding model scores even unrelated docs at 0.50 to 0.65, so the cutoff alone lets in lots of noise. The margin keeps the context to the docs about the question. Measured in M0, see `pipeline.md`. |
 | 18 | No reranker, no BM25 / hybrid search. | 20 short documents. Plain vector search plus the topic expansion already finds everything. Fewer parts, fewer failures. |
 | 19 | No NLI model. | Jev already gives agree / disagree probabilities. An NLI model would be one more local model and is weak on numbers. |
 | 20 | No web search. | The task is about what the documents say, not about the world. |

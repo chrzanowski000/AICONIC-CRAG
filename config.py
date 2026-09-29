@@ -70,8 +70,8 @@ JUDGE_FALLBACK = env("JUDGE_FALLBACK", "llm")  # llm | none
 JEV_MODEL = env("JEV_MODEL", "typesafe/jev-1.13")
 JEV_URL = env("JEV_URL", "https://openrouter.ai/api/alpha/decisions")
 JEV_TIMEOUT_S = env("JEV_TIMEOUT_S", 30.0, float)
-JEV_RELEVANT_P = env("JEV_RELEVANT_P", 0.6, float)
-JEV_DISAGREE_P = env("JEV_DISAGREE_P", 0.6, float)
+JEV_RELEVANT_P = env("JEV_RELEVANT_P", 0.5, float)  # measured: relevant 0.63-0.98, off topic 0.01-0.06
+JEV_DISAGREE_P = env("JEV_DISAGREE_P", 0.5, float)  # measured: disagree 0.87-1.00, agree 0.00
 NUMERIC_BACKSTOP = env("NUMERIC_BACKSTOP", True, _bool)
 
 # --- embeddings ------------------------------------------------------------------------------

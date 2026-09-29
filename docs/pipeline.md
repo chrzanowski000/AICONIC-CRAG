@@ -148,7 +148,7 @@ What we actually saw (`python main.py jev-test`, 2026-09-29): the reply comes fr
 `typesafe/jev-1.13-20260917`, provider `TypeSafe`, in about 0.4 seconds. The format is exactly the
 one above. `noul` is the probability of "yes". Each `choice` answer has `choice`, `confidence` and
 `probabilities` over the three options. On clear cases the probabilities are 0.00 or 1.00, and
-relevance is above 0.9 or below 0.05, so the 0.6 thresholds are not sensitive. A call with 4
+relevance is above 0.9 or below 0.05. A call with 4
 documents and 6 pairs (10 questions) used 1,377 input and 343 output tokens and cost $0.0000578.
 `src/jev.py` checks that every question we asked has an answer; if not, it counts as a failure.
 
@@ -161,17 +161,28 @@ probabilities 1.0 / 0.0. `judge_used` records which one ran, so traces and the e
 
 This is where "outdated" and "disputed" are told apart. On purpose, this is not a model:
 
-1. `relevant` = documents with `relevance ≥ JEV_RELEVANT_P` (0.6).
+1. `relevant` = documents with `relevance ≥ JEV_RELEVANT_P` (0.5).
 2. Build the "replaces" chains from metadata (`D02 supersedes D01`, and so on down a chain).
    Any relevant document that is replaced by another document in the corpus moves to
    `outdated`. The newest document in its chain is forced into `relevant` (the retrieve step
    already fetched it).
-3. `disputes` = pairs with `p_disagree ≥ JEV_DISAGREE_P` (0.6) where both documents are relevant,
+3. `disputes` = pairs with `p_disagree ≥ JEV_DISAGREE_P` (0.5) where both documents are relevant,
    neither is outdated, and they are not in the same "replaces" chain.
 4. Number check: if two relevant, current documents on the same topic have claims with different
    numbers and no dispute was recorded, add one anyway ("numeric mismatch (backstop)"). This
    catches a judge that is too soft.
 5. Route: no relevant document → `abstain`; any dispute → `conflict`; otherwise `answer`.
+
+How the thresholds were set (M3, from the printed traces of 7 demo questions and 16 paraphrases):
+relevant documents got 0.63 to 0.98, off-topic ones 0.01 to 0.06; "disagree" pairs got 0.87 to
+1.00, "agree" pairs 0.00. Both thresholds are 0.5 ("more likely yes than no"). 0.6 also separates
+the groups, but some relevant documents came in at 0.63 to 0.70 for paraphrased questions (for
+example "How long is maternity leave?"). If one side of a dispute falls under the threshold, the
+system answers from the other side and the dispute is hidden, which is the worst mistake it can
+make. So the threshold sits lower, where the gap is wide.
+
+With `JEV_DISAGREE_P=1.01` (a judge that never reports a dispute), the number check alone still
+turns Q3 and Q4 into disputes: "numeric mismatch (backstop): 16 vs 12 week" and "60 vs 75 $".
 
 ### 5a. `answer` (LLM)
 
@@ -193,41 +204,62 @@ scores, so a badly tuned cutoff is easy to spot.
 
 ## Three worked examples
 
+These are real traces from `python main.py demo` (2026-09-29, `JUDGE=jev`). The trace is printed
+after every answer while `SHOW_SCORES=true`.
+
 ### "How many days per week can employees work remotely?" → answered, with outdated note
 
 ```
-retrieve        hits: D02 (0.71), D01 (0.69), D13 (0.48)   related docs added: none new (same topic)
-extract_claims  D01 -> "up to two days per week"   D02 -> "up to three days per week"   D13 -> null
-judge (jev)     rel_D01 0.91  rel_D02 0.95        pair: not asked (D02 replaces D01)
-reconcile       D01 is replaced by D02  ->  outdated=[D01->D02]   relevant=[D02]   route=answer
-answer          "Employees may work remotely up to three days per week [D02]."
-                Outdated: D01 (2024-03-01) said "up to two days per week"; replaced by D02 (2025-06-15).
+retrieve        D02 0.843, D01 0.818                      (D03 0.690 and lower: under the margin)
+extract_claims  D02 -> "Employees may work remotely up to three days per week."
+                D01 -> "Employees may work remotely up to two days per week."
+judge (jev)     rel D02 0.97, D01 0.93                    pair: not asked (D02 replaces D01)
+reconcile       D01 is replaced by D02 -> outdated=[D01->D02], relevant=[D02], route=answer
+answer          STATUS: ANSWERED
+                Employees may work remotely up to three days per week. [D02]
+                Sources:
+                  - [D02] HR Handbook (2025-06-15): Employees may work remotely up to three days per week.
+                Outdated:
+                  - [D01] (2024-03-01) said: "Employees may work remotely up to two days per week."
+                    It is replaced by [D02] (2025-06-15).
 ```
 
 ### "How many weeks of paid parental leave does Helios Dynamics offer?" → disputed
 
 ```
-retrieve        hits: D03 (0.74), D04 (0.72), D16 (0.41 -> dropped)   related docs added: none new
-extract_claims  D03 -> "16 weeks of fully paid parental leave"   D04 -> "12 weeks of paid parental leave"
-judge (jev)     rel_D03 0.96  rel_D04 0.93   pair_D03_D04: disagree 0.88
-reconcile       no supersedes link between D03 and D04  ->  disputes=[D03 vs D04]   route=conflict
+retrieve        D03 0.888; D04 added as a related doc (it scored 0.788, 0.0004 under the margin)
+extract_claims  D03 -> "Helios Dynamics offers 16 weeks of fully paid parental leave."
+                D04 -> "Employees receive 12 weeks of paid parental leave at full salary."
+judge (jev)     rel D03 0.96, D04 0.95    pair D03-D04: disagree (p_disagree 1.00)
+reconcile       no supersedes link between D03 and D04 -> disputes=[D03 vs D04], route=conflict
 conflict_report STATUS: DISPUTED
-                  - [D03] HR Handbook (2025-01-10): 16 weeks of fully paid parental leave.
-                  - [D04] Benefits FAQ (2025-02-20): 12 weeks of paid parental leave.
+                The sources disagree. Both versions:
+                  - [D03] HR Handbook (2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
+                  - [D04] People Ops wiki (2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
                 Neither document is marked as replacing the other; a newer date alone does not settle it.
 ```
 
 Note that D04 is newer. The system still refuses to pick it, because nothing in the corpus says
-D04 replaces D03.
+D04 replaces D03. Also note that the search alone would have missed D04; the topic filter
+brought it back.
 
 ### "What is the policy on bringing pets to the office?" → abstained
 
 ```
-retrieve        hits: D07 (0.43), D13 (0.41), D16 (0.39)  -> all below the cutoff 0.45
-                (with a lower cutoff: extract_claims returns null for all, judge marks none relevant,
-                 reconcile routes to abstain. Same outcome, one LLM call later.)
-abstain         STATUS: ABSTAINED. The documents do not cover this. Closest: D07 (0.43), D13 (0.41), D16 (0.39).
+retrieve        D02 0.636, D01 0.587                      (D07 0.566, D13 0.566: under the cutoff 0.58)
+extract_claims  D02 -> null, D01 -> null
+judge           not called: no document has a claim
+reconcile       relevant=[] -> route=abstain
+abstain         STATUS: ABSTAINED
+                I don't know. The documents do not answer this question. None of the documents
+                found says anything that answers the question. Closest documents: D02 (0.636),
+                D01 (0.587), D07 (0.566).
 ```
+
+The search cannot tell "remote work policy" from "pets policy" well (both are office rules), so the
+score gate lets two documents through. The claim step then finds nothing about pets, and the
+system says so. A question that is clearly off (for example "What is the company's stock price?",
+best score 0.541) is stopped at the search and costs nothing.
 
 ## Why it "admits it doesn't know"
 

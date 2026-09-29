@@ -1,6 +1,7 @@
 """Command line for the Helios RAG demo. Run `python main.py -h` for the commands."""
 
 import argparse
+import json
 import logging
 import sys
 import time
@@ -127,6 +128,30 @@ def cmd_ask(args) -> None:
     print(show(run(args.question, tags=["ask"])))
 
 
+def load_questions() -> list[dict]:
+    with open(config.QUESTIONS_FILE, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def cmd_demo(args) -> None:
+    from src.graph import run
+    from src.render import show
+    from src.vectorstore import ensure_index
+
+    ensure_index()
+    questions = [q for q in load_questions() if args.all or q.get("demo")]
+    summary = []
+    for q in questions:
+        print(f"=== {q['id']} " + "=" * 90)
+        state = run(q["question"], question_id=q["id"], tags=["demo"])
+        print(show(state))
+        got = state["result"]["status"]
+        summary.append(f"  {q['id']}  {got:10} (expected {q['expected']['status']})")
+        print()
+    print("Summary (judge: " + config.JUDGE + "):")
+    print("\n".join(summary))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Helios RAG demo")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -145,6 +170,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("ask", help="run the full pipeline on one question")
     p.add_argument("question")
     p.set_defaults(func=cmd_ask)
+
+    p = sub.add_parser("demo", help="run the demo questions from questions.json")
+    p.add_argument("--all", action="store_true", help="also run the extra questions")
+    p.set_defaults(func=cmd_demo)
 
     sub.add_parser("llm-test", help="one structured-output call (Claims) through OpenRouter"
                    ).set_defaults(func=cmd_llm_test)

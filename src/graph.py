@@ -77,7 +77,10 @@ _WORD_NUMBERS.update({"thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "nine
 _SKIP_WORDS = {"of", "or", "and", "the", "to", "a", "an", "in", "on", "at", "for", "per", "up",
                "more", "less", "than", "fully", "full", "paid", "about", "only", "least"}
 _QUANTITY = re.compile(
-    r"(?P<cur>[$€£])?\s?(?P<num>\d+(?:[.,]\d+)?|\b(?:" + "|".join(_WORD_NUMBERS) + r")\b)"
+    # a number that is not part of a word ("X2") or a clock time ("7:00")
+    r"(?P<cur>[$€£])?\s?(?<![A-Za-z0-9:.,])"
+    r"(?P<num>\d{1,3}(?:,\d{3})+(?![\d:])|\d+(?:\.\d+)?(?![\d:])"
+    r"|\b(?:" + "|".join(_WORD_NUMBERS) + r")\b)"
     r"(?P<rest>(?:\s*%)?(?:[\s-]+[A-Za-z]+){0,3})",
     re.IGNORECASE,
 )
@@ -91,7 +94,7 @@ def quantities(text: str) -> dict[str, set[float]]:
     found: dict[str, set[float]] = {}
     for m in _QUANTITY.finditer(text or ""):
         raw = m.group("num").lower()
-        value = float(_WORD_NUMBERS[raw]) if raw in _WORD_NUMBERS else float(raw.replace(",", "."))
+        value = float(_WORD_NUMBERS[raw]) if raw in _WORD_NUMBERS else float(raw.replace(",", ""))
         rest = m.group("rest") or ""
         if m.group("cur"):
             unit = m.group("cur")

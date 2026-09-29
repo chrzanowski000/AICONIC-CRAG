@@ -123,8 +123,8 @@ tokens, which is plenty for up to 10 short claims and 45 pair questions.
 Measured on 2026-09-29: one call with 538 input and 67 output tokens cost **$0.0000226**
 (538 × $0.042 / 1,000,000; the output was free). The probabilities in that test looked
 plausible, but we have not measured how well they are calibrated. So the thresholds
-(`JEV_RELEVANT_P`, `JEV_DISAGREE_P`, both 0.6) live in `config.py` and are set from the printed
-values.
+(`JEV_RELEVANT_P`, `JEV_DISAGREE_P`) live in `config.py` and were set to 0.5 from the printed
+values (see `pipeline.md`, `reconcile`).
 
 | option | what it returns | cost per question | used? | why |
 |---|---|---|---|---|

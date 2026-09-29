@@ -15,41 +15,36 @@ Last update: 2026-09-29
       `main.py llm-test|jev-test`. LangSmith not checked yet: no key (see known issues).
 - [x] **M2 Graph v1**: `graph.py` (all steps, incl. the reconcile rules and the conflict report),
       `render.py` (answer + a trace of every step when `SHOW_SCORES=true`), `main.py ask`.
-- [ ] **M3 Conflicts + replaced docs**
+- [x] **M3 Conflicts + replaced docs**: `questions.json` (Q1–Q5 demo, Q6–Q7 extra),
+      `main.py demo [--all]`, number check tightened (ignores "X2", "7:00"), thresholds set from
+      measured probabilities (`JEV_RELEVANT_P` and `JEV_DISAGREE_P` 0.6 → 0.5), real traces in
+      `docs/pipeline.md`.
 - [ ] **M4 Eval**
 - [ ] **M5 Hardening + docs**
 
 ## Last verified outputs
 
-- `python main.py ask` on Q1 → ANSWERED, "A pull request needs 2 approvals ... [D14]", cites D14
-  (Jev relevance 0.98; D15 and D20 gave no claim). Q5 (pets) → ABSTAINED: D02 and D01 gave no
-  claim, judge skipped, closest D02 (0.636), D01 (0.587), D07 (0.566). Q2, Q3, Q4, Q6, Q7 also
-  give the expected result already (details in M3).
-
-- `python main.py llm-test` → method `json_schema`, 1.8 s, 951 in / 66 out tokens, $0.000128:
-  `[D03] Helios Dynamics offers 16 weeks of fully paid parental leave.`,
-  `[D04] Employees receive 12 weeks of paid parental leave at full salary.`, `[D13] None`.
-- `python main.py jev-test` → 10/10 as expected (rel D03 0.98, D04 0.95, TX 0.93, D16 0.01;
-  D03–D04 disagree 1.00; D03–TX agree 1.00; pairs with D16 unrelated 1.00). 0.4 s, $0.0000578.
-
-- `python main.py index` → `Rebuilt collection 'helios_docs' (embedded mode): 20 points.`
-  Second run → `Reused ... 20 points. Reason: index is up to date.`
-- `python main.py search "parental leave"` → D03 0.7789 and D04 0.7479 both kept.
-- Search on the demo questions (context after cutoff 0.58, margin 0.10, related docs):
-  Q1 → D14 (+ D15, D20 by topic); Q2 → D02, D01; Q3 → D03 (+ D04 by topic, it was 0.0004 under
-  the margin); Q4 → D05, D06; Q5 (pets) → D02, D01 (the judge must reject them);
-  Q6 → D09, D10, D18; Q7 → D08, D07.
-- Score gap: best hit of answerable questions (incl. paraphrases) ≥ 0.62; clearly off questions
-  ≤ 0.54. Some off questions still score up to 0.70 ("vacation days" → remote work), so the judge
-  is the real gate, as planned.
-- Jev Decisions API test call works; format matches the plan (`noul` p, `choice` + probabilities).
-- `openai/gpt-6-luna` on OpenRouter: $0.10 / $0.50 per million tokens (in / out), supports
-  `response_format`, `structured_outputs`, `reasoning_effort`.
+- `python main.py demo --all` (`JUDGE=jev`) → Q1 answered [D14]; Q2 answered [D02] + outdated
+  D01 (2024-03-01) → D02 (2025-06-15); Q3 disputed D03/D04; Q4 disputed D05/D06; Q5 abstained;
+  Q6 answered [D10] + outdated D09 → D10; Q7 answered [D08] + outdated D07 → D08.
+  11 LLM calls + 6 Jev calls, $0.0012.
+- `JUDGE=llm python main.py demo --all` → the same 7 results. 17 LLM calls, $0.0015.
+- `JEV_DISAGREE_P=1.01 python main.py demo` (judge never reports a dispute) → Q3 and Q4 still
+  disputed by the number check: "16 vs 12 week", "60 vs 75 $".
+- 16 extra questions by hand: the spare dispute ("How often do I need to change my password?")
+  → disputed D11/D12; paraphrases ("Who needs to approve my PR?", "How long is maternity leave?",
+  "What's the per diem for food on business trips?", "Where is HQ?", ...) → right outcome;
+  "How many vacation days do employees get?", "Who is the CEO?", "Can I bring my dog to work?"
+  → abstained.
+- Jev relevance: relevant docs 0.63–0.98, off topic 0.01–0.06. Disagree pairs 0.87–1.00.
+- `python main.py llm-test` → method `json_schema`, 951 in / 66 out tokens, $0.000128.
+- `python main.py jev-test` → 10/10 as expected, 0.4 s, $0.0000578.
+- `python main.py index` → 20 points; reused on the next run.
 
 ## Next step
 
-M3: `questions.json`, `main.py demo`, check the number check, write the real traces into
-`docs/pipeline.md`.
+M4: `eval.py` with the shared check functions; must pass for `JUDGE=jev` and `JUDGE=llm`;
+optional LangSmith dataset + experiment; `docs/evaluation.md`.
 
 ## Known issues
 
@@ -67,4 +62,5 @@ M3: `questions.json`, `main.py demo`, check the number check, write the real tra
 | 2026-09-29 | one Jev test call (by hand, before M0) | 0.00002 |
 | 2026-09-29 | M1: two small probe calls, `llm-test`, `jev-test` | 0.00020 |
 | 2026-09-29 | M2: `ask` on 7 questions | 0.00115 |
-| **total** | | **0.00137** |
+| 2026-09-29 | M3: demo runs (jev, llm, soft judge) and 16 extra questions | 0.00693 |
+| **total** | | **0.00830** |

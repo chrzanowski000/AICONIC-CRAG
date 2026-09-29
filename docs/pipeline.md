@@ -201,15 +201,16 @@ mention it.
 
 ### 5b. `conflict_report` (Python)
 
-No model. For each dispute it prints both claims with id, source and date, the LLM's "what
-differs" sentence, and the line "Neither document is marked as replacing the other; a newer date
+No model. For each dispute it prints both claims with id, source and creation date, then a
+"what differs" line: both ids with their creation dates (from the metadata, added by code) and
+the LLM's sentence. Then the line "Neither document is marked as replacing the other; a newer date
 alone does not settle it."
 `answer` stays `None`.
 
 ### 5c. `abstain` (Python)
 
 No model. Says the documents do not cover the question and lists the closest documents with their
-scores, so a badly tuned cutoff is easy to spot.
+creation dates and scores, so a badly tuned cutoff is easy to spot.
 
 ## Three worked examples
 
@@ -229,10 +230,10 @@ answer check   no problems
 STATUS: ANSWERED
 Employees may work remotely up to three days per week. [D02]
 Sources:
-  - [D02] HR Handbook (2025-06-15): Employees may work remotely up to three days per week.
+  - [D02] HR Handbook (created 2025-06-15): Employees may work remotely up to three days per week.
 Outdated:
-  - [D01] (2024-03-01) said: "Employees may work remotely up to two days per week." It is replaced
-    by [D02] (2025-06-15).
+  - [D01] (created 2024-03-01) said: "Employees may work remotely up to two days per week." It is
+    replaced by [D02] (created 2025-06-15).
 ```
 
 ### "How many weeks of paid parental leave does Helios Dynamics offer?" → disputed
@@ -247,10 +248,10 @@ reconcile      relevant (current): ['D03', 'D04']  outdated: -  route: conflict
 
 STATUS: DISPUTED
 The sources disagree. Both versions:
-  - [D03] HR Handbook (2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
-  - [D04] People Ops wiki (2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
+  - [D03] HR Handbook (created 2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
+  - [D04] People Ops wiki (created 2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
 What differs:
-  - D03 says 16 weeks, D04 says 12 weeks.
+  - [D03] (created 2025-01-10) vs [D04] (created 2025-02-20): D03 says 16 weeks, D04 says 12 weeks.
 Neither document is marked as replacing the other; a newer date alone does not settle it.
 ```
 
@@ -269,7 +270,8 @@ reconcile      relevant (current): -  outdated: -  route: abstain
 
 STATUS: ABSTAINED
 I don't know. The documents do not answer this question. None of the documents found says anything
-that answers the question. Closest documents: D02 (0.636), D01 (0.587), D07 (0.566).
+that answers the question. Closest documents: D02 (created 2025-06-15, score 0.636), D01 (created
+2024-03-01, score 0.587), D07 (created 2024-09-01, score 0.566).
 ```
 
 The search cannot tell "remote work policy" from "pets policy" well (both are office rules), so the
@@ -286,7 +288,7 @@ best score 0.541) is stopped at the search and costs nothing.
   could write "roughly 12 to 16 weeks".
 - Newer is not the same as right. Only an explicit `supersedes` link settles a conflict, and even
   then the old value is still shown with its date.
-- Every claim in every outcome carries `[doc_id] source (date)`, so each statement can be checked
+- Every claim in every outcome carries `[doc_id] source (created date)`, so each statement can be checked
   against the corpus.
 
 ## Tracing and cost

@@ -21,10 +21,10 @@ $ python main.py ask "How many weeks of paid parental leave does Helios Dynamics
 STATUS: DISPUTED
 Question: How many weeks of paid parental leave does Helios Dynamics offer?
 The sources disagree. Both versions:
-  - [D03] HR Handbook (2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
-  - [D04] People Ops wiki (2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
+  - [D03] HR Handbook (created 2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
+  - [D04] People Ops wiki (created 2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
 What differs:
-  - D03 says 16 weeks, D04 says 12 weeks.
+  - [D03] (created 2025-01-10) vs [D04] (created 2025-02-20): D03 says 16 weeks, D04 says 12 weeks.
 Neither document is marked as replacing the other; a newer date alone does not settle it.
 
 $ python main.py ask "How many days per week can employees work remotely?"
@@ -32,16 +32,17 @@ STATUS: ANSWERED
 Question: How many days per week can employees work remotely?
 Employees may work remotely up to three days per week. [D02]
 Sources:
-  - [D02] HR Handbook (2025-06-15): Employees may work remotely up to three days per week.
+  - [D02] HR Handbook (created 2025-06-15): Employees may work remotely up to three days per week.
 Outdated:
-  - [D01] (2024-03-01) said: "Employees may work remotely up to two days per week." It is replaced
-    by [D02] (2025-06-15).
+  - [D01] (created 2024-03-01) said: "Employees may work remotely up to two days per week." It is
+    replaced by [D02] (created 2025-06-15).
 
 $ python main.py ask "What is the policy on bringing pets to the office?"
 STATUS: ABSTAINED
 Question: What is the policy on bringing pets to the office?
 I don't know. The documents do not answer this question. None of the documents found says anything
-that answers the question. Closest documents: D02 (0.636), D01 (0.587), D07 (0.566).
+that answers the question. Closest documents: D02 (created 2025-06-15, score 0.636), D01 (created
+2024-03-01, score 0.587), D07 (created 2024-09-01, score 0.566).
 ```
 
 (With `SHOW_SCORES=true`, the default, a short trace of every step follows each answer.)

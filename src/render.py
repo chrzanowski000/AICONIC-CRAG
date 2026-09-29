@@ -11,7 +11,7 @@ def _wrap(text: str, first: str = "", rest: str = "") -> str:
 
 
 def _source_line(c) -> str:
-    return f"  - [{c.doc_id}] {c.source} ({c.date}): {c.claim}"
+    return f"  - [{c.doc_id}] {c.source} (created {c.date}): {c.claim}"
 
 
 def render(question: str, result: dict) -> str:
@@ -35,8 +35,9 @@ def render(question: str, result: dict) -> str:
     if out.outdated:
         lines.append("Outdated:")
         for o in out.outdated:
-            lines.append(_wrap(f'[{o.old_id}] ({o.old_date}) said: "{o.old_claim}" It is replaced '
-                               f"by [{o.new_id}] ({o.new_date}).", first="  - ", rest="    "))
+            lines.append(_wrap(f'[{o.old_id}] (created {o.old_date}) said: "{o.old_claim}" It is '
+                               f"replaced by [{o.new_id}] (created {o.new_date}).",
+                               first="  - ", rest="    "))
     return "\n".join(lines)
 
 

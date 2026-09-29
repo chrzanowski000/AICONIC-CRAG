@@ -1,7 +1,7 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
-from src.graph import (find_citations, newest_in_chain, pairs_to_compare, read_comparison,
-                       reconcile, same_chain)
+from src.graph import (abstain, conflict_report, find_citations, newest_in_chain,
+                       pairs_to_compare, read_comparison, reconcile, same_chain)
 from src.load_docs import doc_map
 from src.schemas import Comparison, DocAssessment, PairComparison
 from src.vectorstore import _to_retrieved
@@ -91,3 +91,22 @@ def test_find_citations_in_order_with_ids_that_are_not_allowed():
 
 def test_find_citations_with_none():
     assert find_citations("No ids here.", ["D03"]) == ([], [])
+
+
+def test_conflict_report_shows_both_creation_dates():
+    state = _state({"D03": "16 weeks.", "D04": "12 weeks."}, {"D03", "D04"})
+    state["disputes"] = [{"doc_a": "D03", "doc_b": "D04",
+                          "description": "D03 says 16 weeks, D04 says 12 weeks."}]
+    result = conflict_report(state)["result"]
+    assert [(v["doc_id"], v["date"]) for v in result["versions"]] == [
+        ("D03", "2025-01-10"), ("D04", "2025-02-20")]
+    assert result["differences"] == [
+        "[D03] (created 2025-01-10) vs [D04] (created 2025-02-20): "
+        "D03 says 16 weeks, D04 says 12 weeks."]
+
+
+def test_abstain_lists_the_closest_documents_with_dates():
+    state = {"question": "q", "retrieved": [], "best_score": 0.54,
+             "closest": [{"doc_id": "D02", "date": "2025-06-15", "score": 0.541}]}
+    reason = abstain(state)["result"]["reason"]
+    assert "Closest documents: D02 (created 2025-06-15, score 0.541)." in reason

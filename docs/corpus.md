@@ -24,7 +24,7 @@ This replaces the 2024-03-01 version of the Remote Work Policy.
 |---|---|
 | `id` | `D01` ... `D20`. Unique. |
 | `title`, `source` | shown next to every claim, so the user can tell a handbook from a chat digest |
-| `date` | `YYYY-MM-DD`. Shown with every claim. It never settles a conflict on its own. |
+| `date` | `YYYY-MM-DD`, the day the document was created. Shown as "created YYYY-MM-DD" wherever the document appears in an output: sources, both versions of a dispute, "What differs", the outdated note, and the closest documents of "I don't know". It never settles a conflict on its own. |
 | `topic` | docs with the same topic are always fetched together, so both sides of a dispute are seen |
 | `supersedes` | id of the document this one replaces, or `null`. The only thing that can settle a conflict. |
 

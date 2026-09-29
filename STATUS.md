@@ -1,9 +1,11 @@
 # Status
 
-Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
+Last update: 2026-09-30. All milestones of `docs/plan.md` are done, plus a round of fixes to
 dispute detection and the LangSmith connection (see below). Latest: a simplification round on the
-branch `simplification` (less code, same results, all evals pass). Latest: the branch `llm-judge`
+branch `simplification` (less code, same results, all evals pass). Then the branch `llm-judge`
 (from `simplification`): the LLM does all judging; Jev and the regex number check are removed.
+Latest: the branch `document-dates` (from `llm-judge`): every document shown carries its
+creation date.
 
 ## Milestones
 
@@ -108,6 +110,14 @@ branch `simplification` (less code, same results, all evals pass). Latest: the b
     `docs/decisions.md` records why Jev and the regex were removed; `docs/models.md` keeps the
     Jev comparison as history. New test of the eval itself: with the compare step patched to call
     every pair "same", Q3, Q4 and Q8 FAIL as they should (`docs/evaluation.md`).
+- [x] **Creation dates everywhere** (branch `document-dates`): the frontmatter `date` is the day a
+      document was created. It is now shown as "created YYYY-MM-DD" on every source line, on both
+      versions of a dispute, in the outdated note, in the closest documents of "I don't know",
+      and in each "What differs" line, which now starts with both ids and dates, added by code
+      from the metadata: "[D03] (created 2025-01-10) vs [D04] (created 2025-02-20): D03 says 16
+      weeks, D04 says 12 weeks." No model call changed. New `tests/test_render.py` (2 tests) and
+      2 graph tests for `conflict_report` and `abstain`. Checked: `pytest` 18 passed; `demo` shows
+      the dates on all three outcomes; `eval.py` 18/18 PASS.
 
 ## Last verified outputs (2026-09-29)
 
@@ -170,7 +180,8 @@ branch `simplification` (less code, same results, all evals pass). Latest: the b
 
 ## Next step
 
-1. Review and merge the branch `llm-judge` into `main` (it holds `simplification` too).
+1. Review and merge the branch `document-dates` into `main` (it holds `llm-judge` and
+   `simplification` too).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -214,7 +225,7 @@ branch `simplification` (less code, same results, all evals pass). Latest: the b
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.04757 |
-| **total** | | **0.10818** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.05519 |
+| **total** | | **0.11580** |
 
-Budget: $4.00. Left: about $3.89.
+Budget: $4.00. Left: about $3.88.

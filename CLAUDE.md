@@ -91,7 +91,8 @@ STATUS.md          what is done, what is next, known issues, money spent
 
 - All settings live in `config.py`. No other module reads `os.environ`.
 - Secrets come from `.env` (`LLM_API_OR` is the OpenRouter key). Never commit `.env`.
-- Every claim shown to the user carries `[doc_id] source (date)`.
+- Every doc shown to the user carries its creation date: `[doc_id] source (created date)`,
+  also in "What differs", the outdated note and the closest docs of "I don't know".
 - Pin versions in `requirements.txt`.
 - Keep the budget in mind: about $4 of OpenRouter credit. Print token use and cost per run.
   The running total is kept in `.spend.json` (not committed); copy it into `STATUS.md`.

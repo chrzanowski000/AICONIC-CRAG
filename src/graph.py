@@ -41,7 +41,7 @@ class RAGState(TypedDict, total=False):
     question: str
     retrieved: list[RetrievedDoc]
     best_score: float
-    closest: list[dict]  # top search hits before the cutoff: {doc_id, score}
+    closest: list[dict]  # top search hits before the cutoff: {doc_id, date, score}
     claims: dict[str, str | None]  # doc_id -> claim, or None if the doc says nothing
     relevance: dict[str, bool]  # doc_id -> does its claim answer the question (LLM)
     pairs: list[dict]  # {doc_a, doc_b, verdict: same | different | unrelated, what_differs}
@@ -248,7 +248,10 @@ def conflict_report(state: RAGState) -> dict:
     result = FinalOutput(
         status="disputed",
         versions=[_citation(by_id[i], claims) for i in ids],
-        differences=[d["description"] for d in state["disputes"]],
+        # the dates come from the metadata, the sentence from the LLM
+        differences=[f"[{d['doc_a']}] (created {by_id[d['doc_a']]['date']}) vs [{d['doc_b']}] "
+                     f"(created {by_id[d['doc_b']]['date']}): {d['description']}"
+                     for d in state["disputes"]],
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
         reason=NOT_SETTLED,
     )
@@ -256,7 +259,8 @@ def conflict_report(state: RAGState) -> dict:
 
 
 def abstain(state: RAGState) -> dict:
-    closest = ", ".join(f"{c['doc_id']} ({c['score']:.3f})" for c in state.get("closest", [])[:3])
+    closest = ", ".join(f"{c['doc_id']} (created {c['date']}, score {c['score']:.3f})"
+                        for c in state.get("closest", [])[:3])
     if not state.get("retrieved"):
         why = f"No document is close enough to the question (best score {state.get('best_score', 0):.3f}, cutoff {config.SCORE_THRESHOLD})."
     else:

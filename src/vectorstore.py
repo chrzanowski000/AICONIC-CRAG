@@ -157,7 +157,7 @@ def retrieve(question: str) -> dict:
     """
     hits = search(question)
     best_score = hits[0]["score"] if hits else 0.0
-    closest = [{"doc_id": h["doc_id"], "score": h["score"]} for h in hits]
+    closest = [{"doc_id": h["doc_id"], "date": h["date"], "score": h["score"]} for h in hits]
     floor = score_floor(best_score)
     kept = [h for h in hits if h["score"] >= floor]
     if not kept:

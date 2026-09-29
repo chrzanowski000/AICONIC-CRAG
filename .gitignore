@@ -13,3 +13,6 @@ models/
 
 # Running total of money spent
 .spend.json
+
+# Local state of `langgraph dev`
+.langgraph_api/

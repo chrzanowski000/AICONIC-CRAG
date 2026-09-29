@@ -1,2 +1,5 @@
 # Only needed to redraw docs/models_price_vs_score.png
 matplotlib==3.11.2
+
+# Only needed for LangGraph Studio (`langgraph dev`)
+langgraph-cli[inmem]==0.4.32

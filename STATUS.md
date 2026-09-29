@@ -28,8 +28,16 @@ dispute detection and the LangSmith connection (see below).
       `LANG_SMITH_API_KEY`, which nothing reads). Tracing stays off by default and is switched on
       with `LANGSMITH_TRACING=true`. Added: a warning when tracing is asked for without a key,
       a flush of queued traces at the end of each command, the LLM model in the run metadata.
+- [x] **LangGraph Studio**: `langgraph.json` + `src/studio.py` (graph `helios_rag`), input schema
+      with only `question`, `langgraph-cli[inmem]==0.4.32` in `requirements-dev.txt`.
 
 ## Last verified outputs (2026-09-29)
+
+- `langgraph dev --no-browser` → up in 3 s on `127.0.0.1:2024`; `/ok` answers from WSL and from
+  Windows (`curl.exe`, PowerShell). Assistant `helios_rag` has input schema `{question}` and nodes
+  retrieve, extract_claims, judge, reconcile, answer, conflict_report, abstain. `POST /runs/wait`
+  with Q3 → `disputed`, versions D03 (2025-01-10) and D04 (2025-02-20), `judge_used=jev`.
+  While it runs, `main.py` gives the Qdrant "in use" message (expected, documented).
 
 - LangSmith (US server, project `rag-conflicts`):
   - `LANGSMITH_TRACING=true python main.py jev-test` / `llm-test` → runs `jev_judge` (with
@@ -106,6 +114,7 @@ paraphrases checked by hand in M3). After changing `questions.json`, delete the 
 | 2026-09-29 | dispute check round: app runs (from `.spend.json`) | 0.01392 |
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
-| **total** | | **0.05977** |
+| 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
+| **total** | | **0.06061** |
 
 Budget: $4.00. Left: about $3.94.

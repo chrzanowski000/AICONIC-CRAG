@@ -29,6 +29,12 @@ log = logging.getLogger(__name__)
 NOT_SETTLED = "Neither document is marked as replacing the other; a newer date alone does not settle it."
 
 
+class RAGInput(TypedDict):
+    """What a run needs from outside. Studio shows this as the input form."""
+
+    question: str
+
+
 class RAGState(TypedDict, total=False):
     question: str
     retrieved: list[RetrievedDoc]
@@ -377,7 +383,7 @@ def abstain(state: RAGState) -> dict:
 
 @lru_cache(maxsize=1)
 def build_graph():
-    g = StateGraph(RAGState)
+    g = StateGraph(RAGState, input_schema=RAGInput)
     for name, fn in [("retrieve", retrieve), ("extract_claims", extract_claims), ("judge", judge),
                      ("reconcile", reconcile), ("answer", answer),
                      ("conflict_report", conflict_report), ("abstain", abstain)]:

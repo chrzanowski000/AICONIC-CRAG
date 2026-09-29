@@ -47,7 +47,8 @@ def get_client() -> QdrantClient:
             raise LockedStorageError(
                 f"The Qdrant folder {config.QDRANT_PATH} is in use by another process.\n"
                 "Fix it one of these ways:\n"
-                "  1. close the other process that uses it (another main.py or eval.py run),\n"
+                "  1. close the other process that uses it (another main.py or eval.py run,\n"
+                "     or `langgraph dev` for Studio),\n"
                 f"  2. if no such process is running, delete {config.QDRANT_PATH}/.lock,\n"
                 "  3. or run a Qdrant server and set QDRANT_MODE=server."
             ) from err

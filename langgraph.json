@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "helios_rag": "./src/studio.py:graph"
+  },
+  "env": ".env"
+}

@@ -45,7 +45,8 @@ It is judged on one thing: it must work. Simple and working beats pretty.
 - The LLM only extracts claims and writes the final answer. It never decides who is right.
 - Jev only answers yes/no and multiple-choice questions (is this doc relevant? do these two
   claims agree or disagree?). It never writes text.
-- Python rules apply `supersedes` links, keep real disputes, and pick the route.
+- Python rules apply `supersedes` links, keep real disputes (judge p ≥ 0.5, plus a number check),
+  and pick the route. Relevance threshold is 0.5 too.
 - The dispute report and the "outdated" note are rendered by code, not by a model.
 
 Full description with a diagram and worked examples: `docs/pipeline.md`.
@@ -84,6 +85,9 @@ STATUS.md          what is done, what is next, known issues, money spent
 - Every claim shown to the user carries `[doc_id] source (date)`.
 - Pin versions in `requirements.txt`.
 - Keep the budget in mind: about $4 of OpenRouter credit. Print token use and cost per run.
+  The running total is kept in `.spend.json` (not committed); copy it into `STATUS.md`.
+- After changing a document, a prompt, a threshold or the model: run `python eval.py` and
+  `JUDGE=llm python eval.py`; both must pass.
 - Documents: `data/corpus/Dxx_name.md` with frontmatter `id, title, source, date, topic, supersedes`.
 
 ## Working with this repo

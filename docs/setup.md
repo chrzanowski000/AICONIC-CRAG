@@ -48,15 +48,25 @@ for example `JUDGE=llm python main.py ask "..."`. `python main.py config` prints
 ## Qdrant server mode (optional)
 
 ```bash
-docker run -p 6333:6333 qdrant/qdrant
+docker pull qdrant/qdrant:latest
+docker run -p 6333:6333 qdrant/qdrant:latest
 QDRANT_MODE=server python main.py index
+QDRANT_MODE=server python main.py demo
 ```
+
+Use a recent server. The client is `qdrant-client` 1.19.1; an old server (tested: 1.16.3) still
+works but prints a version warning. `latest` was 1.19.1 on 2026-09-29 and gave the same demo
+results as embedded mode. In server mode the keyword indexes on `metadata.topic` and
+`metadata.id` are created too (embedded mode ignores them).
 
 ## Problems
 
 **"The Qdrant folder ... is in use by another process."** Embedded Qdrant allows only one process
 at a time. Close the other `main.py` or `eval.py` run. If none is running, delete
 `qdrant_data/.lock`. Or use server mode.
+
+**A command stops with `ERROR (JevError)`.** Jev failed and `JUDGE_FALLBACK=none` is set. With
+the default `JUDGE_FALLBACK=llm` the LLM judges instead and a warning is logged.
 
 **The embedding model does not download.** FastEmbed needs to reach Hugging Face once. If ONNX
 does not work on your machine, install `langchain-huggingface sentence-transformers` and set

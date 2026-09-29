@@ -24,6 +24,8 @@ decision changes, change it here first.
 | 10 | Never send `temperature`; send `reasoning_effort=low`; `use_responses_api=False`. | The GPT-6 family rejects `temperature`. Low effort keeps cost and time down. |
 | 11 | `provider.require_parameters=true` on OpenRouter. | Only route to hosts that honour `response_format`. |
 | 12 | Structured output tries `json_schema` (strict), then `function_calling`, then `json_mode` + Pydantic. | If one method is not supported, the next one still gives a checked object. |
+| 12a | `function_calling` is done with `bind_tools` directly, not with LangChain's `with_structured_output`. | LangChain always sends `parallel_tool_calls=false`. The gpt-6-luna hosts on OpenRouter do not list that parameter, so with `require_parameters=true` OpenRouter found no host (HTTP 404). Found in M5. |
+| 12b | Judge thresholds `JEV_RELEVANT_P` and `JEV_DISAGREE_P` are 0.5, not 0.6. | Measured in M3: relevant docs 0.63–0.98, off topic 0.01–0.06. A lower relevance bar makes it less likely that one side of a dispute is dropped, which would hide the dispute. |
 | 13 | Judge: Jev `typesafe/jev-1.13` through `POST /api/alpha/decisions`. If it fails, the LLM judges. | One cheap call per question (about $0.00002). The fallback keeps the demo working if the alpha API changes. |
 | 14 | Embeddings: `BAAI/bge-small-en-v1.5` with FastEmbed (ONNX, CPU). | Small, fast, local, free. 384 numbers, cosine. |
 | 15 | Qdrant embedded (`./qdrant_data`) by default; server mode by config. | No Docker needed to run the demo. Server mode is one setting away. |

@@ -21,6 +21,7 @@ from src import jev
 from src.llm import StructuredOutputError, plain, structured
 from src.load_docs import doc_map
 from src.prompts import answer_messages, assess_messages, extract_claims_messages
+from src.quantities import numbers_clash, quantities
 from src.render import render
 from src.schemas import Answer, Assessment, Citation, Claims, FinalOutput, OutdatedNote
 from src.vectorstore import RetrievedDoc, retrieve as vector_retrieve
@@ -74,57 +75,6 @@ def newest_in_chain(doc_id: str) -> str:
 
 def same_chain(a: str, b: str) -> bool:
     return newest_in_chain(a) == newest_in_chain(b)
-
-
-# --- number check (backstop) ------------------------------------------------------------------
-
-_WORD_NUMBERS = {w: i for i, w in enumerate(
-    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
-    "fifteen sixteen seventeen eighteen nineteen twenty".split())}
-_WORD_NUMBERS.update({"thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "ninety": 90})
-_SKIP_WORDS = {"of", "or", "and", "the", "to", "a", "an", "in", "on", "at", "for", "per", "up",
-               "more", "less", "than", "fully", "full", "paid", "about", "only", "least"}
-_QUANTITY = re.compile(
-    # a number that is not part of a word ("X2") or a clock time ("7:00")
-    r"(?P<cur>[$€£])?\s?(?<![A-Za-z0-9:.,])"
-    r"(?P<num>\d{1,3}(?:,\d{3})+(?![\d:])|\d+(?:\.\d+)?(?![\d:])"
-    r"|\b(?:" + "|".join(_WORD_NUMBERS) + r")\b)"
-    r"(?P<rest>(?:\s*%)?(?:[\s-]+[A-Za-z]+){0,3})",
-    re.IGNORECASE,
-)
-
-
-def quantities(text: str) -> dict[str, set[float]]:
-    """Numbers in a claim, grouped by what they count: {"$": {60.0}, "week": {16.0}}.
-
-    The unit is the currency sign, "%", or the first real word after the number.
-    """
-    found: dict[str, set[float]] = {}
-    for m in _QUANTITY.finditer(text or ""):
-        raw = m.group("num").lower()
-        value = float(_WORD_NUMBERS[raw]) if raw in _WORD_NUMBERS else float(raw.replace(",", ""))
-        rest = m.group("rest") or ""
-        if m.group("cur"):
-            unit = m.group("cur")
-        elif rest.strip().startswith("%"):
-            unit = "%"
-        else:
-            words = [w for w in re.findall(r"[a-z]+", rest.lower()) if w not in _SKIP_WORDS]
-            if not words:
-                continue
-            unit = words[0].rstrip("s") or words[0]
-        found.setdefault(unit, set()).add(value)
-    return found
-
-
-def numbers_clash(a: str, b: str) -> str | None:
-    """If both claims count the same thing with different numbers, say what differs."""
-    qa, qb = quantities(a), quantities(b)
-    for unit in sorted(set(qa) & set(qb)):
-        if qa[unit] != qb[unit]:
-            show = lambda vals: "/".join(f"{v:g}" for v in sorted(vals))  # noqa: E731
-            return f"{show(qa[unit])} vs {show(qb[unit])} {unit}"
-    return None
 
 
 # --- steps -----------------------------------------------------------------------------------

@@ -32,8 +32,16 @@ dispute detection and the LangSmith connection (see below).
       with only `question`, `langgraph-cli[inmem]==0.4.32` in `requirements-dev.txt`.
       The last step also writes `output`, the result as plain text, because Studio's step view
       showed only `outdated []` of the nested `result` object (the answer was there, but hidden).
+- [x] **Number check cleaned up**: moved out of `graph.py` into `src/quantities.py` (commented
+      pattern, small named functions, docstring on what it is for). New unit tests in `tests/`
+      (`python -m pytest`, 26 tests, no model calls); `pytest==9.1.1` in `requirements-dev.txt`.
 
 ## Last verified outputs (2026-09-29)
+
+- Number check refactor: old and new code give identical results on all 20 documents and 22
+  sample sentences (42 texts, 231 sentence pairs, 16 clashes). `python -m pytest` → 26 passed.
+  Through the Studio server: Q3 → DISPUTED D03/D04; Q14 → ANSWERED "paid at 100% of your base
+  salary ... [D03]" with no week count. `eval.py` not rerun (the Studio server holds the index).
 
 - `langgraph dev --no-browser` → up in 3 s on `127.0.0.1:2024`; `/ok` answers from WSL and from
   Windows (`curl.exe`, PowerShell). Assistant `helios_rag` has input schema `{question}` and nodes

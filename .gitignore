@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local data, built by the app
+qdrant_data/
+models/
+
+# Secrets
+.env

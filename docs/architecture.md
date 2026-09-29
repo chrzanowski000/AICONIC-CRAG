@@ -50,7 +50,7 @@ flowchart LR
 | `src/prompts.py` | The prompt texts. |
 | `src/graph.py` | `RAGState`, the steps, the rules in `reconcile`, and `build_graph()`. |
 | `src/quantities.py` | The number check: finds "number + unit" in a sentence (`16 weeks` → `{"week": {16}}`) so Python can spot "same unit, different number" without a model. Used by the backstop in `reconcile` and by the check on the answer. |
-| `tests/` | Unit tests (`python -m pytest`, no model calls): the number check, and the graph rules on the real corpus. |
+| `tests/` | Unit tests (`python -m pytest`, no model calls): the number check, the graph rules (`reconcile`, the checks on the answer) on the real corpus, and the corpus checks in `load_docs`. |
 | `src/render.py` | Turns a `FinalOutput` into terminal text. |
 
 ## Who does what

@@ -81,7 +81,7 @@ langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
 data/corpus/       the 20 documents (markdown with frontmatter)
 src/               load_docs, embeddings, vectorstore, llm, jev, schemas, prompts, graph, render,
                    quantities (number check), studio (Studio entry point)
-tests/             unit tests for the number check and the graph rules (pytest)
+tests/             unit tests: number check, graph rules, answer check, corpus checks (pytest)
 docs/              documentation of the repo (plan, setup, architecture, pipeline, corpus, evaluation,
                    research, models, decisions)
 STATUS.md          what is done, what is next, known issues, money spent

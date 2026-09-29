@@ -1,8 +1,8 @@
 # Status
 
 Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
-dispute detection and the LangSmith connection (see below). Now: a simplification round on the
-branch `simplification` (less code, same results).
+dispute detection and the LangSmith connection (see below). Latest: a simplification round on the
+branch `simplification` (less code, same results, all evals pass).
 
 ## Milestones
 
@@ -36,8 +36,9 @@ branch `simplification` (less code, same results).
 - [x] **Number check cleaned up**: moved out of `graph.py` into `src/quantities.py` (commented
       pattern, small named functions, docstring on what it is for). New unit tests in `tests/`
       (`python -m pytest`, 26 tests, no model calls); `pytest==9.1.1` in `requirements-dev.txt`.
-- [ ] **Simplification** (branch `simplification`): remove code that is not needed, keep every
-      result the same. Each step is checked with `pytest` and live runs.
+- [x] **Simplification** (branch `simplification`): remove code that is not needed, keep every
+      result the same. Each step is checked with `pytest` and live runs. Python code 2026 → 1848
+      lines; unit tests 26 → 37. Merge into `main` when reviewed.
   - Step 1, retrieval: the related docs are taken from the corpus in memory, by topic only. Gone:
     the Qdrant topic filter, the separate `supersedes` step, the server-mode keyword indexes and
     the `EXPAND_BY_TOPIC` / `EXPAND_BY_SUPERSEDES` flags. New corpus check instead: a doc and the
@@ -75,6 +76,9 @@ branch `simplification` (less code, same results).
     its cost. Checked: `pytest` 37 passed; fresh index built from nothing (20 points, reused on
     the next run); `eval.py` on it 18/18 PASS; an eval stopped with Ctrl-C after 20 s still added
     its $0.0007 to `.spend.json`.
+  - Not done on purpose: renaming `JEV_RELEVANT_P` / `JEV_DISAGREE_P` (they apply to the LLM
+    judge too, but the names are used in many notes and past commands); `llm-test` and
+    `jev-test` stay (cheap checks that the key and both APIs work).
 
 ## Last verified outputs (2026-09-29)
 
@@ -137,12 +141,23 @@ branch `simplification` (less code, same results).
 
 ## Next step
 
-Nothing required. Open item, if wanted: more questions in `questions.json` (for example the
-paraphrases checked by hand in M3). After changing `questions.json`, delete the LangSmith dataset
-`rag-conflicts-demo` so the next traced eval creates it again.
+1. Review and merge the branch `simplification` into `main`.
+2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
+3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
+   weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
+   maternity leave?"), and a stricter check for Q15 (both parts of the question). Match digits as
+   whole words in `answer_contains` / `answer_excludes`. After changing `questions.json`, delete
+   the LangSmith dataset `rag-conflicts-demo` so the next traced eval creates it again.
 
 ## Known issues
 
+- If only the replaced doc answers the question and the doc that replaces it says nothing about
+  it, the result is ANSWERED with a non-answer ("the information does not say ... [D08]") and the
+  source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where
+  is the bike storage at HQ?" (D07 answers, D08 replaces it and is silent). Cause: `reconcile`
+  adds the newest doc of a chain even when it has no claim.
+- A question with two parts can lose one part without saying so: "What should I do during a
+  Sev1 incident and who is on call?" answers only the first part (D20 relevance 0.19, D15 0.51).
 - **Changed from the plan** (all written down in `docs/decisions.md` and `docs/pipeline.md`):
   - retrieval cutoff 0.58 instead of 0.45, plus a new `SCORE_MARGIN` (0.10);
   - `JEV_RELEVANT_P` and `JEV_DISAGREE_P` 0.5 instead of 0.6;

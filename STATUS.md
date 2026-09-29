@@ -1,7 +1,7 @@
 # Status
 
 Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
-dispute detection (see below).
+dispute detection and the LangSmith connection (see below).
 
 ## Milestones
 
@@ -11,8 +11,8 @@ dispute detection (see below).
 - [x] **M0 Documents + index + retrieval test**: venv, pinned requirements, `.env.example`,
       `config.py`, 20 documents, `load_docs.py`, `embeddings.py`, `vectorstore.py`,
       `main.py config|index|search`, `docs/setup.md`, `docs/corpus.md`.
-- [x] **M1 LLM + Jev tests**: `llm.py`, `jev.py`, `schemas.py`, `prompts.py`,
-      `main.py llm-test|jev-test`. LangSmith not checked (no key, see known issues).
+- [x] **M1 LLM + Jev + LangSmith tests**: `llm.py`, `jev.py`, `schemas.py`, `prompts.py`,
+      `main.py llm-test|jev-test`. LangSmith traces checked later (see "LangSmith connected").
 - [x] **M2 Graph v1**: `graph.py`, `render.py`, `main.py ask`.
 - [x] **M3 Conflicts + replaced docs**: `questions.json`, `main.py demo [--all]`, number check,
       thresholds set from measured probabilities, real traces in `docs/pipeline.md`.
@@ -24,8 +24,28 @@ dispute detection (see below).
       quietly picked a side ("for the full 16 weeks [D03]"). Fixed: narrow claims, judge compares
       only the part that answers the question, answer written from the claims, number check on
       the answer, new eval check `answer_excludes`. `questions.json` grew from 7 to 18 questions.
+- [x] **LangSmith connected**: key in `.env` as `LANGSMITH_API_KEY` (it was saved as
+      `LANG_SMITH_API_KEY`, which nothing reads). Tracing stays off by default and is switched on
+      with `LANGSMITH_TRACING=true`. Added: a warning when tracing is asked for without a key,
+      a flush of queued traces at the end of each command, the LLM model in the run metadata.
 
 ## Last verified outputs (2026-09-29)
+
+- LangSmith (US server, project `rag-conflicts`):
+  - `LANGSMITH_TRACING=true python main.py jev-test` / `llm-test` → runs `jev_judge` (with
+    `cost` in metadata) and `RunnableSequence` → ChatOpenAI show up.
+  - `LANGSMITH_TRACING=true python main.py ask "<Q3>"` → one trace `ask` (19 runs): retrieve,
+    extract_claims → ChatOpenAI, judge → jev_judge, reconcile, conflict_report; metadata
+    `judge=jev`, `llm=openai/gpt-6-luna`.
+  - `LANGSMITH_TRACING=true python eval.py` → local 18/18, dataset `rag-conflicts-demo` created
+    (18 examples), experiment `rag-conflicts-jev-4af5fc19`: 18 runs, 0 errors, 126/126 feedback
+    scores are 1. Exit 0.
+  - `LANGSMITH_TRACING=true JUDGE=llm python eval.py` → dataset reused (still one), experiment
+    `rag-conflicts-llm-07eb37b5`: 18 runs, 0 errors, 126/126 scores are 1. Exit 0.
+  - Tracing off (default) → no "Traces sent" line, nothing sent. Tracing on without a key →
+    warning, `TRACING_ON False`.
+  - LangSmith shows tokens and cost for each ChatOpenAI call (it matches the OpenRouter price,
+    e.g. 239 in / 40 out tokens → $0.0000439). Jev's cost is in the `jev_judge` metadata.
 
 - `python eval.py` → 18/18 PASS, exit 0 (judge Jev). 33 LLM calls + 17 Jev calls, $0.0031.
 - `JUDGE=llm python eval.py` → 18/18 PASS, exit 0. 50 LLM calls, $0.0041.
@@ -55,17 +75,12 @@ dispute detection (see below).
 
 ## Next step
 
-Nothing required. Open items, if wanted:
-
-1. Add a LangSmith key and run `python eval.py` with `LANGSMITH_TRACING=true` to check the traces
-   and the LangSmith experiment (the code is written, not yet run).
-2. More questions in `questions.json` (for example the paraphrases checked by hand in M3).
+Nothing required. Open item, if wanted: more questions in `questions.json` (for example the
+paraphrases checked by hand in M3). After changing `questions.json`, delete the LangSmith dataset
+`rag-conflicts-demo` so the next traced eval creates it again.
 
 ## Known issues
 
-- **LangSmith not verified.** No `LANGSMITH_API_KEY` in `.env`, so neither the traces nor the
-  LangSmith part of `eval.py` has been run. Tracing is off by default, and it is also turned off
-  when `LANGSMITH_TRACING=true` is set without a key. Everything else works without it.
 - **Changed from the plan** (all written down in `docs/decisions.md` and `docs/pipeline.md`):
   - retrieval cutoff 0.58 instead of 0.45, plus a new `SCORE_MARGIN` (0.10);
   - `JEV_RELEVANT_P` and `JEV_DISAGREE_P` 0.5 instead of 0.6;
@@ -90,6 +105,7 @@ Nothing required. Open items, if wanted:
 | 2026-09-29 | all app runs, M1–M5 (from `.spend.json`, 40+ runs) | 0.01809 |
 | 2026-09-29 | dispute check round: app runs (from `.spend.json`) | 0.01392 |
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
-| **total** | | **0.04163** |
+| 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
+| **total** | | **0.05977** |
 
-Budget: $4.00. Left: about $3.96.
+Budget: $4.00. Left: about $3.94.

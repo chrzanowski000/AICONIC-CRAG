@@ -401,5 +401,6 @@ def run(question: str, question_id: str | None = None, tags: list[str] | None = 
     return build_graph().invoke(
         {"question": question},
         config={"run_name": "ask", "tags": tags or ["demo"],
-                "metadata": {"question_id": question_id, "judge": config.JUDGE}},
+                "metadata": {"question_id": question_id, "judge": config.JUDGE,
+                             "llm": config.LLM_MODEL}},
     )

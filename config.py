@@ -106,6 +106,10 @@ LANGSMITH_TRACING = env("LANGSMITH_TRACING", False, _bool)
 LANGSMITH_API_KEY = env("LANGSMITH_API_KEY", "")
 LANGSMITH_PROJECT = env("LANGSMITH_PROJECT", "rag-conflicts")
 TRACING_ON = LANGSMITH_TRACING and bool(LANGSMITH_API_KEY)
+TRACING_WARNING = (
+    "LANGSMITH_TRACING=true but no LANGSMITH_API_KEY is set, so tracing is off."
+    if LANGSMITH_TRACING and not LANGSMITH_API_KEY else ""
+)
 # Send traces to our project by default, and never try to trace without a key.
 os.environ["LANGSMITH_PROJECT"] = LANGSMITH_PROJECT
 os.environ["LANGSMITH_TRACING"] = "true" if TRACING_ON else "false"
@@ -136,7 +140,7 @@ def as_dict() -> dict:
     """All settings, with secrets hidden. Used by `python main.py config`."""
     out = {}
     for name, value in globals().items():
-        if not name.isupper() or name in ("ROOT", "SECRET_NAMES"):
+        if not name.isupper() or name in ("ROOT", "SECRET_NAMES", "TRACING_WARNING"):
             continue
         if name in SECRET_NAMES:
             value = _mask(value)

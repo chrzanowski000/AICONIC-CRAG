@@ -207,6 +207,10 @@ def main() -> int:
     for noisy in ("httpx", "httpx2", "httpcore", "openai", "urllib3", "huggingface_hub"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
+    if config.TRACING_WARNING:
+        print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
+
+    from main import flush_traces
     from src.graph import build_graph
     from src.jev import JevError
     from src.llm import USAGE, StructuredOutputError, record_spend
@@ -229,6 +233,7 @@ def main() -> int:
     print()
     print(USAGE.summary())
     print(record_spend())
+    flush_traces()
     return 0 if ok else 1
 
 

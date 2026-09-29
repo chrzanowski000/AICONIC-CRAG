@@ -183,18 +183,31 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def finish_run() -> None:
-    """Print tokens and cost, and add them to the running total, if any model was called."""
+    """Print tokens and cost, add them to the running total, and send any queued traces."""
     from src.llm import USAGE, record_spend
 
     if USAGE.llm_calls or USAGE.jev_calls:
         print()
         print(USAGE.summary())
         print(record_spend())
+    flush_traces()
+
+
+def flush_traces() -> None:
+    """Send queued traces before a short command exits (only when tracing is on)."""
+    if not config.TRACING_ON:
+        return
+    from langchain_core.tracers.langchain import wait_for_all_tracers
+
+    wait_for_all_tracers()
+    print(f"Traces sent to LangSmith project '{config.LANGSMITH_PROJECT}'.")
 
 
 def main(argv: list[str] | None = None) -> int:
     setup_logging()
     args = build_parser().parse_args(argv)
+    if config.TRACING_WARNING:
+        print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
     from src.jev import JevError
     from src.llm import StructuredOutputError
     from src.load_docs import CorpusError

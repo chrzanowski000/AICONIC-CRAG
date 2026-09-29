@@ -182,7 +182,7 @@ of the BGE models described in [31]: small (384 numbers per vector) and fast on 
 | Checking small facts is more precise [23] | `extract_claims` makes one short claim per document; the judge compares claims |
 | Long contexts are used poorly [24] | at most 10 documents; the judge sees short claims |
 | Probabilities may be off [25] | thresholds in `config.py`, probabilities printed and traced, number check as a backstop |
-| Retrieval can miss one side | `retrieve` adds every document with the same `topic` and every `supersedes` link |
+| Retrieval can miss one side | `retrieve` adds every document with the same `topic` (a `supersedes` link never crosses topics) |
 
 ## Sources
 

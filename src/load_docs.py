@@ -60,12 +60,18 @@ def load_documents(corpus_dir: str | None = None) -> list[Document]:
         if doc_id in seen:
             raise CorpusError(f"Duplicate document id {doc_id}")
         seen.add(doc_id)
+    topic = {doc.metadata["id"]: doc.metadata["topic"] for doc in docs}
     for doc in docs:
-        target = doc.metadata["supersedes"]
-        if target and target not in seen:
-            raise CorpusError(f"{doc.metadata['id']} supersedes {target}, which does not exist")
-        if target == doc.metadata["id"]:
+        doc_id, target = doc.metadata["id"], doc.metadata["supersedes"]
+        if not target:
+            continue
+        if target not in seen:
+            raise CorpusError(f"{doc_id} supersedes {target}, which does not exist")
+        if target == doc_id:
             raise CorpusError(f"{target} supersedes itself")
+        # Retrieval adds related docs by topic, so a doc and the one it replaces must share it.
+        if topic[target] != topic[doc_id]:
+            raise CorpusError(f"{doc_id} supersedes {target} but their topics differ")
     return docs
 
 

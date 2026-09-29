@@ -42,7 +42,8 @@ It is judged on one thing: it must work. Simple and working beats pretty.
 `retrieve → extract_claims (LLM) → judge (Jev) → reconcile (Python rules) → answer | conflict_report | abstain`
 
 - Retrieval: vector search (cutoff `SCORE_THRESHOLD` 0.58, and at most `SCORE_MARGIN` 0.10 below
-  the best hit), then every doc with the same `topic` or a `supersedes` link is added.
+  the best hit), then every doc with the same `topic` is added (a doc and the doc it
+  `supersedes` always share a topic, so both ends of a link come in).
 - The LLM only extracts claims and writes the final answer. It never decides who is right.
   A claim holds only the part of a doc that answers the question; the answer is written
   from the claims, and Python checks it for numbers the docs disagree on.

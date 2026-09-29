@@ -69,8 +69,8 @@ flowchart LR
 - Documents: `data/corpus/Dxx_name.md`, markdown with frontmatter
   `id, title, source, date, topic, supersedes`.
 - Qdrant collection `helios_docs`: one point per document. Vector: 384 numbers, cosine.
-  Payload: `page_content` and `metadata` (the frontmatter). Keyword indexes on `metadata.topic`
-  and `metadata.id`.
+  Payload: `page_content` and `metadata` (the frontmatter). Qdrant is only used for the search;
+  the related docs are taken from the corpus in memory.
 - `qdrant_data/corpus.sha256`: hash of the corpus files at the last index build. If it changes,
   the index is rebuilt.
 

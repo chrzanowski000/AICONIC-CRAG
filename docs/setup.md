@@ -108,8 +108,7 @@ QDRANT_MODE=server python main.py demo
 
 Use a recent server. The client is `qdrant-client` 1.19.1; an old server (tested: 1.16.3) still
 works but prints a version warning. `latest` was 1.19.1 on 2026-09-29 and gave the same demo
-results as embedded mode. In server mode the keyword indexes on `metadata.topic` and
-`metadata.id` are created too (embedded mode ignores them).
+results as embedded mode.
 
 ## Problems
 

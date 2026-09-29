@@ -105,11 +105,6 @@ def ensure_index(force: bool = False) -> dict:
             size=config.EMBEDDING_DIM, distance=models.Distance[config.QDRANT_DISTANCE.upper()]
         ),
     )
-    if config.QDRANT_MODE == "server":  # payload indexes have no effect in embedded mode
-        for field in ("metadata.topic", "metadata.id"):
-            client.create_payload_index(
-                config.QDRANT_COLLECTION, field, field_schema=models.PayloadSchemaType.KEYWORD
-            )
     get_store().add_documents(docs, ids=[point_id(d.metadata["id"]) for d in docs])
     _hash_file().parent.mkdir(parents=True, exist_ok=True)
     _hash_file().write_text(corpus_hash() + "\n")
@@ -147,42 +142,6 @@ def search(question: str, k: int | None = None) -> list[RetrievedDoc]:
     return [_to_retrieved(doc, score) for doc, score in hits]
 
 
-def _docs_with_topics(topics: list[str]) -> list[Document]:
-    points, _ = get_client().scroll(
-        config.QDRANT_COLLECTION,
-        scroll_filter=models.Filter(
-            must=[models.FieldCondition(key="metadata.topic", match=models.MatchAny(any=topics))]
-        ),
-        limit=100,
-        with_payload=True,
-        with_vectors=False,
-    )
-    return [
-        Document(page_content=p.payload["page_content"], metadata=p.payload["metadata"])
-        for p in points
-    ]
-
-
-def _supersedes_family(doc_ids: set[str]) -> set[str]:
-    """All docs linked to these ids by `supersedes`, in either direction, down the whole chain."""
-    all_docs = doc_map()
-    family = set(doc_ids)
-    changed = True
-    while changed:
-        changed = False
-        for doc_id, doc in all_docs.items():
-            target = doc.metadata.get("supersedes")
-            if not target:
-                continue
-            if target in family and doc_id not in family:
-                family.add(doc_id)
-                changed = True
-            if doc_id in family and target not in family:
-                family.add(target)
-                changed = True
-    return family
-
-
 def score_floor(best_score: float) -> float:
     """Lowest score a search hit needs to be kept: the cutoff, or best minus the margin."""
     if config.SCORE_MARGIN > 0:
@@ -191,7 +150,7 @@ def score_floor(best_score: float) -> float:
 
 
 def retrieve(question: str) -> dict:
-    """Search, drop weak hits, add related docs, cap the list.
+    """Search, drop weak hits, add the other docs on the same topics, cap the list.
 
     Returns {"retrieved": [...], "best_score": float, "closest": [...]}. `closest` holds the top
     search hits before the cutoff, so an "I don't know" answer can show what was looked at.
@@ -204,20 +163,12 @@ def retrieve(question: str) -> dict:
     if not kept:
         return {"retrieved": [], "best_score": best_score, "closest": closest}
 
+    # Add every other doc on the same topics. A doc and the doc it replaces always share a
+    # topic (load_docs checks this), so this also brings in both ends of a "replaces" link.
     seen = {h["doc_id"] for h in kept}
-    added: list[RetrievedDoc] = []
-    if config.EXPAND_BY_TOPIC:
-        topics = sorted({h["topic"] for h in kept})
-        for doc in _docs_with_topics(topics):
-            if doc.metadata["id"] not in seen:
-                seen.add(doc.metadata["id"])
-                added.append(_to_retrieved(doc, None))
-    if config.EXPAND_BY_SUPERSEDES:
-        all_docs = doc_map()
-        for doc_id in sorted(_supersedes_family(seen) - seen):
-            seen.add(doc_id)
-            added.append(_to_retrieved(all_docs[doc_id], None))
-
+    topics = {h["topic"] for h in kept}
+    added = [_to_retrieved(doc, None) for doc_id, doc in doc_map().items()
+             if doc.metadata["topic"] in topics and doc_id not in seen]
     added.sort(key=lambda d: d["date"], reverse=True)
     retrieved = (kept + added)[: config.MAX_CONTEXT_DOCS]
     return {"retrieved": retrieved, "best_score": best_score, "closest": closest}

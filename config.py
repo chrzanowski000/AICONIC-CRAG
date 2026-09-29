@@ -85,8 +85,6 @@ TOP_K = env("TOP_K", 6, int)
 SCORE_THRESHOLD = env("SCORE_THRESHOLD", 0.58, float)  # drop hits below this cosine score
 SCORE_MARGIN = env("SCORE_MARGIN", 0.10, float)  # also drop hits more than this below the best; 0 = off
 MAX_CONTEXT_DOCS = env("MAX_CONTEXT_DOCS", 10, int)
-EXPAND_BY_TOPIC = env("EXPAND_BY_TOPIC", True, _bool)
-EXPAND_BY_SUPERSEDES = env("EXPAND_BY_SUPERSEDES", True, _bool)
 
 # --- qdrant ----------------------------------------------------------------------------------
 QDRANT_MODE = env("QDRANT_MODE", "embedded")  # embedded | server

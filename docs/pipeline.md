@@ -79,9 +79,9 @@ class RAGState(TypedDict):
    `SCORE_THRESHOLD` (0.58) **and** at most `SCORE_MARGIN` (0.10) below the best hit. If nothing
    is left, go straight to `abstain`. No LLM call is spent.
 3. **Add related docs.** This is the step that makes sure both sides of a conflict are present:
-   - every document with the same `topic` as a hit is added (found by a metadata filter, not by
-     similarity), and
-   - every document linked to a hit by `supersedes`, in either direction, is added.
+   every document with the same `topic` as a hit is added (taken from the corpus in memory, not
+   found by similarity). A document and the one it `supersedes` must share a topic (the corpus
+   loader stops with an error otherwise), so both ends of a `supersedes` link come in this way.
 4. Remove duplicates, keep at most 10 (hits first, then the added ones, newest first).
 
 Why add related docs: the two documents of a dispute (say "16 weeks" vs "12 weeks" of parental

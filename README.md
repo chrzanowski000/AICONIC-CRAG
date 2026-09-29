@@ -51,8 +51,8 @@ retrieve → extract_claims (LLM) → judge (Jev) → reconcile (Python rules) �
 ```
 
 - **retrieve**: local embeddings (`BAAI/bge-small-en-v1.5`) and Qdrant. Weak hits are dropped,
-  then every document with the same topic or a `supersedes` link is added, so both sides of a
-  dispute are always seen.
+  then every document with the same topic is added, so both sides of a dispute (and both ends of
+  a `supersedes` link) are always seen.
 - **extract_claims**: the LLM (`openai/gpt-6-luna` through OpenRouter) writes one sentence per
   document: what it says about the question, numbers copied exactly.
 - **judge**: Jev (`typesafe/jev-1.13`, OpenRouter Decisions API) answers only yes/no and

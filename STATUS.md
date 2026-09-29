@@ -1,7 +1,8 @@
 # Status
 
 Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
-dispute detection and the LangSmith connection (see below).
+dispute detection and the LangSmith connection (see below). Now: a simplification round on the
+branch `simplification` (less code, same results).
 
 ## Milestones
 
@@ -35,6 +36,13 @@ dispute detection and the LangSmith connection (see below).
 - [x] **Number check cleaned up**: moved out of `graph.py` into `src/quantities.py` (commented
       pattern, small named functions, docstring on what it is for). New unit tests in `tests/`
       (`python -m pytest`, 26 tests, no model calls); `pytest==9.1.1` in `requirements-dev.txt`.
+- [ ] **Simplification** (branch `simplification`): remove code that is not needed, keep every
+      result the same. Each step is checked with `pytest` and live runs.
+  - Step 1, retrieval: the related docs are taken from the corpus in memory, by topic only. Gone:
+    the Qdrant topic filter, the separate `supersedes` step, the server-mode keyword indexes and
+    the `EXPAND_BY_TOPIC` / `EXPAND_BY_SUPERSEDES` flags. New corpus check instead: a doc and the
+    doc it replaces must share a topic. New `tests/test_load_docs.py` (4 tests). Checked:
+    retrieval gives the same docs as `main` for 25 questions; `pytest` 30 passed; `demo` 5/5.
 
 ## Last verified outputs (2026-09-29)
 
@@ -129,6 +137,7 @@ paraphrases checked by hand in M3). After changing `questions.json`, delete the 
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| **total** | | **0.06061** |
+| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.00558 |
+| **total** | | **0.06619** |
 
-Budget: $4.00. Left: about $3.94.
+Budget: $4.00. Left: about $3.93.

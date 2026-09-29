@@ -23,6 +23,8 @@ Question: How many weeks of paid parental leave does Helios Dynamics offer?
 The sources disagree. Both versions:
   - [D03] HR Handbook (2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
   - [D04] People Ops wiki (2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
+What differs:
+  - D03 says 16 weeks, D04 says 12 weeks.
 Neither document is marked as replacing the other; a newer date alone does not settle it.
 
 $ python main.py ask "How many days per week can employees work remotely?"
@@ -47,7 +49,7 @@ that answers the question. Closest documents: D02 (0.636), D01 (0.587), D07 (0.5
 ## How it works
 
 ```
-retrieve → extract_claims (LLM) → judge (Jev) → reconcile (Python rules) → answer | conflict_report | abstain
+retrieve → extract_claims (LLM) → compare (LLM) → reconcile (Python rules) → answer (LLM + LLM check) | conflict_report | abstain
 ```
 
 - **retrieve**: local embeddings (`BAAI/bge-small-en-v1.5`) and Qdrant. Weak hits are dropped,
@@ -55,14 +57,17 @@ retrieve → extract_claims (LLM) → judge (Jev) → reconcile (Python rules) �
   a `supersedes` link) are always seen.
 - **extract_claims**: the LLM (`openai/gpt-6-luna` through OpenRouter) writes one sentence per
   document: what it says about the question, numbers copied exactly.
-- **judge**: Jev (`typesafe/jev-1.13`, OpenRouter Decisions API) answers only yes/no and
-  multiple-choice questions: is this document relevant? do these two claims agree or disagree?
-  If Jev fails, the LLM judges instead.
-- **reconcile**: plain Python. Applies `supersedes` links, keeps real disputes, runs a number
-  check as a backstop, and picks the route.
+- **compare**: the LLM says which claims answer the question and, for every pair of documents
+  not linked by `supersedes`, whether they give the same answer, a different one, or are
+  unrelated. If different, it says what differs: "D03 says 16 weeks, D04 says 12 weeks".
+  It never says which one is right.
+- **reconcile**: plain Python. Applies `supersedes` links, keeps the disputes between current
+  documents, and picks the route.
 - **answer / conflict_report / abstain**: only the answer is written by the LLM, from the
-  checked claims (its citations and numbers are checked by code). The dispute report, the outdated note and "I don't know" are built by
-  code, so no model can blur "16 weeks vs 12 weeks" into "about 12 to 16 weeks".
+  claims. Code checks its citations, and a second LLM call checks it for facts no claim states
+  and for values the documents give differently (one more try, then a note). The dispute report,
+  the outdated note and "I don't know" are built by code, so no model can blur "16 weeks vs
+  12 weeks" into "about 12 to 16 weeks".
 
 Full walkthrough with real traces: [`docs/pipeline.md`](docs/pipeline.md).
 
@@ -87,7 +92,6 @@ python main.py config            # print every setting (secrets hidden)
 python main.py index [--reindex] # build or refresh the Qdrant collection
 python main.py search "<q>"      # retrieval test, no model calls
 python main.py llm-test          # one structured-output call through OpenRouter
-python main.py jev-test          # one Jev decision call on a fixed example
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
@@ -96,7 +100,7 @@ langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip insta
 ```
 
 Every setting lives in `config.py` and can be changed in `.env` or the shell, for example
-`JUDGE=llm python eval.py`. Token use and cost are printed after every run.
+`LLM_MODEL=... python eval.py`. Token use and cost are printed after every run.
 
 LangSmith tracing is off by default. With `LANGSMITH_API_KEY` in `.env`, add
 `LANGSMITH_TRACING=true` to a command to trace it; `LANGSMITH_TRACING=true python eval.py` also
@@ -104,9 +108,9 @@ runs a LangSmith experiment on the same checks.
 
 ## Results
 
-`python eval.py` passes all 18 questions with Jev as judge and with the LLM as judge: real
-disputes (in numbers and in words), documents that agree, replaced documents, and questions where
-the two sides of a dispute agree on the point asked. A full eval costs about $0.003. See
+`python eval.py` passes all 18 questions (checked on three runs in a row): real disputes (in
+numbers and in words), documents that agree, replaced documents, and questions where the two
+sides of a dispute agree on the point asked. A full eval costs about $0.006. See
 [`docs/evaluation.md`](docs/evaluation.md).
 
 ## Documentation

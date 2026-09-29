@@ -5,9 +5,11 @@ result. It needs no LangSmith account. It prints one PASS/FAIL line per question
 the tokens and cost. It exits with code 1 if any question fails, so it can be used in a script.
 
 ```bash
-python eval.py                 # judge = Jev (default)
-JUDGE=llm python eval.py       # judge = the LLM
+python eval.py
 ```
+
+The LLM can answer differently from one run to the next, so after a change to a prompt, a
+threshold, a document or the model, run it twice; both runs must pass.
 
 ## The questions
 
@@ -64,70 +66,69 @@ The checks look at the structure of the output, not at the wording. A disputed q
 only when the system refuses to give one answer; an unanswerable question passes only when the
 system says nothing that looks like an answer. Guessing is never rewarded.
 
-## Results (2026-09-29)
+## Results (2026-09-29, LLM-only judge)
 
-`python eval.py`, judge Jev: **18/18 PASS**, exit code 0.
+`python eval.py`: **18/18 PASS** on three runs in a row, exit code 0.
 
 ```
-Q1  PASS  answered  (judge jev) ...; cited ['D14']; contains '2'
-Q2  PASS  answered  (judge jev) ...; cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'
-Q3  PASS  disputed  (judge jev) ...; versions ['D03', 'D04'], each with date and claim, no answer
-Q4  PASS  disputed  (judge jev) ...; versions ['D05', 'D06'], each with date and claim, no answer
-Q5  PASS  abstained (judge none) ...; no answer, no citations, no versions
-Q6  PASS  answered  (judge jev) ...; cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'
-Q7  PASS  answered  (judge jev) ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'
-Q8  PASS  disputed  (judge jev) ...; versions ['D11', 'D12'], each with date and claim, no answer
-Q9  PASS  answered  (judge jev) ...; cited ['D18']; contains '1.2'
-Q10 PASS  answered  (judge jev) ...; cited ['D10']; contains '300'
-Q11 PASS  answered  (judge jev) ...; cited ['D03', 'D04']; contains 'adopt'; avoids ['16', '12']
-Q12 PASS  answered  (judge jev) ...; cited ['D11', 'D12']; contains 'required'
-Q13 PASS  answered  (judge jev) ...; cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']
-Q14 PASS  answered  (judge jev) ...; cited ['D03', 'D04']; contains 'full'; avoids ['16', '12']
-Q15 PASS  answered  (judge jev) ...; cited ['D15']
-Q16 PASS  answered  (judge jev) ...; cited ['D04']; contains 'yes'
-Q17 PASS  answered  (judge jev) ...; cited ['D11']; contains '14'
-Q18 PASS  answered  (judge jev) ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'
+Q1  PASS  answered  ...; cited ['D14']; contains '2'
+Q2  PASS  answered  ...; cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'
+Q3  PASS  disputed  ...; versions ['D03', 'D04'], each with date and claim, no answer
+Q4  PASS  disputed  ...; versions ['D05', 'D06'], each with date and claim, no answer
+Q5  PASS  abstained ...; no answer, no citations, no versions
+Q6  PASS  answered  ...; cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'
+Q7  PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'
+Q8  PASS  disputed  ...; versions ['D11', 'D12'], each with date and claim, no answer
+Q9  PASS  answered  ...; cited ['D18']; contains '1.2'
+Q10 PASS  answered  ...; cited ['D10']; contains '300'
+Q11 PASS  answered  ...; cited ['D03', 'D04']; contains 'adopt'; avoids ['16', '12']
+Q12 PASS  answered  ...; cited ['D11']; contains 'required'
+Q13 PASS  answered  ...; cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']
+Q14 PASS  answered  ...; cited ['D03']; contains '100%'; avoids ['16', '12']
+Q15 PASS  answered  ...; cited ['D15', 'D20']
+Q16 PASS  answered  ...; cited ['D04']; contains 'yes'
+Q17 PASS  answered  ...; cited ['D11']; contains '14'
+Q18 PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'
 Summary: all passed.
-LLM: 33 calls, 19242 in / 2123 out tokens, $0.002598. Jev: 17 calls, $0.000457. This run: $0.003056.
+LLM: 63 calls, 38989 in / 4199 out tokens. This run: $0.005611.
 ```
 
-`JUDGE=llm python eval.py`: **18/18 PASS** as well, exit code 0. 50 LLM calls, $0.0041.
+The check on the answer (see `pipeline.md`, step 5a) sometimes catches an answer about parental
+leave that restates D04's "12 weeks"; the second try is clean, so Q11–Q14 still avoid "16" and
+"12". In `demo --all` no correct answer got a note.
 
-Q5 shows `judge none`: no document had a claim about pets, so the judge was not called at all.
-
-In both runs the number check on the answer (see `pipeline.md`, step 5a) fired once: an answer
-about parental leave restated D04's "12 weeks". The model was asked once more and the second
-answer was clean, so Q11–Q14 still avoid "16" and "12".
+Earlier results (Jev as judge, then the LLM as Jev's fallback, both 18/18) are in `STATUS.md`.
 
 ## What this found, and what was fixed
 
 The first version of the extra questions (before the fix) gave two wrong results out of 13:
 "Does parental leave cover adoption?" and "Do I keep my salary during parental leave?" came out
 `disputed`, although D03 and D04 agree on both points. The claims had pulled in the week counts
-("covered by 16 weeks of fully paid parental leave"), so the judge and the number check saw a
-clash. And once the claims were narrowed, the answer to the salary question still said "for the
+("covered by 16 weeks of fully paid parental leave"), so the judge saw a clash.
+And once the claims were narrowed, the answer to the salary question still said "for the
 full 16 weeks [D03]", because the answer step saw the full documents.
 
-Fixes: claims keep only the part that answers the question; the judge's pair question says only
-that part counts; the answer is written from the claims, not from the full documents; and Python
-checks the answer for numbers the documents disagree on. Q11, Q13 and Q14 (with
+Fixes: claims keep only the part that answers the question; the comparison looks only at that
+part; the answer is written from the claims, not from the full documents; and the answer is
+checked for values the documents give differently (first by a regex number check, now by a
+second LLM call). Q11, Q13 and Q14 (with
 `answer_excludes`) keep this fixed.
 
 ## Does the eval catch a broken system?
 
-Yes. Two broken setups:
+Yes. Test (2026-09-29): the compare step was patched to call every pair `same`, so no dispute is
+ever found, and Q3, Q4 and Q8 were run:
 
-| setup | result |
-|---|---|
-| judge never reports a dispute (`JEV_DISAGREE_P=1.01`), number check on | Q8 FAIL, exit 1. Q3 and Q4 still pass: the number check finds "16 vs 12 week" and "60 vs 75 $". Q8 is a dispute in words ("every 90 days" vs "no fixed schedule"), which only the judge can see. |
-| judge never reports a dispute, number check off (`NUMERIC_BACKSTOP=false`) | Q3, Q4 and Q8 FAIL, exit 1: "expected disputed, got answered ... a single answer was given". |
+```
+Q3  FAIL  answered  status_matches: expected disputed, got answered; ... a single answer was given
+Q4  FAIL  answered  status_matches: expected disputed, got answered; ... a single answer was given
+Q8  FAIL  answered  status_matches: expected disputed, got answered; ... a single answer was given
+```
 
-In the second setup the answer step still does not pick a side for Q3: its first answer stated
-the weeks, the number check on the answer caught it, and the second answer was "The documents give
-conflicting figures for paid parental leave, so a single value cannot be determined [D03][D04]",
-with both claims and dates listed under Sources. But the status is `answered`, and whether the
-wording is right is up to the model, so the eval fails it on purpose. With the normal settings,
-both versions with dates are shown by code every time.
+The answer step still did not pick a side. It wrote, for example, "The claims conflict: one says
+16 weeks of fully paid parental leave [D03], while another says 12 weeks at full salary [D04]."
+But that is free text from a model, with status `answered`, so the eval fails it on purpose. With
+the normal pipeline, both versions with dates and "what differs" are shown by code every time.
 
 ## LangSmith (optional)
 
@@ -137,23 +138,21 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
    `questions.json` if it does not exist (inputs: `question`, `id`; outputs: the `expected`
    block);
 2. runs `client.evaluate(...)` with the same seven checks as evaluators, experiment prefix
-   `rag-conflicts-<judge>`, `max_concurrency=1` (embedded Qdrant allows only one process, and one
+   `rag-conflicts`, `max_concurrency=1` (embedded Qdrant allows only one process, and one
    thread keeps it simple);
 3. prints the experiment name and URL.
 
 ```bash
 LANGSMITH_TRACING=true python eval.py
-LANGSMITH_TRACING=true JUDGE=llm python eval.py
 ```
 
 Every check should score 1 in the experiment. The graph runs are traced with
-`run_name="ask"`, the tag `eval`, and metadata `question_id`, `judge` and `llm`; the Jev call
-shows up as a `jev_judge` run with its cost in the metadata.
+`run_name="ask"`, the tag `eval`, and metadata `question_id` and `llm`.
 
 The dataset is created once. If you change `questions.json`, delete the dataset in LangSmith (or
 set a new `EVAL_DATASET_NAME`) so it is created again.
 
-First runs (2026-09-29):
+First runs (2026-09-29, before Jev was removed):
 
 | experiment | judge | runs | errors | feedback scores |
 |---|---|---|---|---|
@@ -165,6 +164,6 @@ The local table passed 18/18 in both runs as well.
 
 ## Cost
 
-One full eval (18 questions) costs about $0.003 with Jev and $0.004 with the LLM judge. The
-LangSmith eval runs the pipeline a second time, so it doubles that (measured: $0.006 with Jev,
-$0.008 with the LLM judge).
+One full eval (18 questions) costs about $0.0056 with the LLM-only judge (it was $0.003 with Jev,
+which used fewer LLM calls; the check on the answer adds one call per answered question). The
+LangSmith eval runs the pipeline a second time, so it doubles that.

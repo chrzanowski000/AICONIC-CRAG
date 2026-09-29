@@ -19,7 +19,6 @@ flowchart LR
   end
   subgraph remote[Remote services]
     OR[OpenRouter<br/>chat completions<br/>openai/gpt-6-luna]
-    JEV[OpenRouter<br/>Decisions API<br/>typesafe/jev-1.13]
     LS[LangSmith<br/>optional]
   end
   CLI --> G
@@ -28,7 +27,6 @@ flowchart LR
   VS --> EMB
   DOCS -->|src/load_docs.py| VS
   G -->|src/llm.py| OR
-  G -->|src/jev.py| JEV
   G --> R
   G -. traces .-> LS
 ```
@@ -38,19 +36,17 @@ flowchart LR
 | file | job |
 |---|---|
 | `config.py` | Every setting. Reads `.env` once. No other module reads `os.environ`. |
-| `main.py` | The command line: `config`, `index`, `search`, `llm-test`, `jev-test`, `ask`, `demo`. |
+| `main.py` | The command line: `config`, `index`, `search`, `llm-test`, `ask`, `demo`. |
 | `eval.py` | Runs the questions in `questions.json`, prints PASS/FAIL, optionally runs a LangSmith experiment. |
 | `langgraph.json`, `src/studio.py` | Entry point for LangGraph Studio (`langgraph dev`): builds the index if needed and exposes the graph as `helios_rag`. |
-| `src/load_docs.py` | Reads the markdown files with frontmatter. Checks ids, dates and `supersedes` targets. Gives the doc map and the corpus hash. |
+| `src/load_docs.py` | Reads the markdown files with frontmatter. Checks ids, dates, `supersedes` targets and that a doc and the doc it replaces share a topic. Gives the doc map and the corpus hash. |
 | `src/embeddings.py` | A small `Embeddings` class around FastEmbed, so LangChain and Qdrant can use it. |
 | `src/vectorstore.py` | One Qdrant client per process. Builds or reuses the collection. `retrieve()` does search, cutoff and adds related docs. |
-| `src/llm.py` | The `ChatOpenAI` client for OpenRouter. `structured()` with fallbacks. Counts tokens and cost. |
-| `src/jev.py` | The Decisions API client. Builds the questions, parses the answers into relevance and pairs. |
-| `src/schemas.py` | Pydantic models: `Claims`, `Answer`, `Assessment`, `FinalOutput` and the Jev request and response. |
+| `src/llm.py` | The `ChatOpenAI` client for OpenRouter. `structured()` (strict JSON schema). Counts tokens and cost. |
+| `src/schemas.py` | Pydantic models: `Claims`, `Comparison`, `Answer`, `AnswerCheck`, `FinalOutput`. |
 | `src/prompts.py` | The prompt texts. |
-| `src/graph.py` | `RAGState`, the steps, the rules in `reconcile`, and `build_graph()`. |
-| `src/quantities.py` | The number check: finds "number + unit" in a sentence (`16 weeks` → `{"week": {16}}`) so Python can spot "same unit, different number" without a model. Used by the backstop in `reconcile` and by the check on the answer. |
-| `tests/` | Unit tests (`python -m pytest`, no model calls): the number check, the graph rules (`reconcile`, the checks on the answer) on the real corpus, and the corpus checks in `load_docs`. |
+| `src/graph.py` | `RAGState`, the steps, the rules in `reconcile`, the citation check, and `build_graph()`. |
+| `tests/` | Unit tests (`python -m pytest`, no model calls): the graph rules (`reconcile`, reading the LLM's comparison, finding citations) on the real corpus, and the corpus checks in `load_docs`. |
 | `src/render.py` | Turns a `FinalOutput` into terminal text. |
 
 ## Who does what
@@ -59,10 +55,10 @@ flowchart LR
 |---|---|---|
 | find candidate documents | Qdrant + local embeddings | any remote model |
 | say what each document claims | LLM (structured output) | – |
-| is this document relevant? do two claims disagree? | Jev (LLM if Jev fails) | – |
+| is this document relevant? do two claims give different answers, and what differs? | LLM (structured output) | – |
 | which document wins | Python, from `supersedes` links only | any model |
 | dispute report, outdated note, "I don't know" | Python | any model |
-| final cited answer | LLM, from the checked claims only; then Python checks the citations and looks for numbers the documents disagree on | – |
+| final cited answer | LLM, from the claims only; Python checks the citations, a second LLM call checks the facts | – |
 
 ## Data
 
@@ -77,8 +73,7 @@ flowchart LR
 ## Settings
 
 All in `config.py`, each one can be set in `.env` or the shell with the same name. The main ones:
-`LLM_MODEL`, `JUDGE` (`jev` or `llm`), `TOP_K`, `SCORE_THRESHOLD`, `JEV_RELEVANT_P`,
-`JEV_DISAGREE_P`, `QDRANT_MODE`, `LANGSMITH_TRACING`. Run `python main.py config` to see all of
+`LLM_MODEL`, `TOP_K`, `SCORE_THRESHOLD`, `SCORE_MARGIN`, `QDRANT_MODE`, `LANGSMITH_TRACING`. Run `python main.py config` to see all of
 them with the values in use.
 
 ## Failure handling
@@ -87,6 +82,7 @@ them with the values in use.
 |---|---|
 | no document scores above the cutoff | abstain at once, no model call |
 | the LLM reply cannot be parsed, or the LLM call fails | the run stops with a one-line `ERROR (...)` message, exit code 2 |
-| Jev call fails (error, timeout, bad format) | the LLM judges with structured output; `judge_used=llm` |
+| the LLM leaves a pair out of its comparison | the pair counts as unrelated, with a warning |
+| the answer check finds a problem | ask once more with the problems as the fix; then keep the answer with a note that lists them |
 | the answer cites no allowed doc, or a doc that is not allowed | ask once more; then leave out the ids that are not allowed, and abstain if no allowed id is left |
 | Qdrant folder locked by another process | clear error message with three ways out |

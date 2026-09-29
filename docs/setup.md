@@ -43,7 +43,7 @@ python main.py search "parental leave"   # retrieval test, no model calls, costs
 ## Settings
 
 Every setting is in `config.py` and can be changed in `.env` or in the shell with the same name,
-for example `JUDGE=llm python main.py ask "..."`. `python main.py config` prints them all.
+for example `SHOW_SCORES=false python main.py ask "..."`. `python main.py config` prints them all.
 
 ## LangSmith (optional)
 
@@ -115,10 +115,6 @@ results as embedded mode.
 **"The Qdrant folder ... is in use by another process."** Embedded Qdrant allows only one process
 at a time. Close the other `main.py` or `eval.py` run. If none is running, delete
 `qdrant_data/.lock`. Or use server mode.
-
-**"Jev failed ... The LLM judges instead."** A warning, not an error: the Decisions API did not
-answer, so the LLM decided relevance and agree / disagree for this run. `jev-test` shows the
-Jev error itself.
 
 **The embedding model does not download.** FastEmbed needs to reach Hugging Face once. After
 that the model is read from `./models`.

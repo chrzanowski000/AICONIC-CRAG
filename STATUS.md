@@ -2,7 +2,7 @@
 
 Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
 dispute detection and the LangSmith connection (see below). Latest: a simplification round on the
-branch `simplification` (less code, same results, all evals pass). Now: the branch `llm-judge`
+branch `simplification` (less code, same results, all evals pass). Latest: the branch `llm-judge`
 (from `simplification`): the LLM does all judging; Jev and the regex number check are removed.
 
 ## Milestones
@@ -80,7 +80,7 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
   - Not done on purpose: renaming `JEV_RELEVANT_P` / `JEV_DISAGREE_P` (they apply to the LLM
     judge too, but the names are used in many notes and past commands); `llm-test` and
     `jev-test` stay (cheap checks that the key and both APIs work).
-- [ ] **LLM-only judge** (branch `llm-judge`): no Jev, no regex. The LLM compares the claims and
+- [x] **LLM-only judge** (branch `llm-judge`): no Jev, no regex. The LLM compares the claims and
       says what differs; Python still applies `supersedes` links and picks the route.
   - Step 1: new `compare` step (one LLM call): relevance per doc, and for every pair not linked by
     `supersedes` a verdict (same / different / unrelated) plus, if different, one sentence with
@@ -103,6 +103,11 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
     car", and passes a clean answer; Q14 asked twice → clean answer, no note; `eval.py` twice →
     18/18 PASS both times ($0.0056 per run); `demo --all` → no notes on any answer, one "12 weeks"
     leak caught and fixed on the second try.
+  - Step 3, docs: `CLAUDE.md`, `README.md` and `docs/` describe the LLM-only pipeline
+    (`compare`, the answer check, "What differs"); `docs/pipeline.md` has new real traces;
+    `docs/decisions.md` records why Jev and the regex were removed; `docs/models.md` keeps the
+    Jev comparison as history. New test of the eval itself: with the compare step patched to call
+    every pair "same", Q3, Q4 and Q8 FAIL as they should (`docs/evaluation.md`).
 
 ## Last verified outputs (2026-09-29)
 
@@ -165,7 +170,7 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
 
 ## Next step
 
-1. Review and merge the branch `simplification` into `main`.
+1. Review and merge the branch `llm-judge` into `main` (it holds `simplification` too).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -180,22 +185,23 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where
   is the bike storage at HQ?" (D07 answers, D08 replaces it and is silent). Cause: `reconcile`
   adds the newest doc of a chain even when it has no claim.
-- A question with two parts can lose one part without saying so: "What should I do during a
-  Sev1 incident and who is on call?" answers only the first part (D20 relevance 0.19, D15 0.51).
+- A question with two parts could lose one part without saying so: with Jev, "What should I do
+  during a Sev1 incident and who is on call?" answered only the first part (D20 relevance 0.19).
+  The LLM judge keeps D20 (Q15 cites D15 and D20), but the eval check for Q15 is still weak.
+- One model judges everything: there is no second opinion and no probability to tune. The LLM
+  can answer differently from run to run, so the eval is run twice after a change.
 - **Changed from the plan** (all written down in `docs/decisions.md` and `docs/pipeline.md`):
   - retrieval cutoff 0.58 instead of 0.45, plus a new `SCORE_MARGIN` (0.10);
   - `JEV_RELEVANT_P` and `JEV_DISAGREE_P` 0.5 instead of 0.6;
   - `function_calling` does not use `with_structured_output` (it sent `parallel_tool_calls`,
     which made OpenRouter find no host);
   - the state has a `closest` field (for "I don't know"), and `judge_used` can be `none`;
-  - running spend total in `.spend.json`.
-- Disputes in words (not two numbers for the same thing), like Q8, are caught only by the judge.
-  The number checks cannot see them.
-- The number check on the answer only knows about numbers. If an answer adds a disputed detail in
-  words, only the claims-only rule stops it.
+  - running spend total in `.spend.json`;
+  - Jev and the regex number check were removed; the LLM compares the claims and checks the
+    answer (branch `llm-judge`).
 - The score cutoff cannot separate every off-topic question from an answerable one (off-topic
-  questions reach 0.70, answerable paraphrases go down to 0.62). The judge is the real gate; it
-  rejected every off-topic doc in the tests.
+  questions reach 0.70, answerable paraphrases go down to 0.62). The LLM's relevance check is
+  the real gate; it rejected every off-topic doc in the tests.
 - The system is tested on this corpus and these questions only.
 
 ## Money spent
@@ -208,7 +214,7 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.04411 |
-| **total** | | **0.10472** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.04757 |
+| **total** | | **0.10818** |
 
-Budget: $4.00. Left: about $3.90.
+Budget: $4.00. Left: about $3.89.

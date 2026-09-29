@@ -1,7 +1,8 @@
 # Model comparison
 
-Checked on 2026-09-29. This page explains why the pipeline uses `openai/gpt-6-luna` to write
-text and Jev (`typesafe/jev-1.13`) to make decisions.
+Checked on 2026-09-29. This page explains why the pipeline uses `openai/gpt-6-luna`. It first
+used Jev (`typesafe/jev-1.13`) to make decisions; Jev has since been removed and the LLM does
+all the judging (see "The judge" below and `decisions.md` 7).
 
 - Prices, context sizes and supported parameters come from the public OpenRouter model list
   (`https://openrouter.ai/api/v1/models`) and its per-model endpoint lists. Prices are in USD
@@ -11,13 +12,17 @@ text and Jev (`typesafe/jev-1.13`) to make decisions.
 
 ## What the text model has to do
 
-The text model has two small jobs (see [pipeline.md](pipeline.md)):
+The model has four small jobs (see [pipeline.md](pipeline.md)), all with structured output:
 
 1. `extract_claims`: for each retrieved document, write one sentence that says what the
-   document says about the question, with numbers copied exactly. Structured output.
-2. `answer`: write 2 to 4 sentences, each ending with a `[Dxx]` citation. Structured output.
+   document says about the question, with numbers copied exactly.
+2. `compare`: say which claims answer the question and, for each pair, same / different /
+   unrelated, naming both values when different.
+3. `answer`: write 2 to 4 sentences, each ending with a `[Dxx]` citation.
+4. The check on the answer: list facts no claim states and values the documents give
+   differently.
 
-It never judges which document is right and never writes the dispute report. So we need a model
+It never decides which document is right and never writes the dispute report. So we need a model
 that is cheap, follows a JSON schema, and can copy facts without changing them. We do not need
 top-level reasoning.
 
@@ -104,10 +109,16 @@ retrieval step keeps only 2 or 3 documents in the context.
 
 With gpt-6-luna, one demo run costs less than half a cent. Even if reasoning tripled the output
 tokens (1,200 per call), a run would cost about $0.0085, and $4 would still pay for more than 450
-runs. The judge adds almost nothing: at most 5 Jev calls of about $0.00002 each, so about $0.0001
-per run.
+runs. (Measured after Jev was removed: the 5 demo questions take 13 LLM calls and cost about
+$0.0011.)
 
-## The judge: Jev vs the other options
+## The judge: Jev vs the other options (history)
+
+This section is the comparison made in M-1. Jev was the judge until the `llm-judge` round; now
+the LLM judges (row 2 of the table below), with a prompt that asks for exact values and for
+what differs. Reasons: one model and one API instead of two, no alpha API, no fallback path and
+no thresholds to tune, and the LLM can say what differs, which Jev cannot. It passes the full
+eval on its own.
 
 The judge answers two kinds of questions: "does document D03 answer the question?" (yes/no) and
 "do the claims of D03 and D04 agree, disagree, or is one unrelated?" (pick one of three).
@@ -128,12 +139,11 @@ values (see `pipeline.md`, `reconcile`).
 
 | option | what it returns | cost per question | used? | why |
 |---|---|---|---|---|
-| **Jev** (Decisions API) | a probability for each option | about $0.00002 | **yes, default** | cannot write text, so it cannot blur a conflict; probabilities can be tuned with thresholds; one call covers every document and pair |
-| LLM as judge (gpt-6-luna, structured `Assessment`) | true/false per document, list of conflicting pairs | about $0.00045 (2,500 in, 400 out), about 20× Jev | **fallback only** | works when the Jev API fails; but LLM judges have known biases (Zheng et al. 2023) and give only 0 or 1, so there is nothing to tune |
+| **Jev** (Decisions API) | a probability for each option | about $0.00002 | **removed** (was the default) | cannot write text, so it cannot blur a conflict; probabilities can be tuned with thresholds; one call covers every document and pair |
+| LLM as judge (gpt-6-luna, structured `Comparison`) | true/false per document, same / different / unrelated per pair, and what differs | about $0.00045 (2,500 in, 400 out), about 20× Jev | **yes, now the judge** (was the fallback) | one model for everything and it can say what differs; LLM judges have known biases (Zheng et al. 2023) and give no probabilities, so the eval is the guard |
 | NLI cross-encoder (a small local model) | entail / neutral / contradict per sentence pair | no API cost, but an extra model to download and run on CPU | **no** | does not see the question, so it cannot say "unrelated to this question"; NLI models are weak with numbers (Ravichander et al. 2019), and most of our disputes are about numbers |
 
-In both judge modes, Python still makes the final call (see [pipeline.md](pipeline.md),
-`reconcile`), and a number check catches a judge that is too soft.
+Either way, Python still makes the final call (see [pipeline.md](pipeline.md), `reconcile`).
 
 ## Why gpt-6-luna
 

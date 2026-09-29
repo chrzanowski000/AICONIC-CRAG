@@ -40,6 +40,7 @@ flowchart LR
 | `config.py` | Every setting. Reads `.env` once. No other module reads `os.environ`. |
 | `main.py` | The command line: `config`, `index`, `search`, `llm-test`, `jev-test`, `ask`, `demo`. |
 | `eval.py` | Runs the questions in `questions.json`, prints PASS/FAIL, optionally runs a LangSmith experiment. |
+| `langgraph.json`, `src/studio.py` | Entry point for LangGraph Studio (`langgraph dev`): builds the index if needed and exposes the graph as `helios_rag`. |
 | `src/load_docs.py` | Reads the markdown files with frontmatter. Checks ids, dates and `supersedes` targets. Gives the doc map and the corpus hash. |
 | `src/embeddings.py` | A small `Embeddings` class around FastEmbed, so LangChain and Qdrant can use it. |
 | `src/vectorstore.py` | One Qdrant client per process. Builds or reuses the collection. `retrieve()` does search, cutoff and adds related docs. |

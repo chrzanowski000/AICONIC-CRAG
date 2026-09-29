@@ -65,6 +65,7 @@ python main.py jev-test          # one Jev decision call
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
 python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmith eval if tracing is on
+langgraph dev                    # LangGraph Studio server on 127.0.0.1:2024 (needs requirements-dev.txt)
 ```
 
 ## Layout
@@ -74,6 +75,7 @@ config.py          the one place for every setting (models, URLs, thresholds, pa
 main.py            CLI
 eval.py            evaluation
 questions.json     18 questions with expected results (Q1-Q5 are the demo)
+langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
 data/corpus/       the 20 documents (markdown with frontmatter)
 src/               load_docs, embeddings, vectorstore, llm, jev, schemas, prompts, graph, render
 docs/              documentation of the repo (plan, setup, architecture, pipeline, corpus, evaluation,

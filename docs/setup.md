@@ -67,6 +67,31 @@ without tracing.
 Keys from the EU region also need `LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com` in
 `.env`. The default is the US server.
 
+## LangGraph Studio (optional)
+
+Studio shows the graph, lets you type a question, and shows the state after every step.
+
+```bash
+pip install -r requirements-dev.txt     # once: langgraph-cli[inmem]
+langgraph dev                           # from the repo root, with the venv active
+```
+
+Then open <https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024>, or in Studio's
+"Configure Studio connection" dialog enter the base URL `http://127.0.0.1:2024` and press
+Connect. Pick the graph `helios_rag`; the input form has one field, `question`.
+
+- `langgraph.json` tells the server where the graph is (`src/studio.py:graph`) and loads `.env`.
+  `src/studio.py` builds the index if needed, then builds the graph.
+- While the server runs it holds `qdrant_data/`, so `main.py` and `eval.py` stop with the "in use
+  by another process" message. Stop the server (Ctrl+C) first, or use `QDRANT_MODE=server` for
+  both.
+- WSL: the Windows browser reaches `127.0.0.1:2024` in WSL (tested). Brave and Safari block a
+  secure page from calling plain `http://` on localhost; use `langgraph dev --tunnel` there.
+- Studio shows each step itself; runs are **not** sent to LangSmith unless you start the server
+  with `LANGSMITH_TRACING=true langgraph dev`.
+- The server reloads when a `.py` file changes. Its local threads live in `.langgraph_api/`
+  (not committed).
+
 ## Qdrant server mode (optional)
 
 ```bash

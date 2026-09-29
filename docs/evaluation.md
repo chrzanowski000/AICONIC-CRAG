@@ -31,10 +31,10 @@ threshold, a document or the model, run it twice; both runs must pass.
 | Q10 | What is the maximum payload of the Kestrel X2? | docs agree | `answered`; cites D10 or D18; contains "300" |
 | Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; contains "adopt"; does **not** contain "16" or "12" |
 | Q12 | Is multi-factor sign-in required? | docs agree | `answered`; cites D11 or D12; contains "required" or "yes" |
-| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; does **not** contain "16" or "12" |
+| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
 | Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; contains "full" or "100%"; does **not** contain "16" or "12" |
 | Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts | `answered`; cites D15 or D20 |
-| Q16 | Do I keep my health insurance during parental leave? | only one doc answers | `answered`; cites D04 |
+| Q16 | Do I keep my health insurance during parental leave? | only one doc answers | `answered`; cites D04; contains "yes" or "continue" |
 | Q17 | How long must passwords be? | only one doc answers | `answered`; cites D11; contains "14" |
 | Q18 | What are the HQ office opening hours? | replaced doc with the same value | `answered`; cites D08; outdated D07 → D08; contains "7:00" |
 
@@ -62,9 +62,26 @@ comment `n/a`. A question passes only if every check scores 1.
 | `answer_contains` | Does the answer contain one of the expected strings? |
 | `answer_excludes` | Does the answer avoid all of these strings (for example a number the documents disagree on)? |
 
+Two limits to know: `answer_contains` and `answer_excludes` match plain substrings, so "2"
+also matches "2025"; and Q15 only checks that D15 or D20 is cited, not that both parts of the
+question are answered.
+
 The checks look at the structure of the output, not at the wording. A disputed question passes
 only when the system refuses to give one answer; an unanswerable question passes only when the
 system says nothing that looks like an answer. Guessing is never rewarded.
+
+## Unit tests
+
+`python -m pytest` runs the tests in `tests/` (needs `requirements-dev.txt`). They make no model
+calls, cost nothing and take about 2 seconds. They use the real corpus.
+
+| file | what it checks |
+|---|---|
+| `tests/test_graph_rules.py` | the "replaces" chains; `reconcile` (replaced doc → outdated, `different` pair → dispute with the LLM's sentence, `same` → answer, a pair with a doc that is not relevant is ignored, nothing relevant → abstain); which pairs are sent to the LLM; reading the LLM's comparison (pairs in any order, a left-out pair counts as unrelated); finding citations in the answer; `conflict_report` and `abstain` show the creation dates |
+| `tests/test_render.py` | every source line, both versions of a dispute, "What differs" and the outdated note show "created YYYY-MM-DD" |
+| `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics and a duplicate id are refused |
+
+The unit tests cover the plain-code rules. What the LLM says can only be checked by the eval.
 
 ## Results (2026-09-29, LLM-only judge)
 
@@ -138,8 +155,8 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
    `questions.json` if it does not exist (inputs: `question`, `id`; outputs: the `expected`
    block);
 2. runs `client.evaluate(...)` with the same seven checks as evaluators, experiment prefix
-   `rag-conflicts`, `max_concurrency=1` (embedded Qdrant allows only one process, and one
-   thread keeps it simple);
+   `rag-conflicts`, `max_concurrency=1` (one question at a time: the cost counter is not
+   thread safe);
 3. prints the experiment name and URL.
 
 ```bash

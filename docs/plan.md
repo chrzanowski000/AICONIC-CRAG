@@ -1,5 +1,11 @@
 # Implementation plan: "RAG that admits it doesn't know"
 
+> **History.** This is the plan the project started from (2026-09-29). It is kept as a record and
+> is no longer up to date: the thresholds, the judge (Jev, later removed), the number check (later
+> removed), the prompts, the file list and the question count have all changed since. For how the
+> system works now, read [`architecture.md`](architecture.md) and [`pipeline.md`](pipeline.md);
+> for what changed and why, [`decisions.md`](decisions.md) and `STATUS.md`.
+
 ## What we are building
 
 A small RAG demo over 20 made-up markdown documents about a fictional company, *Helios Dynamics*.

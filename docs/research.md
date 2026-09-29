@@ -53,8 +53,9 @@ flipped pairwise choices between equally relevant passages in up to 25% of cases
 - Counting does not matter. One disagreeing pair is enough for a dispute, so "majority rule" [6]
   cannot hide the minority version.
 - Since models are poor at noticing and presenting conflicts on their own [5, 7, 8, 9], we do
-  not ask the writing model to do it. Detection is a separate step (the judge), and the report
-  is rendered by Python.
+  not ask the writing model to present them. Detection is a separate step (`compare`, which can
+  only answer same / different / unrelated and name the values), and the report is rendered by
+  Python.
 
 ## 2. Corrective and self-checking RAG
 
@@ -78,19 +79,19 @@ question".
 **What we took.**
 
 - A **retrieval gate** before any answer is written: first the similarity score cutoff, then a
-  relevance probability per document from the judge. This plays the role of CRAG's evaluator and
+  relevant yes/no per document from the `compare` step. This plays the role of CRAG's evaluator and
   Self-RAG's `IsRel`.
-- **Thresholds in config**, as CRAG sets them per dataset (`SCORE_THRESHOLD`, `JEV_RELEVANT_P`,
-  `JEV_DISAGREE_P`).
+- **Thresholds in config**, as CRAG sets them per dataset (`SCORE_THRESHOLD`, `SCORE_MARGIN`).
 - A **state graph with conditional edges** (LangGraph), so each route is explicit and traceable.
-- A citation check after the answer, in the spirit of `IsSup`: citations must point to relevant,
-  current documents.
+- A check after the answer, in the spirit of `IsSup`: citations must point to relevant, current
+  documents, and a second LLM call looks for facts the claims do not support.
 
 **What we did not take.**
 
 - Web search on a failed retrieval. Our corpus is closed and made up; the web cannot know about
   Helios Dynamics, and a web page could not be cited as `[Dxx]`. We abstain instead.
-- Training a critic model. No training budget, and a hosted decision model does the job.
+- Training a critic model. No training budget, and a hosted model does the job (first Jev, now
+  the LLM's `compare` step).
 - A query rewrite loop. One pass is easier to test; it can be added later.
 
 ## 3. Saying "I don't know"
@@ -110,7 +111,7 @@ question".
 
 **What we took.**
 
-- Two gates (score cutoff, judge relevance) and **Python decides** to abstain. No model is asked
+- Two gates (score cutoff, the LLM's relevance yes/no) and **Python decides** to abstain. No model is asked
   "do you know this?", which [18] suggests is unreliable.
 - The "I don't know" output is built by code and lists the closest documents with their scores,
   so a cutoff that is too strict (the problem noted in [20]) is easy to spot.
@@ -124,31 +125,36 @@ The pipeline gives each part one narrow job:
 
 | part | job | can it write free text? |
 |---|---|---|
-| LLM (`openai/gpt-6-luna`) | extract one claim per document; write the final answer | yes |
-| Jev (`typesafe/jev-1.13`) | relevance yes/no; agree / disagree / unrelated per pair; returns probabilities | no |
-| Python rules | apply `supersedes` links, keep disputes, number check, pick the route, render the dispute and "I don't know" outputs | not a model |
+| LLM (`openai/gpt-6-luna`) | extract one claim per document; compare claims (relevant yes/no; same / different / unrelated per pair, and what differs); write the final answer; check the answer | yes, but only in short, fixed places |
+| Python rules | apply `supersedes` links, keep disputes between current documents, pick the route, render the dispute report, the outdated note and "I don't know" | not a model |
+
+Until the `llm-judge` round a second model, Jev (`typesafe/jev-1.13`), decided relevance and
+agree / disagree with probabilities, and a regex number check backed it up. Both were removed to
+keep one model and one path (see `decisions.md` 6, 7 and 13). The findings below are why the
+LLM's part is kept narrow.
 
 Reasons:
 
 - **LLM judges have known biases**: position, wordiness and self-preference, plus limited
-  reasoning [21]. They also agree with people most of the time [21], so we keep one as a
-  fallback judge, but not as the default.
+  reasoning [21]. They also agree with people most of the time [21]. So the LLM only picks from
+  fixed options on short claims, it never says which document is right, and the eval checks the
+  result on every change.
 - **A model that can write text can blur a conflict** into something like "about 12 to 16 weeks".
-  Jev can only return a probability over fixed options, and the dispute report is built from the
-  extracted claims by code. No step lets a model write a vague middle answer.
+  So the comparison is a fixed choice plus one sentence that names both values, and the dispute
+  report is built from the extracted claims by code. No step lets a model write a vague middle
+  answer in place of the report.
 - **Keep structured calls simple.** Strict output formats can lower a model's reasoning quality
-  [22]. Our structured calls only copy facts and write short cited sentences; the harder
-  decision goes to the judge.
+  [22]. Each structured call does one small thing: copy facts, pick an option per pair, write
+  short cited sentences, or list problems.
 - **Compare short claims, not whole documents.** FActScore [23] checks text one small fact at a
   time, because a long passage often mixes supported and unsupported parts. We turn each document
-  into one sentence, and the judge compares those sentences.
+  into one sentence, and `compare` works on those sentences.
 - **Keep the context small.** Models use information in the middle of a long context less well
-  [24]. We cap the context at 10 documents and give the judge short claims.
-- **Do not trust probabilities blindly.** Modern neural networks are often poorly calibrated
-  [25], and model confidence barely reacts to conflicting evidence [3]. So Jev's probabilities
-  are printed and traced, the thresholds live in config, and rules act as a safety net: a
-  number check adds a dispute when two current claims on the same topic have different numbers
-  and the judge did not flag them.
+  [24]. We cap the context at 10 documents, and `compare` sees only short claims.
+- **Do not trust model confidence.** Modern neural networks are often poorly calibrated [25], and
+  model confidence barely reacts to conflicting evidence [3]. The pipeline therefore asks for no
+  confidence at all: the LLM picks an option, Python applies fixed rules, and every decision is
+  printed in the trace.
 
 ## 5. Options we looked at and did not use
 
@@ -156,10 +162,10 @@ Reasons:
 |---|---|---|
 | Cross-encoder reranker [26] | better order of the top hits; rerankers do best on BEIR, at a high compute cost [27] | we have 20 short documents and already add every same-topic document after the search; a reranker reorders hits but cannot add the missing side of a conflict; one more model on CPU |
 | BM25 or hybrid search [27, 28] | exact word matches; BM25 is a strong baseline [27] | the documents are short, with clear topics, and dense search plus the topic filter already finds both sides; hybrid adds a second index and score fusion to tune |
-| NLI model for contradictions [29, 30] | a local contradiction score per sentence pair | it does not see the question, so it cannot say "unrelated"; NLI models tested on quantity reasoning did, on average, no better than always guessing the most common label [29], and most of our disputes are numbers; NLI filters can also drop useful passages [20]; one more model to install |
+| NLI model for contradictions [29, 30] | a local contradiction score per sentence pair (a possible cheap second opinion next to the LLM) | it does not see the question, so it cannot say "unrelated"; NLI models tested on quantity reasoning did, on average, no better than always guessing the most common label [29], and most of our disputes are numbers; NLI filters can also drop useful passages [20]; one more model to install |
 | Web search (as in CRAG [12]) | more sources when retrieval fails | closed, made-up corpus; web results cannot answer and cannot be cited as `[Dxx]`; we abstain instead |
 | Let the LLM pick the "most recent" source | a single answer every time | a newer date does not prove a replacement; LLMs favor newer-looking text [10]; in our demo the newer document is on the "wrong" side on purpose (D04 vs D03, D06 vs D05) |
-| Multi-agent debate (MADAM-RAG [8]) | several LLM rounds per question to sort out conflicts | many LLM calls per question and more randomness; one decision call plus fixed rules gives the "show all valid answers" behavior we need |
+| Multi-agent debate (MADAM-RAG [8]) | several LLM rounds per question to sort out conflicts | many LLM calls per question and more randomness; one comparison call plus fixed rules gives the "show all valid answers" behavior we need |
 
 To be fair to these options: NLI works well for inconsistency checks when it is applied sentence
 by sentence [30], and a reranker or hybrid search would matter more in a large corpus. They are
@@ -170,18 +176,18 @@ of the BGE models described in [31]: small (384 numbers per vector) and fast on 
 
 | finding | part of the pipeline |
 |---|---|
-| Models hide conflicts or merge them [3, 5, 7, 8, 9] | `judge` detects disagreement per pair; `conflict_report` (Python) prints both versions with id, source and date, and `answer` stays empty |
+| Models hide conflicts or merge them [3, 5, 7, 8, 9] | `compare` marks each pair same / different / unrelated and names what differs; `conflict_report` (Python) prints both versions with id, source and creation date, and `answer` stays empty |
 | Outdated and disputed need different outputs [9] | `reconcile` splits them: `outdated` list vs `disputes` list; different routes |
 | Newer dates bias models [10] | only a `supersedes` link marks a document as outdated; the report says "a newer date alone does not settle it" |
 | Majority and confirmation bias [4, 6] | one disagreeing pair is enough for a dispute; the LLM never picks a side |
 | Check retrieval before answering [12, 13, 14] | score cutoff in `retrieve` + relevance gate in `reconcile`; conditional edges in the LangGraph graph |
 | Abstaining is hard for LLMs [16, 18] | the abstain route is chosen by Python rules and rendered by code |
 | Tests that reward guessing [19] | `eval.py` checks clean abstention (Q5) and "no single answer" for disputes (Q3, Q4) |
-| LLM judges are biased [21] | Jev is the default judge; the LLM judge is only the fallback |
-| Structured output can hurt reasoning [22] | structured calls only extract and write short answers |
-| Checking small facts is more precise [23] | `extract_claims` makes one short claim per document; the judge compares claims |
-| Long contexts are used poorly [24] | at most 10 documents; the judge sees short claims |
-| Probabilities may be off [25] | thresholds in `config.py`, probabilities printed and traced, number check as a backstop |
+| LLM judges are biased [21] | the LLM only picks fixed options on short claims and never settles a dispute; Python decides; the eval checks every change |
+| Structured output can hurt reasoning [22] | each structured call does one small job: extract claims, pick an option per pair, write a short answer, or list problems |
+| Checking small facts is more precise [23] | `extract_claims` makes one short claim per document; `compare` compares claims; the answer check looks for single unsupported facts |
+| Long contexts are used poorly [24] | at most 10 documents; `compare` sees short claims |
+| Confidence may be off [25] | no confidence is used: fixed options, fixed rules, every decision printed in the trace |
 | Retrieval can miss one side | `retrieve` adds every document with the same `topic` (a `supersedes` link never crosses topics) |
 
 ## Sources

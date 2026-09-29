@@ -1,7 +1,7 @@
 # The documents
 
 20 short made-up documents about Helios Dynamics, a small drone maker in Tallinn. They live in
-`data/corpus/`, one markdown file each, 150 to 190 words.
+`data/corpus/`, one markdown file each, 137 to 167 words.
 
 ## Format
 
@@ -28,8 +28,10 @@ This replaces the 2024-03-01 version of the Remote Work Policy.
 | `topic` | docs with the same topic are always fetched together, so both sides of a dispute are seen |
 | `supersedes` | id of the document this one replaces, or `null`. The only thing that can settle a conflict. |
 
-`src/load_docs.py` checks that ids are unique, that every `supersedes` target exists, and that
-every date parses. It stops with a clear error if not.
+`src/load_docs.py` checks that ids are unique, that every date parses, that every `supersedes`
+target exists, and that a document and the one it replaces share a topic (retrieval brings in
+related documents by topic, so a link across topics could miss one end). It stops with a clear
+error if not.
 
 ## The list
 
@@ -73,6 +75,7 @@ every date parses. It stops with a clear error if not.
 
 ## Editing the documents
 
-Change a file and run any command. The corpus hash in `qdrant_data/corpus.sha256` no longer
-matches, so the index is rebuilt on the next run. Keep the rules above, or the demo questions in
-`questions.json` may no longer give the expected results.
+Change a file, then run `index`, `search`, `ask`, `demo` or `eval.py`. The corpus hash in
+`qdrant_data/corpus.sha256` no longer matches, so the index is rebuilt first. Keep the rules
+above, or the questions in `questions.json` may no longer give the expected results. Run
+`python eval.py` twice after any change to a document.

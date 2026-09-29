@@ -111,19 +111,24 @@ runs a LangSmith experiment on the same checks.
 
 `python eval.py` passes all 18 questions (checked on three runs in a row): real disputes (in
 numbers and in words), documents that agree, replaced documents, and questions where the two
-sides of a dispute agree on the point asked. A full eval costs about $0.006. See
+sides of a dispute agree on the point asked. A full eval costs about $0.006. The 18 unit tests
+(`python -m pytest`) check the plain-code rules for free. See
 [`docs/evaluation.md`](docs/evaluation.md).
 
 ## Documentation
 
+To understand the system, read `docs/architecture.md` first (the parts and who does what), then
+`docs/pipeline.md` (every step, with real traces).
+
 | file | what |
 |---|---|
-| [`docs/pipeline.md`](docs/pipeline.md) | the graph, every step, real traces |
-| [`docs/architecture.md`](docs/architecture.md) | parts, modules, who does what, failure handling |
+| [`docs/architecture.md`](docs/architecture.md) | the big picture: parts, one question start to finish, who does what, modules, output, settings, failure handling |
+| [`docs/pipeline.md`](docs/pipeline.md) | how the cases are told apart, the state, every step in detail, real traces, known limits |
 | [`docs/decisions.md`](docs/decisions.md) | every design decision with its reason |
 | [`docs/corpus.md`](docs/corpus.md) | the 20 documents and the rules they follow |
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
 | [`docs/setup.md`](docs/setup.md) | install, settings, server mode, problems |
 | [`docs/research.md`](docs/research.md) | published work behind the design |
 | [`docs/models.md`](docs/models.md) | why these models, prices, cost per run |
+| [`docs/plan.md`](docs/plan.md) | the original plan (history, no longer up to date) |
 | [`STATUS.md`](STATUS.md) | what is done, what is next, known issues, money spent |

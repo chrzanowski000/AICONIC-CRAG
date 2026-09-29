@@ -77,11 +77,14 @@ changes.
 
 ## Cost of one demo run
 
+This estimate was made in M-1 to choose the model, for the first design, where the LLM made at
+most 2 calls per question (claims and answer). The current design makes more calls; see the
+measured numbers below the table.
+
 Assumptions, stated so they can be checked:
 
-- 5 demo questions, and we count **2 LLM calls for every question = 10 calls**. This is an upper
-  bound. In practice an answered question needs 2 calls, a disputed one needs 1, and a question
-  that fails the retrieval cutoff needs 0, so the real count is about 6.
+- 5 demo questions, and we count **2 LLM calls for every question = 10 calls** (the first
+  design's upper bound).
 - Each call uses about **2,500 input tokens and 400 output tokens**. Reasoning tokens are billed
   as output, so they are inside the 400.
 - Cost of a run = 10 × (2,500 × input price + 400 × output price) / 1,000,000.
@@ -102,15 +105,17 @@ Assumptions, stated so they can be checked:
 | `openai/gpt-6-sol` | $0.0900 | about 44 |
 | `moonshotai/kimi-k3` | $0.1350 | about 30 |
 
-**Measured** (M2, 2026-09-29, `reasoning_effort=low`): the 5 demo questions together used 7 LLM
-calls and 4 Jev calls and cost **$0.0007**, about 6 times less than the upper bound above. Real
+**Measured, first design** (M2, 2026-09-29, `reasoning_effort=low`, with Jev as judge): the 5
+demo questions together used 7 LLM calls and 4 Jev calls and cost **$0.0007**. Real
 calls use 700 to 1,500 input tokens and 50 to 150 output tokens, because the margin in the
 retrieval step keeps only 2 or 3 documents in the context.
 
-With gpt-6-luna, one demo run costs less than half a cent. Even if reasoning tripled the output
-tokens (1,200 per call), a run would cost about $0.0085, and $4 would still pay for more than 450
-runs. (Measured after Jev was removed: the 5 demo questions take 13 LLM calls and cost about
-$0.0011.)
+**Measured, current design** (2026-09-30, LLM only): an answered question takes 4 LLM calls
+(claims, compare, answer, check; 6 if the answer is retried), a disputed one 2, one where no
+document has a claim 1, and one stopped at the search 0. The 5 demo questions take **13 calls and
+cost about $0.0011**; a full eval of 18 questions costs about $0.006. Even the worst case, 6 calls
+for each of the 5 questions (30 calls, 3 times the table's 10), would cost about $0.0135 with
+gpt-6-luna, and $4 would still pay for about 300 runs.
 
 ## The judge: Jev vs the other options (history)
 
@@ -133,9 +138,9 @@ tokens, which is plenty for up to 10 short claims and 45 pair questions.
 
 Measured on 2026-09-29: one call with 538 input and 67 output tokens cost **$0.0000226**
 (538 × $0.042 / 1,000,000; the output was free). The probabilities in that test looked
-plausible, but we have not measured how well they are calibrated. So the thresholds
-(`JEV_RELEVANT_P`, `JEV_DISAGREE_P`) live in `config.py` and were set to 0.5 from the printed
-values (see `pipeline.md`, `reconcile`).
+plausible, but we have not measured how well they are calibrated. So the thresholds (then
+`JEV_RELEVANT_P` and `JEV_DISAGREE_P`, both removed with Jev) lived in `config.py` and were set
+to 0.5 from the printed values.
 
 | option | what it returns | cost per question | used? | why |
 |---|---|---|---|---|
@@ -147,8 +152,8 @@ Either way, Python still makes the final call (see [pipeline.md](pipeline.md), `
 
 ## Why gpt-6-luna
 
-- **Cheap.** $0.10 in and $0.50 out per million tokens. About $0.0045 per demo run, even with the
-  upper-bound count of calls.
+- **Cheap.** $0.10 in and $0.50 out per million tokens. About $0.0011 per demo run (measured,
+  13 calls).
 - **Structured output.** OpenRouter lists `response_format` and `structured_outputs`. It has 7
   endpoints (`openai`, `openai/flex`, `openai/fast`, `azure`, `azure/us`, `azure/eu`,
   `amazon-bedrock/us-east-1`). Only the Bedrock one lacks structured output, and

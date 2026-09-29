@@ -54,7 +54,7 @@ It is judged on one thing: it must work. Simple and working beats pretty.
   route. There is no regex number check and no other model.
 - The dispute report and the "outdated" note are rendered by code, not by a model.
 
-Full description with a diagram and worked examples: `docs/pipeline.md`.
+The big picture: `docs/architecture.md`. Every step with real traces: `docs/pipeline.md`.
 
 ## Commands
 
@@ -81,9 +81,9 @@ langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
 data/corpus/       the 20 documents (markdown with frontmatter)
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,
                    studio (Studio entry point)
-tests/             unit tests: graph rules, citations, corpus checks (pytest)
-docs/              documentation of the repo (plan, setup, architecture, pipeline, corpus, evaluation,
-                   research, models, decisions)
+tests/             unit tests: graph rules, citations, dates in the output, corpus checks (pytest)
+docs/              documentation of the repo (architecture, pipeline, decisions, corpus, evaluation,
+                   setup, research, models; plan.md is the original plan, kept as history)
 STATUS.md          what is done, what is next, known issues, money spent
 ```
 
@@ -91,8 +91,9 @@ STATUS.md          what is done, what is next, known issues, money spent
 
 - All settings live in `config.py`. No other module reads `os.environ`.
 - Secrets come from `.env` (`LLM_API_OR` is the OpenRouter key). Never commit `.env`.
-- Every doc shown to the user carries its creation date: `[doc_id] source (created date)`,
-  also in "What differs", the outdated note and the closest docs of "I don't know".
+- Every doc shown to the user carries its creation date: sources and dispute versions as
+  `[doc_id] source (created date)`; "What differs" and the outdated note as `[doc_id] (created
+  date)`; the closest docs of "I don't know" as `Dxx (created date, score ...)`.
 - Pin versions in `requirements.txt`.
 - Keep the budget in mind: about $4 of OpenRouter credit. Print token use and cost per run.
   The running total is kept in `.spend.json` (not committed); copy it into `STATUS.md`.

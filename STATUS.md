@@ -118,6 +118,16 @@ creation date.
       weeks, D04 says 12 weeks." No model call changed. New `tests/test_render.py` (2 tests) and
       2 graph tests for `conflict_report` and `abstain`. Checked: `pytest` 18 passed; `demo` shows
       the dates on all three outcomes; `eval.py` 18/18 PASS.
+- [x] **Docs refresh** (branch `document-dates`): the docs now describe the current system and
+      focus on how it works. `docs/architecture.md` rewritten: the parts, one question start to
+      finish, who does what (model vs code), modules and how a command flows through them, the
+      output fields, settings, failure handling, tests. `docs/pipeline.md`: new "how the system
+      tells the cases apart" table and "known limits". `docs/setup.md`: dev tools, first `ask`,
+      error messages. `docs/evaluation.md`: unit tests section, full expectations, known limits
+      of the checks. `docs/research.md`: design mapping updated for the LLM-only judge.
+      `docs/corpus.md`: real word counts, the topic rule. `docs/plan.md`: marked as history.
+      README and `CLAUDE.md`: reading order. Checked by a separate read of every doc against the
+      code.
 
 ## Last verified outputs (2026-09-29)
 
@@ -225,7 +235,7 @@ creation date.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.05519 |
-| **total** | | **0.11580** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.05578 |
+| **total** | | **0.11639** |
 
 Budget: $4.00. Left: about $3.88.

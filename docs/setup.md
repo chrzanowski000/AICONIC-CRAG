@@ -17,7 +17,13 @@ pip install -r requirements.txt
 cp .env.example .env         # then put your OpenRouter key in LLM_API_OR
 ```
 
-`requirements-dev.txt` holds tools that are only needed to redraw the chart in `docs/models.md`.
+`requirements-dev.txt` holds tools you only need for development: `pytest` for the unit tests,
+`langgraph-cli[inmem]` for LangGraph Studio, and `matplotlib` for the chart in `docs/models.md`.
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest                     # unit tests, no model calls, free
+```
 
 ## First run
 
@@ -25,10 +31,15 @@ cp .env.example .env         # then put your OpenRouter key in LLM_API_OR
 python main.py config                    # check the settings; the key is shown masked
 python main.py index                     # downloads the embedding model once, builds the index
 python main.py search "parental leave"   # retrieval test, no model calls, costs nothing
+python main.py llm-test                  # one LLM call through OpenRouter, checks the key
+python main.py ask "How many weeks of paid parental leave does Helios Dynamics offer?"
 ```
 
-`index` prints `Rebuilt collection 'helios_docs' (embedded mode): 20 points.` the first time, and
-`Reused ...` after that. It rebuilds by itself when a document changes. Use
+`ask` prints the result, then a short trace of every step (switch it off with
+`SHOW_SCORES=false`), then the tokens, the cost of this run and the running total.
+
+`index` prints `Rebuilt collection 'helios_docs' (embedded mode): 20 points. Reason: ...` the first
+time, and `Reused ...` after that. It rebuilds by itself when a document changes. Use
 `python main.py index --reindex` to force a rebuild.
 
 ## Where things are stored
@@ -42,8 +53,9 @@ python main.py search "parental leave"   # retrieval test, no model calls, costs
 
 ## Settings
 
-Every setting is in `config.py` and can be changed in `.env` or in the shell with the same name,
-for example `SHOW_SCORES=false python main.py ask "..."`. `python main.py config` prints them all.
+Every setting of the app is in `config.py` and can be changed in `.env` or in the shell with the
+same name, for example `SHOW_SCORES=false python main.py ask "..."`. `python main.py config`
+prints them all. The main ones are listed in `architecture.md`.
 
 ## LangSmith (optional)
 
@@ -94,6 +106,7 @@ part of a nested object.
   secure page from calling plain `http://` on localhost; use `langgraph dev --tunnel` there.
 - Studio shows each step itself; runs are **not** sent to LangSmith unless you start the server
   with `LANGSMITH_TRACING=true langgraph dev`.
+- Runs through Studio are not added to `.spend.json` and their cost is not printed.
 - The server reloads when a `.py` file changes. Its local threads live in `.langgraph_api/`
   (not committed).
 
@@ -118,3 +131,11 @@ at a time. Close the other `main.py` or `eval.py` run. If none is running, delet
 
 **The embedding model does not download.** FastEmbed needs to reach Hugging Face once. After
 that the model is read from `./models`.
+
+**A command stops with `ERROR (StructuredOutputError)` or an OpenRouter error.** The LLM reply
+could not be read, or the call failed (bad key, no credit, unknown model id, network). The
+message says which. Check the key with `python main.py llm-test`.
+
+**A command stops with `ERROR (CorpusError)`.** A document in `data/corpus/` has missing or bad
+frontmatter, a duplicate id, a `supersedes` target that does not exist, or a `supersedes` link
+between two different topics. The message names the file.

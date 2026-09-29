@@ -138,7 +138,7 @@ CHECKS = [status_matches, cites_required_docs, disputed_shows_both_sides, marks_
 
 
 def target(inputs: dict) -> dict:
-    """Run the pipeline on one question. Returns the FinalOutput dict plus the judge used."""
+    """Run the pipeline on one question. Returns the FinalOutput dict."""
     from src.graph import run
 
     state = run(inputs["question"], question_id=inputs.get("id"), tags=["eval"])

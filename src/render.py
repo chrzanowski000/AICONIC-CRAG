@@ -69,7 +69,8 @@ def render_trace(state: dict) -> str:
 
 
 def show(state: dict) -> str:
-    text = render(state["question"], state["result"])
+    """What the CLI prints: the result text the last step wrote, plus the trace if asked for."""
+    text = state["output"]
     if config.SHOW_SCORES:
         text += "\n" + render_trace(state)
     return text

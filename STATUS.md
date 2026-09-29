@@ -63,6 +63,8 @@ branch `simplification` (less code, same results).
     `_numbers_note`. `src/quantities.py` gives `clashing_units` and `show_values`, so the "same
     unit, different number" rule is written once. Docs now describe the retry the way the code
     does it. Checked: `pytest` 37 passed; `eval.py` 18/18 PASS and `JUDGE=llm eval.py` 18/18 PASS.
+  - Step 5, output: the CLI prints the `output` text that the last step already wrote, instead of
+    rendering the result a second time. Checked: `pytest` 37 passed; `ask` (pets) → ABSTAINED.
 
 ## Last verified outputs (2026-09-29)
 
@@ -157,7 +159,7 @@ paraphrases checked by hand in M3). After changing `questions.json`, delete the 
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.01590 |
-| **total** | | **0.07651** |
+| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.01600 |
+| **total** | | **0.07661** |
 
 Budget: $4.00. Left: about $3.92.

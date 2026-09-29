@@ -21,6 +21,7 @@ from src import jev
 from src.llm import StructuredOutputError, plain, structured
 from src.load_docs import doc_map
 from src.prompts import answer_messages, assess_messages, extract_claims_messages
+from src.render import render
 from src.schemas import Answer, Assessment, Citation, Claims, FinalOutput, OutdatedNote
 from src.vectorstore import RetrievedDoc, retrieve as vector_retrieve
 
@@ -49,6 +50,7 @@ class RAGState(TypedDict, total=False):
     disputes: list[dict]  # {doc_a, doc_b, description}
     route: Literal["answer", "conflict", "abstain"]
     result: dict | None  # FinalOutput.model_dump()
+    output: str  # the result as text, the same as the CLI prints (easy to read in Studio)
 
 
 # --- "replaces" links ------------------------------------------------------------------------
@@ -265,6 +267,12 @@ def reconcile(state: RAGState) -> dict:
     return {"relevant_ids": current, "outdated": outdated, "disputes": disputes, "route": route}
 
 
+def _finish(state: RAGState, result: FinalOutput) -> dict:
+    """What every last step writes: the result, and the same result as readable text."""
+    data = result.model_dump()
+    return {"result": data, "output": render(state["question"], data)}
+
+
 def _citation(doc: RetrievedDoc, claims: dict) -> Citation:
     return Citation(doc_id=doc["doc_id"], date=doc["date"], source=doc["source"],
                     claim=claims.get(doc["doc_id"]) or "(no claim extracted)")
@@ -331,10 +339,10 @@ def answer(state: RAGState) -> dict:
             log.warning("Asking once more for the answer.")
             messages = messages + [HumanMessage(" ".join(fix))]
     if not cited:
-        return {"result": FinalOutput(
+        return _finish(state, FinalOutput(
             status="abstained",
             reason="An answer was written but could not be tied to the documents, so it is not shown.",
-        ).model_dump()}
+        ))
 
     note = None
     if leaked:  # still there after the retry: show both values, built by code
@@ -350,7 +358,7 @@ def answer(state: RAGState) -> dict:
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
         reason=note,
     )
-    return {"result": result.model_dump()}
+    return _finish(state, result)
 
 
 def conflict_report(state: RAGState) -> dict:
@@ -363,7 +371,7 @@ def conflict_report(state: RAGState) -> dict:
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
         reason=NOT_SETTLED,
     )
-    return {"result": result.model_dump()}
+    return _finish(state, result)
 
 
 def abstain(state: RAGState) -> dict:
@@ -375,7 +383,7 @@ def abstain(state: RAGState) -> dict:
     reason = f"The documents do not answer this question. {why}"
     if closest:
         reason += f" Closest documents: {closest}."
-    return {"route": "abstain", "result": FinalOutput(status="abstained", reason=reason).model_dump()}
+    return {"route": "abstain", **_finish(state, FinalOutput(status="abstained", reason=reason))}
 
 
 # --- the graph -------------------------------------------------------------------------------

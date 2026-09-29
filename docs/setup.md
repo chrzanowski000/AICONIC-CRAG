@@ -80,6 +80,11 @@ Then open <https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024>, o
 "Configure Studio connection" dialog enter the base URL `http://127.0.0.1:2024` and press
 Connect. Pick the graph `helios_rag`; the input form has one field, `question`.
 
+Read the result in the **`output`** field of the last step (`answer`, `conflict_report` or
+`abstain`): it is the same text the CLI prints (`STATUS: ...`, the answer or both versions, the
+sources). The same data is also in `result` as an object, but Studio's step view may show only
+part of a nested object.
+
 - `langgraph.json` tells the server where the graph is (`src/studio.py:graph`) and loads `.env`.
   `src/studio.py` builds the index if needed, then builds the graph.
 - While the server runs it holds `qdrant_data/`, so `main.py` and `eval.py` stop with the "in use

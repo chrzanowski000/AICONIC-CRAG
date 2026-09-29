@@ -30,6 +30,8 @@ dispute detection and the LangSmith connection (see below).
       a flush of queued traces at the end of each command, the LLM model in the run metadata.
 - [x] **LangGraph Studio**: `langgraph.json` + `src/studio.py` (graph `helios_rag`), input schema
       with only `question`, `langgraph-cli[inmem]==0.4.32` in `requirements-dev.txt`.
+      The last step also writes `output`, the result as plain text, because Studio's step view
+      showed only `outdated []` of the nested `result` object (the answer was there, but hidden).
 
 ## Last verified outputs (2026-09-29)
 
@@ -38,6 +40,10 @@ dispute detection and the LangSmith connection (see below).
   retrieve, extract_claims, judge, reconcile, answer, conflict_report, abstain. `POST /runs/wait`
   with Q3 → `disputed`, versions D03 (2025-01-10) and D04 (2025-02-20), `judge_used=jev`.
   While it runs, `main.py` gives the Qdrant "in use" message (expected, documented).
+- After adding `output`: three runs through the dev server → Q1 `STATUS: ANSWERED ... 2 approvals
+  [D14]`, Q4 `STATUS: DISPUTED` with D05 $60 / D06 $75, "What is the company's stock price?" →
+  `STATUS: ABSTAINED` at the search (best 0.541 < 0.58). `eval.py` not rerun for this change
+  (the Studio server holds the index); the change only adds a field, `result` is unchanged.
 
 - LangSmith (US server, project `rag-conflicts`):
   - `LANGSMITH_TRACING=true python main.py jev-test` / `llm-test` → runs `jev_judge` (with

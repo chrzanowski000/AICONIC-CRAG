@@ -67,6 +67,7 @@ class RAGState(TypedDict):
     disputes: list[dict]               # {doc_a, doc_b, description}
     route: Literal["answer", "conflict", "abstain"]
     result: dict | None                # FinalOutput
+    output: str                        # the result as text, the same as the CLI prints
 ```
 
 ## Step by step

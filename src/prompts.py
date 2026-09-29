@@ -60,3 +60,24 @@ def answer_messages(question: str, docs: list[dict], claims: dict[str, str | Non
              f"Claim: {claims.get(d['doc_id']) or '(no claim)'}" for d in docs]
     return [SystemMessage(ANSWER),
             HumanMessage(f"Question: {question}\n\nClaims:\n" + "\n\n".join(lines))]
+
+
+CHECK_ANSWER = """\
+You check an answer written for a question-answering system. The answer must be written from the
+claims only. List every problem of these two kinds:
+1. The answer states a fact that none of the claims states.
+2. The answer writes a value (a number, amount, date or name) that the full documents give
+   differently from each other. Stating one of the values picks a side. Only a value written in
+   the answer counts: words that name no value, such as "the whole period" or "full pay", are
+   not a problem.
+Do not list style, missing details or citations. Return an empty list if there is no problem.
+Return only the structured object."""
+
+
+def check_answer_messages(question: str, answer: str, docs: list[dict],
+                          claims: dict[str, str | None]) -> list:
+    claim_lines = "\n".join(f"[{d['doc_id']}] {claims.get(d['doc_id']) or '(no claim)'}" for d in docs)
+    full = "\n\n".join(format_doc(d) for d in docs)
+    return [SystemMessage(CHECK_ANSWER),
+            HumanMessage(f"Question: {question}\n\nAnswer: {answer}\n\nClaims:\n{claim_lines}"
+                         f"\n\nFull documents:\n{full}")]

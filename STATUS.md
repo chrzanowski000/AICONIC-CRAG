@@ -92,6 +92,17 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
     as unrelated and is logged). Checked: `pytest` 39 passed; `ask` Q3 and "How long is maternity
     leave?" → DISPUTED with "D03 says 16 weeks, D04 says 12 weeks"; Q9 → ANSWERED 1.2 kg;
     `eval.py` 18/18 PASS ($0.0047 per run, about the same as with Jev).
+  - Step 2: the answer is checked by a second LLM call (`AnswerCheck`) instead of the regex. It
+    gets the answer, the claims and the full text of the current docs, and lists (1) facts no
+    claim states and (2) values the documents give differently. Problems → one more try with
+    them as the fix; still there → the answer is kept with a note. Citations are found by looking
+    for the known doc ids in the text (no regex). Removed: `src/quantities.py` and its 21 tests,
+    `disputed_numbers`, `_numbers_note`. The first version of the check prompt also flagged
+    "for the whole period" (no value) on Q14; the prompt now says only a written value counts.
+    Checked: `pytest` 14 passed; by hand, the check flags "12 weeks" and an invented "company
+    car", and passes a clean answer; Q14 asked twice → clean answer, no note; `eval.py` twice →
+    18/18 PASS both times ($0.0056 per run); `demo --all` → no notes on any answer, one "12 weeks"
+    leak caught and fixed on the second try.
 
 ## Last verified outputs (2026-09-29)
 
@@ -197,7 +208,7 @@ branch `simplification` (less code, same results, all evals pass). Now: the bran
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.02516 |
-| **total** | | **0.08577** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.04411 |
+| **total** | | **0.10472** |
 
-Budget: $4.00. Left: about $3.91.
+Budget: $4.00. Left: about $3.90.

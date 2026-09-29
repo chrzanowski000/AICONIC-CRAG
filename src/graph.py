@@ -10,7 +10,6 @@ decided here, in plain Python, from `supersedes` links only.
 
 import itertools
 import logging
-import re
 from functools import lru_cache
 from typing import Literal, TypedDict
 
@@ -20,10 +19,11 @@ from langgraph.graph import END, START, StateGraph
 import config
 from src.llm import structured
 from src.load_docs import doc_map
-from src.prompts import answer_messages, compare_messages, extract_claims_messages
-from src.quantities import clashing_units, quantities, show_values
+from src.prompts import (answer_messages, check_answer_messages, compare_messages,
+                         extract_claims_messages)
 from src.render import render
-from src.schemas import Answer, Citation, Claims, Comparison, FinalOutput, OutdatedNote
+from src.schemas import (Answer, AnswerCheck, Citation, Claims, Comparison, FinalOutput,
+                         OutdatedNote)
 from src.vectorstore import RetrievedDoc, retrieve as vector_retrieve
 
 log = logging.getLogger(__name__)
@@ -49,6 +49,7 @@ class RAGState(TypedDict, total=False):
     outdated: list[dict]  # {old_id, old_date, old_claim, new_id, new_date}
     disputes: list[dict]  # {doc_a, doc_b, description}
     route: Literal["answer", "conflict", "abstain"]
+    answer_problems: list[str]  # what the check on the answer found (after the last try)
     result: dict | None  # FinalOutput.model_dump()
     output: str  # the result as text, the same as the CLI prints (easy to read in Studio)
 
@@ -191,84 +192,53 @@ def _citation(doc: RetrievedDoc, claims: dict) -> Citation:
                     claim=claims.get(doc["doc_id"]) or "(no claim extracted)")
 
 
-_DOC_ID = re.compile(r"\bD\d{2}\b")
-
-
-def disputed_numbers(docs: list[RetrievedDoc]) -> dict[str, dict[str, set[float]]]:
-    """Numbers that same-topic docs give differently in their full text. `docs` are current docs.
-
-    {"week": {"D03": {16.0}, "D04": {12.0}}}. The answer must not state these: the question did
-    not ask about them (else the route would be "conflict"), and stating one would pick a side.
-    """
-    found: dict[str, dict[str, set[float]]] = {}
-    numbers = {d["doc_id"]: quantities(d["text"]) for d in docs}
-    for a, b in itertools.combinations(docs, 2):
-        if a["topic"] != b["topic"]:
-            continue
-        qa, qb = numbers[a["doc_id"]], numbers[b["doc_id"]]
-        for unit in clashing_units(qa, qb):
-            found.setdefault(unit, {})[a["doc_id"]] = qa[unit]
-            found[unit][b["doc_id"]] = qb[unit]
-    return found
-
-
-def check_answer(text: str, allowed: list[str], disputed: dict) -> tuple[list, list, list]:
-    """(allowed doc ids cited, doc ids cited that are not allowed, disputed units stated)."""
-    ids = list(dict.fromkeys(_DOC_ID.findall(text)))
-    cited = [i for i in ids if i in allowed]
-    bad = [i for i in ids if i not in allowed]
-    leaked = sorted(set(quantities(text)) & set(disputed))
-    return cited, bad, leaked
-
-
-def _numbers_note(units: list[str], disputed: dict, by_id: dict) -> str:
-    """Both values of each disputed number the answer still states, built by code."""
-    parts = [f"{unit}: " + "; ".join(f"[{i}] ({by_id[i]['date']}) {show_values(values)}"
-                                     for i, values in disputed[unit].items())
-             for unit in units]
-    return "Note: the documents give different values for " + ", ".join(parts) + ". " + NOT_SETTLED
+def find_citations(text: str, allowed: list[str]) -> tuple[list[str], list[str]]:
+    """Doc ids written in the answer, in order: (allowed ones, ones that are not allowed)."""
+    ids = sorted((i for i in doc_map() if i in text), key=text.index)
+    return [i for i in ids if i in allowed], [i for i in ids if i not in allowed]
 
 
 def answer(state: RAGState) -> dict:
-    claims = state["claims"]
+    question, claims = state["question"], state["claims"]
     by_id = {d["doc_id"]: d for d in state["retrieved"]}
     allowed = [i for i in state["relevant_ids"] if i in by_id]
     docs = [by_id[i] for i in allowed]
     # The answer is written from the checked claims only, not from the full documents, so it can
-    # only restate what the judge compared.
-    messages = answer_messages(state["question"], docs, claims)
-    disputed = disputed_numbers(docs)
+    # only restate what was compared. A second LLM call then checks it against the claims and the
+    # full documents.
+    messages = answer_messages(question, docs, claims)
 
-    for attempt in range(2):  # one more try if a citation or a number is wrong
+    for attempt in range(2):  # one more try if a citation is wrong or the check finds a problem
         text = structured(Answer, messages).answer.strip()
-        cited, bad, leaked = check_answer(text, allowed, disputed)
-        if cited and not bad and not leaked:
+        cited, bad = find_citations(text, allowed)
+        problems = structured(AnswerCheck, check_answer_messages(question, text, docs, claims)).problems
+        if cited and not bad and not problems:
             break
         if attempt == 0:
-            log.warning("Answer needs a fix (cited %s, not allowed %s, disputed numbers %s). "
-                        "Asking once more.", cited, bad, leaked)
+            log.warning("Answer needs a fix (cited %s, not allowed %s, problems %s). "
+                        "Asking once more.", cited, bad, problems)
             fix = []
             if not cited or bad:
                 fix.append(f"Use only these document ids as citations: {', '.join(allowed)}.")
-            if leaked:
-                fix.append(f"Leave out any {' / '.join(leaked)} figure: the documents give "
-                           "different values for it, and the question does not ask about it.")
+            if problems:
+                fix.append("Fix these problems: " + " ".join(problems) + " Leave out anything the "
+                           "claims do not state or the documents give differently.")
             messages = messages + [HumanMessage(" ".join(fix))]
     if not cited:
-        return _finish(state, FinalOutput(
+        return {"answer_problems": problems, **_finish(state, FinalOutput(
             status="abstained",
             reason="An answer was written but could not be tied to the documents, so it is not shown.",
-        ))
+        ))}
 
     result = FinalOutput(
         status="answered",
         answer=text,
         citations=[_citation(by_id[c], claims) for c in cited],
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
-        # a disputed number still there after the retry: show both values
-        reason=_numbers_note(leaked, disputed, by_id) if leaked else None,
+        # still there after the retry: say so under the answer
+        reason=("Note: the check on this answer found: " + " ".join(problems)) if problems else None,
     )
-    return _finish(state, result)
+    return {"answer_problems": problems, **_finish(state, result)}
 
 
 def conflict_report(state: RAGState) -> dict:

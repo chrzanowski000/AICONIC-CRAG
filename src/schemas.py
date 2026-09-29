@@ -31,6 +31,15 @@ class Answer(BaseModel):
     )
 
 
+class AnswerCheck(BaseModel):
+    problems: list[str] = Field(
+        description=(
+            "One short sentence per problem, naming the values, e.g. 'states 16 weeks; D03 says "
+            "16 weeks, D04 says 12 weeks'. Empty if the answer has no problem."
+        )
+    )
+
+
 # LLM judge: relevance of each doc, and each pair of claims compared
 
 

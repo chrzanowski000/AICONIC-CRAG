@@ -68,6 +68,8 @@ def render_trace(state: dict) -> str:
                      f"route: {state['route']}")
         for d in state.get("disputes", []):
             lines.append(f"               dispute {d['doc_a']} vs {d['doc_b']}: {d['description']}")
+    if "answer_problems" in state:
+        lines.append(f"answer check   {'; '.join(state['answer_problems']) or 'no problems'}")
     return "\n".join(lines)
 
 

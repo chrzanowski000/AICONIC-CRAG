@@ -1,28 +1,10 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
-from src.graph import (check_answer, disputed_numbers, newest_in_chain, pairs_to_compare,
-                       read_comparison, reconcile, same_chain)
+from src.graph import (find_citations, newest_in_chain, pairs_to_compare, read_comparison,
+                       reconcile, same_chain)
 from src.load_docs import doc_map
 from src.schemas import Comparison, DocAssessment, PairComparison
 from src.vectorstore import _to_retrieved
-
-
-def _docs(*ids):
-    """The fields of each document that the rules read."""
-    return [{"doc_id": i, "topic": doc_map()[i].metadata["topic"], "text": doc_map()[i].page_content}
-            for i in ids]
-
-
-def test_disputed_numbers_finds_the_parental_leave_weeks():
-    assert disputed_numbers(_docs("D03", "D04")) == {"week": {"D03": {16.0}, "D04": {12.0}}}
-
-
-def test_disputed_numbers_finds_the_meal_allowance():
-    assert disputed_numbers(_docs("D05", "D06")) == {"$": {"D05": {60.0}, "D06": {75.0}}}
-
-
-def test_disputed_numbers_ignores_documents_that_agree():
-    assert disputed_numbers(_docs("D10", "D18")) == {}  # both say 1.2 kg and 300 g
 
 
 def test_replaces_chains():
@@ -102,18 +84,10 @@ def test_read_comparison_matches_pairs_in_any_order_and_fills_gaps():
     ]
 
 
-WEEKS = {"week": {"D03": {16.0}, "D04": {12.0}}}
+def test_find_citations_in_order_with_ids_that_are_not_allowed():
+    text = "Adoption is covered [D04]. It can be split [D03, D04]. See also [D15]."
+    assert find_citations(text, ["D03", "D04"]) == (["D04", "D03"], ["D15"])
 
 
-def test_check_answer_accepts_a_clean_answer():
-    text = "Yes, adoption is covered [D03]. It also covers foster care [D03, D04]."
-    assert check_answer(text, ["D03", "D04"], WEEKS) == (["D03", "D04"], [], [])
-
-
-def test_check_answer_finds_ids_that_are_not_allowed():
-    assert check_answer("Two approvals [D14] [D15].", ["D14"], {}) == (["D14"], ["D15"], [])
-
-
-def test_check_answer_finds_a_disputed_number():
-    assert check_answer("Leave is paid for 16 weeks [D03].", ["D03", "D04"], WEEKS) == (
-        ["D03"], [], ["week"])
+def test_find_citations_with_none():
+    assert find_citations("No ids here.", ["D03"]) == ([], [])

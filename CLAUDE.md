@@ -43,6 +43,8 @@ It is judged on one thing: it must work. Simple and working beats pretty.
 - Retrieval: vector search (cutoff `SCORE_THRESHOLD` 0.58, and at most `SCORE_MARGIN` 0.10 below
   the best hit), then every doc with the same `topic` or a `supersedes` link is added.
 - The LLM only extracts claims and writes the final answer. It never decides who is right.
+  A claim holds only the part of a doc that answers the question; the answer is written
+  from the claims, and Python checks it for numbers the docs disagree on.
 - Jev only answers yes/no and multiple-choice questions (is this doc relevant? do these two
   claims agree or disagree?). It never writes text.
 - Python rules apply `supersedes` links, keep real disputes (judge p ≥ 0.5, plus a number check),
@@ -60,7 +62,7 @@ python main.py search "<q>"      # retrieval smoke test, no LLM
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py jev-test          # one Jev decision call
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: also Q6, Q7)
+python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
 python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmith eval if tracing is on
 ```
 
@@ -70,7 +72,7 @@ python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmi
 config.py          the one place for every setting (models, URLs, thresholds, paths, flags)
 main.py            CLI
 eval.py            evaluation
-questions.json     demo questions and expected results
+questions.json     18 questions with expected results (Q1-Q5 are the demo)
 data/corpus/       the 20 documents (markdown with frontmatter)
 src/               load_docs, embeddings, vectorstore, llm, jev, schemas, prompts, graph, render
 docs/              documentation of the repo (plan, setup, architecture, pipeline, corpus, evaluation,

@@ -60,8 +60,8 @@ retrieve → extract_claims (LLM) → judge (Jev) → reconcile (Python rules) �
   If Jev fails, the LLM judges instead.
 - **reconcile**: plain Python. Applies `supersedes` links, keeps real disputes, runs a number
   check as a backstop, and picks the route.
-- **answer / conflict_report / abstain**: only the answer is written by the LLM (and its
-  citations are checked). The dispute report, the outdated note and "I don't know" are built by
+- **answer / conflict_report / abstain**: only the answer is written by the LLM, from the
+  checked claims (its citations and numbers are checked by code). The dispute report, the outdated note and "I don't know" are built by
   code, so no model can blur "16 weeks vs 12 weeks" into "about 12 to 16 weeks".
 
 Full walkthrough with real traces: [`docs/pipeline.md`](docs/pipeline.md).
@@ -89,7 +89,7 @@ python main.py search "<q>"      # retrieval test, no model calls
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py jev-test          # one Jev decision call on a fixed example
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: also 2 extra)
+python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
 ```
 
@@ -98,8 +98,10 @@ Every setting lives in `config.py` and can be changed in `.env` or the shell, fo
 
 ## Results
 
-`python eval.py` passes all 7 questions with Jev as judge and with the LLM as judge. A full eval
-costs about $0.0012. See [`docs/evaluation.md`](docs/evaluation.md).
+`python eval.py` passes all 18 questions with Jev as judge and with the LLM as judge: real
+disputes (in numbers and in words), documents that agree, replaced documents, and questions where
+the two sides of a dispute agree on the point asked. A full eval costs about $0.003. See
+[`docs/evaluation.md`](docs/evaluation.md).
 
 ## Documentation
 

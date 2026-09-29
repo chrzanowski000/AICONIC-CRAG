@@ -59,7 +59,7 @@ flowchart LR
 | is this document relevant? do two claims disagree? | Jev (LLM if Jev fails) | – |
 | which document wins | Python, from `supersedes` links only | any model |
 | dispute report, outdated note, "I don't know" | Python | any model |
-| final cited answer | LLM, then Python checks the citations | – |
+| final cited answer | LLM, from the checked claims only; then Python checks the citations and looks for numbers the documents disagree on | – |
 
 ## Data
 

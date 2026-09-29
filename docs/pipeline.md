@@ -115,6 +115,15 @@ The prompt tells the model not to answer the question and not to judge which doc
 It only asks for a short, literal restatement per document, with numbers copied as written.
 These sentences are what the user sees in a dispute report, so they must be short and exact.
 
+The claim keeps **only the part that answers the question**. This matters because D03 and D04
+agree on many things (adoption is covered, pay is 100%, leave can be split) and disagree on one
+(16 vs 12 weeks). Before this rule, "Does parental leave cover adoption?" gave the claims
+"...covered by 16 weeks of fully paid parental leave" and "...employees receive 12 weeks...". The
+judge and the number check then saw "16 vs 12 weeks" and reported a dispute the question was not
+about. Now the claims are "Every employee who becomes a parent through adoption is covered by
+parental leave" and "Birth, adoption and surrogacy are treated the same way", the judge says
+`agree` (p_disagree 0.00), and the question is answered.
+
 ### 3. `judge` (Jev)
 
 If no document has a claim, nothing is sent to the judge (`judge_used = "none"`) and the route
@@ -127,7 +136,9 @@ list of `{id, source, date, claim}` and a set of questions built from it:
   "Does document D03 directly answer the question?"
 - for every pair of such documents that is **not** linked by `supersedes`:
   `pair_D03_D04` — type `choice` with options `agree` / `disagree` / `unrelated` —
-  "Compare the claims of D03 and D04 as answers to the question. Different dates or sources do
+  "Compare the claims of D03 and D04 only as answers to the question. Only the part of each claim
+  that answers the question counts: if both give the same answer to the question, they agree,
+  even when they differ in details the question does not ask about. Different dates or sources do
   NOT make claims agree or disagree; only their content does."
 
 Response (shortened):
@@ -182,14 +193,38 @@ system answers from the other side and the dispute is hidden, which is the worst
 make. So the threshold sits lower, where the gap is wide.
 
 With `JEV_DISAGREE_P=1.01` (a judge that never reports a dispute), the number check alone still
-turns Q3 and Q4 into disputes: "numeric mismatch (backstop): 16 vs 12 week" and "60 vs 75 $".
+turns Q3 and Q4 into disputes: "numeric mismatch (backstop): 16 vs 12 week" and "60 vs 75 $". It
+cannot catch Q8 (passwords: "every 90 days" vs "no fixed schedule"), because that dispute is in
+words, not in two numbers for the same thing. Word disputes rely on the judge.
 
 ### 5a. `answer` (LLM)
 
-Structured call with only the relevant, current documents. Output `{answer, citations}`.
-Python then checks that every citation is one of the allowed ids (drops unknown ones, asks once
-more if none are left, abstains if that still fails). Python also adds the outdated note itself
-from the `outdated` list. The model is not trusted to mention it.
+Structured call. Output `{answer, citations}`. The model gets the question and the **claims** of
+the relevant, current documents (with id, source and date), not the full documents. So it can only
+restate what the judge has checked.
+
+Why: the full text of a document often holds more than the claim. For "Do I keep my salary during
+parental leave?", D03 and D04 agree (full pay), but when the model saw the full documents it
+wrote "...paid at 100% of your base salary for the full 16 weeks [D03]". That quietly picks D03's
+side of the 16 vs 12 weeks dispute. From the claims it writes "Yes, parental leave is paid at 100%
+of your base salary [D03]."
+
+Python then checks the answer:
+
+1. Every citation must be one of the allowed ids.
+2. **Number check on the answer.** Python lists the numbers that the current documents on the
+   same topic give differently in their full text (for D03 and D04: weeks, 16 vs 12). If the
+   answer states one of them, it picked a side on something the question did not ask about.
+3. If either check fails, the model is asked once more, told what to fix ("Leave out any week
+   figure: the documents give different values for it..."). If the citations are still wrong,
+   the system abstains. If the number is still there, the answer is kept but Python adds a note
+   below it with both values and their dates.
+
+The number check on the answer fired once in each full eval run (the model restated D04's
+"12 weeks" in an answer about pay) and the second try was clean both times.
+
+Python also adds the outdated note itself from the `outdated` list. The model is not trusted to
+mention it.
 
 ### 5b. `conflict_report` (Python)
 

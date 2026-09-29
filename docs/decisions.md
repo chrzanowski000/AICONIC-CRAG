@@ -15,6 +15,9 @@ decision changes, change it here first.
 | 6 | Jev only answers yes/no and multiple-choice questions and returns probabilities. | It cannot write text, so it cannot write a vague middle answer. Probabilities make thresholds easy to tune. |
 | 7 | A number check backs up the judge. | If two current same-topic claims have different numbers and the judge saw no dispute, we add one. A soft judge cannot hide a clear clash. |
 | 8 | Two gates before an answer: the search score cutoff and the judge's relevance. | Either one failing leads to "I don't know". |
+| 8a | A claim keeps only the part of the document that answers the question, and the judge compares only that part. | Two documents can disagree on one thing and agree on the rest. Without this, "Does parental leave cover adoption?" was reported as a dispute because the claims carried the disputed week counts. |
+| 8b | The answer is written from the checked claims, not from the full documents. | From the full text the model added "for the full 16 weeks [D03]" to an answer about pay, quietly picking a side of a dispute the question did not ask about. |
+| 8c | Python checks the answer for numbers the current same-topic documents disagree on; one retry, then a note with both values is added. | A third safety net against picking a side by accident. It fired once per full eval run and the retry fixed it each time. |
 
 ## Models and services
 

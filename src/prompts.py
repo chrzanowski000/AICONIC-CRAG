@@ -11,17 +11,19 @@ as other numbers, amounts or conditions. Copy numbers, amounts, dates and names 
 written. If a document says nothing about the question, return null for it. Return only the
 structured object."""
 
-ASSESS = """\
+COMPARE = """\
 You check retrieved documents for a question-answering system. You never answer the question
-yourself.
-For EACH document decide whether it directly answers the question (relevant).
-Then compare every pair of relevant documents. If two documents give answers to the question that
-cannot both be true (different numbers, different names, opposite rules), list the pair under
-conflicts. Only the part that answers the question counts; differences in details the question
-does not ask about are not conflicts. Do NOT settle conflicts, do NOT guess which is right, and
-do NOT treat a newer date as settling anything.
-Known "replaces" links (already handled, do NOT list them as conflicts): {supersession_facts}
-Return only the structured object."""
+yourself and never decide which document is right.
+1. For EACH document decide whether its claim directly answers the question (relevant).
+2. For EACH listed pair, compare the two claims only as answers to the question:
+   - same: both give the same answer. The same value written differently ("two" and "2") is
+     the same.
+   - different: their answers cannot both be true. Check numbers, amounts, units, dates, names
+     and rules exactly. In what_differs write one short sentence that names both values, for
+     example "D03 says 16 weeks, D04 says 12 weeks".
+   - unrelated: at least one does not answer the question, or they answer different parts of it.
+Only the part that answers the question counts; details the question does not ask about do not
+make a pair different. A newer date settles nothing. Return only the structured object."""
 
 ANSWER = """\
 Answer the question using ONLY the claims below. Each claim is what one document says about the
@@ -43,13 +45,14 @@ def extract_claims_messages(question: str, docs: list[dict]) -> list:
             HumanMessage(f"Question: {question}\n\nDocuments:\n{body}")]
 
 
-def assess_messages(question: str, docs: list[dict], claims: dict[str, str | None],
-                    supersession_facts: str) -> list:
+def compare_messages(question: str, docs: list[dict], claims: dict[str, str | None],
+                     pairs: list[tuple[str, str]]) -> list:
     lines = [f"[{d['doc_id']}] {d['title']} — source: {d['source']} — date: {d['date']}\n"
-             f"Claim: {claims.get(d['doc_id']) or 'null'}" for d in docs]
-    return [SystemMessage(ASSESS.format(supersession_facts=supersession_facts or "none")),
+             f"Claim: {claims.get(d['doc_id'])}" for d in docs]
+    listed = ", ".join(f"{a}-{b}" for a, b in pairs) or "none"
+    return [SystemMessage(COMPARE),
             HumanMessage(f"Question: {question}\n\nDocuments with their claims:\n"
-                         + "\n\n".join(lines))]
+                         + "\n\n".join(lines) + f"\n\nPairs to compare: {listed}")]
 
 
 def answer_messages(question: str, docs: list[dict], claims: dict[str, str | None]) -> list:

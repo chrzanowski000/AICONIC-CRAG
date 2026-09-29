@@ -2,7 +2,8 @@
 
 Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
 dispute detection and the LangSmith connection (see below). Latest: a simplification round on the
-branch `simplification` (less code, same results, all evals pass).
+branch `simplification` (less code, same results, all evals pass). Now: the branch `llm-judge`
+(from `simplification`): the LLM does all judging; Jev and the regex number check are removed.
 
 ## Milestones
 
@@ -79,6 +80,18 @@ branch `simplification` (less code, same results, all evals pass).
   - Not done on purpose: renaming `JEV_RELEVANT_P` / `JEV_DISAGREE_P` (they apply to the LLM
     judge too, but the names are used in many notes and past commands); `llm-test` and
     `jev-test` stay (cheap checks that the key and both APIs work).
+- [ ] **LLM-only judge** (branch `llm-judge`): no Jev, no regex. The LLM compares the claims and
+      says what differs; Python still applies `supersedes` links and picks the route.
+  - Step 1: new `compare` step (one LLM call): relevance per doc, and for every pair not linked by
+    `supersedes` a verdict (same / different / unrelated) plus, if different, one sentence with
+    both values ("D03 says 16 weeks, D04 says 12 weeks"). That sentence is the dispute's
+    description and is shown under "What differs:" in the dispute report. Removed: the Jev
+    client (`src/jev.py`, `jev-test`, Jev schemas and settings, `httpx` pin), the `JUDGE`
+    setting, the judge thresholds, and the number check between claims (`NUMERIC_BACKSTOP`).
+    New unit tests for `pairs_to_compare` and `read_comparison` (a pair the LLM leaves out counts
+    as unrelated and is logged). Checked: `pytest` 39 passed; `ask` Q3 and "How long is maternity
+    leave?" → DISPUTED with "D03 says 16 weeks, D04 says 12 weeks"; Q9 → ANSWERED 1.2 kg;
+    `eval.py` 18/18 PASS ($0.0047 per run, about the same as with Jev).
 
 ## Last verified outputs (2026-09-29)
 
@@ -184,7 +197,7 @@ branch `simplification` (less code, same results, all evals pass).
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.01965 |
-| **total** | | **0.08026** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.02516 |
+| **total** | | **0.08577** |
 
-Budget: $4.00. Left: about $3.92.
+Budget: $4.00. Left: about $3.91.

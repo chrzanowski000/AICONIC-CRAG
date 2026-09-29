@@ -1,4 +1,4 @@
-"""Pydantic models: what the LLM must return, what Jev sends and returns, and the final output."""
+"""Pydantic models: what the LLM must return, and the final output."""
 
 from typing import Literal
 
@@ -31,76 +31,37 @@ class Answer(BaseModel):
     )
 
 
-# LLM judge (used when JUDGE=llm, or when Jev fails)
+# LLM judge: relevance of each doc, and each pair of claims compared
 
 
 class DocAssessment(BaseModel):
     doc_id: str
     relevant: bool = Field(
-        description="True only if the document says something that directly answers the question"
+        description="True only if the document's claim directly answers the question"
     )
 
 
-class Conflict(BaseModel):
+class PairComparison(BaseModel):
     doc_a: str
     doc_b: str
-    description: str
-
-
-class Assessment(BaseModel):
-    docs: list[DocAssessment]
-    conflicts: list[Conflict] = Field(
-        description="Every pair of RELEVANT documents whose claims cannot both be true"
+    verdict: Literal["same", "different", "unrelated"] = Field(
+        description=(
+            "same: both give the same answer to the question; different: their answers cannot "
+            "both be true; unrelated: at least one does not answer the question, or they answer "
+            "different parts of it"
+        )
+    )
+    what_differs: str | None = Field(
+        description=(
+            "Only when different: one short sentence that names both values, e.g. "
+            "'D03 says 16 weeks, D04 says 12 weeks'. Null otherwise."
+        )
     )
 
 
-# --- Jev Decisions API -----------------------------------------------------------------------
-
-
-class JevDocument(BaseModel):
-    id: str
-    source: str
-    date: str
-    claim: str
-
-
-class JevState(BaseModel):
-    question: str
-    documents: list[JevDocument]
-
-
-class JevQuestion(BaseModel):
-    type: Literal["noul", "choice"]
-    instructions: str
-    criteria: dict[str, str] | None = None
-
-
-class JevRequest(BaseModel):
-    model: str
-    state: JevState
-    questions: dict[str, JevQuestion]
-
-
-class JevAnswer(BaseModel):
-    type: Literal["noul", "choice"]
-    noul: float | None = None
-    choice: str | None = None
-    confidence: float | None = None
-    probabilities: dict[str, float] | None = None
-
-
-class JevUsage(BaseModel):
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cost: float = 0.0
-
-
-class JevResponse(BaseModel):
-    answers: dict[str, JevAnswer]
-    id: str | None = None
-    model: str | None = None
-    provider: str | None = None
-    usage: JevUsage = JevUsage()
+class Comparison(BaseModel):
+    docs: list[DocAssessment]
+    pairs: list[PairComparison] = Field(description="One entry for every listed pair")
 
 
 # --- final output ----------------------------------------------------------------------------
@@ -127,4 +88,5 @@ class FinalOutput(BaseModel):
     citations: list[Citation] = []  # answered: at least 1
     versions: list[Citation] = []  # disputed: at least 2
     outdated: list[OutdatedNote] = []
+    differences: list[str] = []  # disputed: what differs, in words
     reason: str | None = None

@@ -73,51 +73,6 @@ def cmd_llm_test(args) -> None:
     print(f"Tokens: {USAGE.input_tokens} in / {USAGE.output_tokens} out   cost: ${USAGE.llm_cost:.6f}")
 
 
-# A fixed state for jev-test: D03 and D04 disagree, TX agrees with D03, D16 is off topic.
-JEV_TEST_QUESTION = "How many weeks of paid parental leave does Helios Dynamics offer?"
-JEV_TEST_DOCS = [
-    {"id": "D03", "source": "HR Handbook", "date": "2025-01-10",
-     "claim": "Helios Dynamics offers 16 weeks of fully paid parental leave."},
-    {"id": "D04", "source": "People Ops wiki", "date": "2025-02-20",
-     "claim": "Employees receive 12 weeks of paid parental leave at full salary."},
-    {"id": "TX", "source": "Test note", "date": "2025-03-01",
-     "claim": "New parents get sixteen weeks of leave on full pay."},
-    {"id": "D16", "source": "HR Handbook", "date": "2025-01-02",
-     "claim": "In 2025 Helios Dynamics observes 11 public holidays."},
-]
-JEV_TEST_EXPECTED = {
-    "rel_D03": "high", "rel_D04": "high", "rel_TX": "high", "rel_D16": "low",
-    "pair_D03_D04": "disagree", "pair_D03_TX": "agree", "pair_D04_TX": "disagree",
-    "pair_D03_D16": "unrelated", "pair_D04_D16": "unrelated", "pair_TX_D16": "unrelated",
-}
-
-
-def cmd_jev_test(args) -> None:
-    from src.jev import build_request, call_jev
-
-    request = build_request(JEV_TEST_QUESTION, JEV_TEST_DOCS, linked=set())
-    print(f"Model: {config.JEV_MODEL}   URL: {config.JEV_URL}")
-    print(f"Question: {JEV_TEST_QUESTION}   ({len(request.questions)} decision questions)")
-    started = time.time()
-    response = call_jev(request)
-    print(f"Answered by {response.model} ({response.provider}) in {time.time() - started:.1f}s")
-    ok = 0
-    for key, expected in JEV_TEST_EXPECTED.items():
-        ans = response.answers[key]
-        if ans.type == "noul":
-            got = "high" if ans.noul >= config.JEV_RELEVANT_P else "low"
-            detail = f"p(yes)={ans.noul:.2f}"
-        else:
-            got = ans.choice
-            probs = ", ".join(f"{k} {v:.2f}" for k, v in (ans.probabilities or {}).items())
-            detail = f"{ans.choice} ({probs})"
-        ok += got == expected
-        print(f"  {'ok  ' if got == expected else 'MISS'} {key:14} expected {expected:9} got {detail}")
-    usage = response.usage
-    print(f"{ok}/{len(JEV_TEST_EXPECTED)} as expected. Tokens: {usage.input_tokens} in / "
-          f"{usage.output_tokens} out   cost: ${usage.cost:.7f}")
-
-
 def cmd_ask(args) -> None:
     from src.graph import run
     from src.render import show
@@ -147,7 +102,7 @@ def cmd_demo(args) -> None:
         got = state["result"]["status"]
         summary.append(f"  {q['id']}  {got:10} (expected {q['expected']['status']})")
         print()
-    print("Summary (judge: " + config.JUDGE + "):")
+    print("Summary:")
     print("\n".join(summary))
 
 
@@ -176,8 +131,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("llm-test", help="one structured-output call (Claims) through OpenRouter"
                    ).set_defaults(func=cmd_llm_test)
-    sub.add_parser("jev-test", help="one Jev decision call on a fixed example"
-                   ).set_defaults(func=cmd_jev_test)
     return parser
 
 
@@ -185,7 +138,7 @@ def finish_run() -> None:
     """Print tokens and cost, add them to the running total, and send any queued traces."""
     from src.llm import USAGE, record_spend
 
-    if USAGE.llm_calls or USAGE.jev_calls:
+    if USAGE.llm_calls:
         print()
         print(USAGE.summary())
         print(record_spend())
@@ -206,12 +159,11 @@ def known_errors() -> tuple[type[Exception], ...]:
     """Problems that get a one-line message instead of a long traceback."""
     from openai import APIError
 
-    from src.jev import JevError
     from src.llm import StructuredOutputError
     from src.load_docs import CorpusError
     from src.vectorstore import LockedStorageError
 
-    return (LockedStorageError, JevError, StructuredOutputError, CorpusError, APIError)
+    return (LockedStorageError, StructuredOutputError, CorpusError, APIError)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -26,6 +26,9 @@ def render(question: str, result: dict) -> str:
     elif out.status == "disputed":
         lines.append("The sources disagree. Both versions:")
         lines += [_source_line(c) for c in out.versions]
+        if out.differences:
+            lines.append("What differs:")
+            lines += [_wrap(d, first="  - ", rest="    ") for d in out.differences]
         lines.append(out.reason or "")
     else:
         lines.append(_wrap(f"I don't know. {out.reason or ''}"))
@@ -53,12 +56,12 @@ def render_trace(state: dict) -> str:
     if claims is not None:
         for doc_id, claim in claims.items():
             lines.append(f"claim          {doc_id}: {claim}")
-    if "judge_used" in state:
-        rel = ", ".join(f"{k} {v:.2f}" for k, v in state.get("relevance", {}).items()) or "-"
-        lines.append(f"judge ({state['judge_used']:4})   relevance: {rel}")
+    if "relevance" in state:
+        rel = ", ".join(f"{k} {'yes' if v else 'no'}" for k, v in state["relevance"].items()) or "-"
+        lines.append(f"compare        relevant: {rel}")
         for p in state.get("pairs", []):
-            lines.append(f"               pair {p['doc_a']}-{p['doc_b']}: {p['relation']} "
-                         f"(p_disagree {p['p_disagree']:.2f})")
+            what = f": {p['what_differs']}" if p["what_differs"] else ""
+            lines.append(f"               pair {p['doc_a']}-{p['doc_b']}: {p['verdict']}{what}")
     if "route" in state:
         lines.append(f"reconcile      relevant (current): {state.get('relevant_ids') or '-'}  "
                      f"outdated: {[o['old_id'] + '->' + o['new_id'] for o in state.get('outdated', [])] or '-'}  "

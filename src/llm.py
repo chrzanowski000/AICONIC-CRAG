@@ -26,12 +26,6 @@ class Usage:
     input_tokens: int = 0
     output_tokens: int = 0
     llm_cost: float = 0.0
-    jev_calls: int = 0
-    jev_cost: float = 0.0
-
-    @property
-    def total_cost(self) -> float:
-        return self.llm_cost + self.jev_cost
 
     def add_llm(self, message: AIMessage | None) -> None:
         if message is None:
@@ -48,15 +42,10 @@ class Usage:
                     + tokens_out * config.LLM_PRICE_OUT_PER_M) / 1e6
         self.llm_cost += float(cost)
 
-    def add_jev(self, cost: float) -> None:
-        self.jev_calls += 1
-        self.jev_cost += float(cost or 0.0)
-
     def summary(self) -> str:
         return (
             f"LLM: {self.llm_calls} calls, {self.input_tokens} in / {self.output_tokens} out "
-            f"tokens, ${self.llm_cost:.6f}. Jev: {self.jev_calls} calls, ${self.jev_cost:.6f}. "
-            f"This run: ${self.total_cost:.6f}."
+            f"tokens. This run: ${self.llm_cost:.6f}."
         )
 
 
@@ -70,7 +59,7 @@ def record_spend() -> str:
         data = json.loads(path.read_text()) if path.exists() else {}
     except (OSError, ValueError):
         data = {}
-    total = float(data.get("total_usd", 0.0)) + USAGE.total_cost
+    total = float(data.get("total_usd", 0.0)) + USAGE.llm_cost
     data = {"total_usd": round(total, 8), "runs": int(data.get("runs", 0)) + 1}
     try:
         path.write_text(json.dumps(data, indent=2) + "\n")

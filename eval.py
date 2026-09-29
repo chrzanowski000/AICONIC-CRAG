@@ -1,7 +1,6 @@
 """Evaluation: run every question in questions.json and check the result.
 
     python eval.py                 # local PASS/FAIL table, exit code 1 on any FAIL
-    JUDGE=llm python eval.py       # the same with the LLM as judge
 
 When LANGSMITH_TRACING=true and LANGSMITH_API_KEY is set, the same checks also run as a
 LangSmith experiment on the dataset EVAL_DATASET_NAME.
@@ -143,11 +142,11 @@ def target(inputs: dict) -> dict:
     from src.graph import run
 
     state = run(inputs["question"], question_id=inputs.get("id"), tags=["eval"])
-    return {**state["result"], "judge_used": state.get("judge_used")}
+    return state["result"]
 
 
 def run_local(questions: list[dict]) -> bool:
-    print(f"Local eval: {len(questions)} questions, judge {config.JUDGE}, model {config.LLM_MODEL}")
+    print(f"Local eval: {len(questions)} questions, model {config.LLM_MODEL}")
     all_ok = True
     for q in questions:
         outputs = target({"question": q["question"], "id": q["id"]})
@@ -158,9 +157,8 @@ def run_local(questions: list[dict]) -> bool:
             reason = "; ".join(f"{r['key']}: {r['comment']}" for r in failed)
         else:
             reason = "; ".join(r["comment"] for r in results if r["comment"] != "n/a")
-        judge = outputs.get("judge_used") or "-"
         print(f"{q['id']:3} {'PASS' if not failed else 'FAIL'}  {outputs['status']:9} "
-              f"(judge {judge}) {reason}")
+              f"{reason}")
     passed = "all passed" if all_ok else "SOME FAILED"
     print(f"Summary: {passed}.")
     return all_ok
@@ -184,9 +182,9 @@ def run_langsmith(questions: list[dict]) -> None:
         target,
         data=name,
         evaluators=CHECKS,
-        experiment_prefix=f"{config.EVAL_EXPERIMENT_PREFIX}-{config.JUDGE}",
+        experiment_prefix=config.EVAL_EXPERIMENT_PREFIX,
         max_concurrency=1,  # one question at a time: the cost counter is not thread safe
-        metadata={"judge": config.JUDGE, "llm": config.LLM_MODEL},
+        metadata={"llm": config.LLM_MODEL},
     )
     print(f"LangSmith experiment: {results.experiment_name}")
     if results.url:

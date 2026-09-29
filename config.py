@@ -56,15 +56,6 @@ LLM_HTTP_REFERER = env("LLM_HTTP_REFERER", "local-demo")
 LLM_PRICE_IN_PER_M = env("LLM_PRICE_IN_PER_M", 0.10, float)
 LLM_PRICE_OUT_PER_M = env("LLM_PRICE_OUT_PER_M", 0.50, float)
 
-# --- judge (decides relevance and agree / disagree) ------------------------------------------
-JUDGE = env("JUDGE", "jev")  # jev | llm (if Jev fails, the LLM judges instead)
-JEV_MODEL = env("JEV_MODEL", "typesafe/jev-1.13")
-JEV_URL = env("JEV_URL", "https://openrouter.ai/api/alpha/decisions")
-JEV_TIMEOUT_S = env("JEV_TIMEOUT_S", 30.0, float)
-JEV_RELEVANT_P = env("JEV_RELEVANT_P", 0.5, float)  # measured: relevant 0.63-0.98, off topic 0.01-0.06
-JEV_DISAGREE_P = env("JEV_DISAGREE_P", 0.5, float)  # measured: disagree 0.87-1.00, agree 0.00
-NUMERIC_BACKSTOP = env("NUMERIC_BACKSTOP", True, _bool)
-
 # --- embeddings ------------------------------------------------------------------------------
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 MODELS_CACHE_DIR = _path(env("MODELS_CACHE_DIR", "./models"))

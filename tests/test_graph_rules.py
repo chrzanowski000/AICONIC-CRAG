@@ -1,7 +1,9 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
-from src.graph import check_answer, disputed_numbers, newest_in_chain, reconcile, same_chain
+from src.graph import (check_answer, disputed_numbers, newest_in_chain, pairs_to_compare,
+                       read_comparison, reconcile, same_chain)
 from src.load_docs import doc_map
+from src.schemas import Comparison, DocAssessment, PairComparison
 from src.vectorstore import _to_retrieved
 
 
@@ -30,49 +32,74 @@ def test_replaces_chains():
     assert not same_chain("D03", "D04")  # a real dispute: no supersedes link
 
 
-def _state(claims, relevance, pairs=()):
-    """A state as the judge leaves it, for the docs in `claims` (real metadata, no model calls)."""
+def _state(claims, relevant, pairs=()):
+    """A state as `compare` leaves it, for the docs in `claims` (real metadata, no model calls)."""
     return {"question": "q", "retrieved": [_to_retrieved(doc_map()[i], None) for i in claims],
-            "claims": claims, "relevance": relevance, "pairs": list(pairs), "judge_used": "jev"}
+            "claims": claims, "relevance": {i: i in relevant for i in claims},
+            "pairs": list(pairs)}
+
+
+def _pair(a, b, verdict, what=None):
+    return {"doc_a": a, "doc_b": b, "verdict": verdict, "what_differs": what}
 
 
 def test_reconcile_moves_a_replaced_doc_to_outdated_even_when_the_numbers_differ():
     claims = {"D09": "38 minutes of flight time.", "D10": "45 minutes of flight time."}
-    out = reconcile(_state(claims, {"D09": 0.9, "D10": 0.9}))
+    out = reconcile(_state(claims, {"D09", "D10"}))  # a linked pair is never compared
     assert out["route"] == "answer"
     assert out["relevant_ids"] == ["D10"]
     assert [(o["old_id"], o["new_id"]) for o in out["outdated"]] == [("D09", "D10")]
     assert out["disputes"] == []
 
 
-def test_reconcile_keeps_a_dispute_the_judge_reports():
-    pair = {"doc_a": "D03", "doc_b": "D04", "relation": "disagree", "p_disagree": 0.99}
-    claims = {"D03": "16 weeks.", "D04": "12 weeks."}
-    out = reconcile(_state(claims, {"D03": 0.9, "D04": 0.9}, [pair]))
+def test_reconcile_keeps_a_dispute_with_what_differs():
+    pair = _pair("D03", "D04", "different", "D03 says 16 weeks, D04 says 12 weeks")
+    out = reconcile(_state({"D03": "16 weeks.", "D04": "12 weeks."}, {"D03", "D04"}, [pair]))
     assert out["route"] == "conflict"
-    assert [(d["doc_a"], d["doc_b"]) for d in out["disputes"]] == [("D03", "D04")]
-
-
-def test_reconcile_number_check_finds_a_dispute_the_judge_missed():
-    pair = {"doc_a": "D03", "doc_b": "D04", "relation": "agree", "p_disagree": 0.01}
-    out = reconcile(_state({"D03": "16 weeks of leave.", "D04": "12 weeks of leave."},
-                           {"D03": 0.9, "D04": 0.9}, [pair]))
-    assert out["route"] == "conflict"
-    assert "numeric mismatch" in out["disputes"][0]["description"]
+    assert out["disputes"] == [{"doc_a": "D03", "doc_b": "D04",
+                                "description": "D03 says 16 weeks, D04 says 12 weeks"}]
 
 
 def test_reconcile_answers_when_the_docs_agree():
-    pair = {"doc_a": "D10", "doc_b": "D18", "relation": "agree", "p_disagree": 0.0}
+    pair = _pair("D10", "D18", "same")
     out = reconcile(_state({"D10": "It weighs 1.2 kg.", "D18": "The drone weighs 1.2 kg."},
-                           {"D10": 0.9, "D18": 0.9}, [pair]))
+                           {"D10", "D18"}, [pair]))
     assert out["route"] == "answer"
     assert out["disputes"] == []
 
 
+def test_reconcile_ignores_a_difference_with_a_doc_that_is_not_relevant():
+    pair = _pair("D15", "D20", "different", "different things")
+    out = reconcile(_state({"D15": "Acknowledge within 15 minutes.", "D20": "Two engineers."},
+                           {"D15"}, [pair]))
+    assert out["route"] == "answer"
+    assert out["relevant_ids"] == ["D15"]
+
+
 def test_reconcile_abstains_when_nothing_is_relevant():
-    out = reconcile(_state({"D03": None, "D16": "11 public holidays."}, {"D16": 0.03}))
+    out = reconcile(_state({"D03": None, "D16": "11 public holidays."}, set()))
     assert out["route"] == "abstain"
     assert out["relevant_ids"] == []
+
+
+def test_pairs_to_compare_leaves_out_supersedes_links():
+    assert pairs_to_compare(["D01", "D02", "D03"]) == [("D01", "D03"), ("D02", "D03")]
+
+
+def test_read_comparison_matches_pairs_in_any_order_and_fills_gaps():
+    out = Comparison(
+        docs=[DocAssessment(doc_id="D03", relevant=True), DocAssessment(doc_id="D99", relevant=True)],
+        pairs=[PairComparison(doc_a="D04", doc_b="D03", verdict="different", what_differs=None),
+               PairComparison(doc_a="D03", doc_b="D05", verdict="same", what_differs=None)],
+    )
+    relevance, pairs = read_comparison(out, ["D03", "D04", "D05"],
+                                       [("D03", "D04"), ("D03", "D05"), ("D04", "D05")])
+    assert relevance == {"D03": True, "D04": False, "D05": False}
+    assert pairs == [
+        _pair("D03", "D04", "different", "D03 and D04 give different answers"),
+        _pair("D03", "D05", "same"),
+        _pair("D04", "D05", "unrelated"),  # left out by the LLM
+    ]
 
 
 WEEKS = {"week": {"D03": {16.0}, "D04": {12.0}}}

@@ -89,9 +89,7 @@ def record_spend() -> str:
 def get_llm() -> ChatOpenAI:
     if not config.LLM_API_KEY:
         raise RuntimeError("No OpenRouter key. Set LLM_API_OR in .env (see .env.example).")
-    provider: dict = {"require_parameters": config.LLM_REQUIRE_PARAMETERS}
-    if config.LLM_PROVIDER_ORDER:
-        provider["order"] = config.LLM_PROVIDER_ORDER
+    provider = {"require_parameters": config.LLM_REQUIRE_PARAMETERS}
     kwargs = {}
     if config.LLM_TEMPERATURE:
         kwargs["temperature"] = float(config.LLM_TEMPERATURE)

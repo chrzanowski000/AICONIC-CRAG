@@ -11,13 +11,9 @@ so the same functions work locally and as LangSmith evaluators. A check that doe
 question scores 1 with the comment "n/a".
 """
 
-import json
-import logging
 import sys
 
 import config
-
-log = logging.getLogger("eval")
 
 
 def _result(key: str, ok: bool, comment: str) -> dict:
@@ -142,11 +138,6 @@ CHECKS = [status_matches, cites_required_docs, disputed_shows_both_sides, marks_
           abstained_cleanly, answer_contains, answer_excludes]
 
 
-def load_questions() -> list[dict]:
-    with open(config.QUESTIONS_FILE, encoding="utf-8") as f:
-        return json.load(f)
-
-
 def target(inputs: dict) -> dict:
     """Run the pipeline on one question. Returns the FinalOutput dict plus the judge used."""
     from src.graph import run
@@ -194,7 +185,7 @@ def run_langsmith(questions: list[dict]) -> None:
         data=name,
         evaluators=CHECKS,
         experiment_prefix=f"{config.EVAL_EXPERIMENT_PREFIX}-{config.JUDGE}",
-        max_concurrency=config.EVAL_MAX_CONCURRENCY,
+        max_concurrency=1,  # one question at a time: the cost counter is not thread safe
         metadata={"judge": config.JUDGE, "llm": config.LLM_MODEL},
     )
     print(f"LangSmith experiment: {results.experiment_name}")
@@ -203,18 +194,14 @@ def run_langsmith(questions: list[dict]) -> None:
 
 
 def main() -> int:
-    logging.basicConfig(level=config.LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
-    for noisy in ("httpx", "httpx2", "httpcore", "openai", "urllib3", "huggingface_hub"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
-
-    if config.TRACING_WARNING:
-        print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
-
-    from main import flush_traces, known_errors
+    from main import finish_run, known_errors, load_questions, setup_logging
     from src.graph import build_graph
-    from src.llm import USAGE, record_spend
     from src.vectorstore import ensure_index
 
+    setup_logging()
+    if config.TRACING_WARNING:
+        print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
+    ok = False
     try:
         ensure_index()
         build_graph()
@@ -227,11 +214,8 @@ def main() -> int:
                   "to run it).")
     except known_errors() as err:
         print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
-        ok = False
-    print()
-    print(USAGE.summary())
-    print(record_spend())
-    flush_traces()
+    finally:
+        finish_run()  # cost and traces, also when the run stops early
     return 0 if ok else 1
 
 

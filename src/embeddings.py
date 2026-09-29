@@ -1,4 +1,4 @@
-"""Local text embeddings. FastEmbed (ONNX, CPU) by default."""
+"""Local text embeddings: FastEmbed (ONNX, CPU)."""
 
 from functools import lru_cache
 
@@ -25,16 +25,5 @@ class FastEmbedDense(Embeddings):
 
 @lru_cache(maxsize=1)
 def get_embeddings() -> Embeddings:
-    """One embeddings object per process, chosen by EMBEDDING_BACKEND."""
-    if config.EMBEDDING_BACKEND == "fastembed":
-        return FastEmbedDense(config.EMBEDDING_MODEL, config.MODELS_CACHE_DIR)
-    if config.EMBEDDING_BACKEND == "huggingface":
-        # Not installed by default: pip install langchain-huggingface sentence-transformers
-        from langchain_huggingface import HuggingFaceEmbeddings
-
-        return HuggingFaceEmbeddings(
-            model_name=config.EMBEDDING_MODEL,
-            cache_folder=config.MODELS_CACHE_DIR,
-            encode_kwargs={"normalize_embeddings": True},
-        )
-    raise ValueError(f"Unknown EMBEDDING_BACKEND '{config.EMBEDDING_BACKEND}'")
+    """One embeddings object per process."""
+    return FastEmbedDense(config.EMBEDDING_MODEL, config.MODELS_CACHE_DIR)

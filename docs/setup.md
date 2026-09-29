@@ -120,7 +120,5 @@ at a time. Close the other `main.py` or `eval.py` run. If none is running, delet
 answer, so the LLM decided relevance and agree / disagree for this run. `jev-test` shows the
 Jev error itself.
 
-**The embedding model does not download.** FastEmbed needs to reach Hugging Face once. If ONNX
-does not work on your machine, install `langchain-huggingface sentence-transformers` and set
-`EMBEDDING_BACKEND=huggingface` (same model, same 384 numbers), then run
-`python main.py index --reindex`.
+**The embedding model does not download.** FastEmbed needs to reach Hugging Face once. After
+that the model is read from `./models`.

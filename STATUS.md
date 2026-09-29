@@ -65,6 +65,16 @@ branch `simplification` (less code, same results).
     does it. Checked: `pytest` 37 passed; `eval.py` 18/18 PASS and `JUDGE=llm eval.py` 18/18 PASS.
   - Step 5, output: the CLI prints the `output` text that the last step already wrote, instead of
     rendering the result a second time. Checked: `pytest` 37 passed; `ask` (pets) → ABSTAINED.
+  - Step 6, settings and copies: removed settings nobody changes: `LLM_PROVIDER_ORDER`,
+    `EMBEDDING_BACKEND` (and the untested `huggingface` path), `EMBEDDING_DIM` (the size now comes
+    from the model), `QDRANT_DISTANCE` (always cosine; the cutoffs assume it),
+    `QDRANT_FORCE_REINDEX` (same as `index --reindex`), `EVAL_MAX_CONCURRENCY`. Kept
+    `NUMERIC_BACKSTOP` (used in `docs/evaluation.md` to show what the number check adds).
+    `eval.py` now uses `setup_logging`, `load_questions` and `finish_run` from `main.py` instead of
+    its own copies; `finish_run` is in a `finally`, so an eval that stops early still records
+    its cost. Checked: `pytest` 37 passed; fresh index built from nothing (20 points, reused on
+    the next run); `eval.py` on it 18/18 PASS; an eval stopped with Ctrl-C after 20 s still added
+    its $0.0007 to `.spend.json`.
 
 ## Last verified outputs (2026-09-29)
 
@@ -159,7 +169,7 @@ paraphrases checked by hand in M3). After changing `questions.json`, delete the 
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.01600 |
-| **total** | | **0.07661** |
+| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.01965 |
+| **total** | | **0.08026** |
 
 Budget: $4.00. Left: about $3.92.

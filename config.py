@@ -17,10 +17,6 @@ def _bool(raw: str) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "on")
 
 
-def _list(raw: str) -> list[str]:
-    return [part.strip() for part in raw.split(",") if part.strip()]
-
-
 def env(name: str, default, cast=str):
     """Read one setting. Unset means the default.
 
@@ -54,7 +50,6 @@ LLM_MAX_TOKENS = env("LLM_MAX_TOKENS", 1500, int)
 LLM_TIMEOUT_S = env("LLM_TIMEOUT_S", 90.0, float)
 LLM_MAX_RETRIES = env("LLM_MAX_RETRIES", 3, int)
 LLM_REQUIRE_PARAMETERS = env("LLM_REQUIRE_PARAMETERS", True, _bool)
-LLM_PROVIDER_ORDER = env("LLM_PROVIDER_ORDER", [], _list)
 LLM_APP_TITLE = env("LLM_APP_TITLE", "rag-conflicts")
 LLM_HTTP_REFERER = env("LLM_HTTP_REFERER", "local-demo")
 # Used to work out the cost when OpenRouter does not report it (USD per million tokens).
@@ -71,9 +66,7 @@ JEV_DISAGREE_P = env("JEV_DISAGREE_P", 0.5, float)  # measured: disagree 0.87-1.
 NUMERIC_BACKSTOP = env("NUMERIC_BACKSTOP", True, _bool)
 
 # --- embeddings ------------------------------------------------------------------------------
-EMBEDDING_BACKEND = env("EMBEDDING_BACKEND", "fastembed")  # fastembed | huggingface
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
-EMBEDDING_DIM = env("EMBEDDING_DIM", 384, int)
 MODELS_CACHE_DIR = _path(env("MODELS_CACHE_DIR", "./models"))
 
 # --- retrieval -------------------------------------------------------------------------------
@@ -88,8 +81,6 @@ QDRANT_PATH = _path(env("QDRANT_PATH", "./qdrant_data"))
 QDRANT_URL = env("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = env("QDRANT_API_KEY", "")
 QDRANT_COLLECTION = env("QDRANT_COLLECTION", "helios_docs")
-QDRANT_DISTANCE = env("QDRANT_DISTANCE", "COSINE")
-QDRANT_FORCE_REINDEX = env("QDRANT_FORCE_REINDEX", False, _bool)
 
 # --- corpus ----------------------------------------------------------------------------------
 CORPUS_DIR = _path(env("CORPUS_DIR", "./data/corpus"))
@@ -111,7 +102,6 @@ os.environ["LANGSMITH_TRACING"] = "true" if TRACING_ON else "false"
 # --- eval ------------------------------------------------------------------------------------
 EVAL_DATASET_NAME = env("EVAL_DATASET_NAME", "rag-conflicts-demo")
 EVAL_EXPERIMENT_PREFIX = env("EVAL_EXPERIMENT_PREFIX", "rag-conflicts")
-EVAL_MAX_CONCURRENCY = env("EVAL_MAX_CONCURRENCY", 1, int)
 
 # --- output ----------------------------------------------------------------------------------
 SHOW_SCORES = env("SHOW_SCORES", True, _bool)

@@ -75,7 +75,7 @@ def _stored_hash() -> str | None:
 def _rebuild_reason(force: bool) -> str | None:
     """Why the index must be rebuilt, or None if it can be reused."""
     client = get_client()
-    if force or config.QDRANT_FORCE_REINDEX:
+    if force:
         return "reindex was asked for"
     if not client.collection_exists(config.QDRANT_COLLECTION):
         return "the collection does not exist yet"
@@ -102,7 +102,7 @@ def ensure_index(force: bool = False) -> dict:
     client.create_collection(
         config.QDRANT_COLLECTION,
         vectors_config=models.VectorParams(
-            size=config.EMBEDDING_DIM, distance=models.Distance[config.QDRANT_DISTANCE.upper()]
+            size=len(get_embeddings().embed_query("size")), distance=models.Distance.COSINE
         ),
     )
     get_store().add_documents(docs, ids=[point_id(d.metadata["id"]) for d in docs])
@@ -118,7 +118,7 @@ def get_store() -> QdrantVectorStore:
         client=get_client(),
         collection_name=config.QDRANT_COLLECTION,
         embedding=get_embeddings(),
-        distance=models.Distance[config.QDRANT_DISTANCE.upper()],
+        distance=models.Distance.COSINE,
     )
 
 

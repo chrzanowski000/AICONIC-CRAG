@@ -20,12 +20,15 @@ from src.schemas import JevDocument, JevQuestion, JevRequest, JevResponse, JevSt
 log = logging.getLogger(__name__)
 
 PAIR_INSTRUCTIONS = (
-    "Compare the claims of {a} and {b} as answers to the question. Different dates or sources "
-    "do NOT make claims agree or disagree; only their content does."
+    "Compare the claims of {a} and {b} only as answers to the question. Only the part of each "
+    "claim that answers the question counts: if both give the same answer to the question, they "
+    "agree, even when they differ in details the question does not ask about. Different dates or "
+    "sources do NOT make claims agree or disagree; only their content does."
 )
 PAIR_CRITERIA = {
-    "agree": "Both give the same answer (same values or rules)",
-    "disagree": "They give answers that cannot both be true (different numbers, names or rules)",
+    "agree": "Both give the same answer to the question (same values or rules for what is asked)",
+    "disagree": ("Their answers to the question cannot both be true (different numbers, names or "
+                 "rules for what the question asks)"),
     "unrelated": "At least one does not answer the question",
 }
 

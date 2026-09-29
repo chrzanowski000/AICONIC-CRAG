@@ -21,6 +21,8 @@ def render(question: str, result: dict) -> str:
         lines.append(_wrap(out.answer or ""))
         lines.append("Sources:")
         lines += [_source_line(c) for c in out.citations]
+        if out.reason:
+            lines.append(_wrap(out.reason))
     elif out.status == "disputed":
         lines.append("The sources disagree. Both versions:")
         lines += [_source_line(c) for c in out.versions]

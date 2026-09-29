@@ -1,6 +1,7 @@
 # Status
 
-Last update: 2026-09-29. All milestones of `docs/plan.md` are done.
+Last update: 2026-09-29. All milestones of `docs/plan.md` are done, plus a round of fixes to
+dispute detection (see below).
 
 ## Milestones
 
@@ -18,14 +19,21 @@ Last update: 2026-09-29. All milestones of `docs/plan.md` are done.
 - [x] **M4 Eval**: `eval.py`, six shared checks, `docs/evaluation.md`.
 - [x] **M5 Hardening + docs**: fallbacks tested, one bug fixed (`function_calling`), clear
       one-line errors, server mode tested, final README and docs.
+- [x] **Dispute check round**: 13 targeted questions found 2 false disputes (D03/D04 agree on
+      adoption and on pay, but the claims carried the disputed week counts) and one answer that
+      quietly picked a side ("for the full 16 weeks [D03]"). Fixed: narrow claims, judge compares
+      only the part that answers the question, answer written from the claims, number check on
+      the answer, new eval check `answer_excludes`. `questions.json` grew from 7 to 18 questions.
 
 ## Last verified outputs (2026-09-29)
 
-- `python eval.py` → 7/7 PASS, exit 0 (judge Jev). 11 LLM calls + 6 Jev calls, $0.00115.
-- `JUDGE=llm python eval.py` → 7/7 PASS, exit 0. 17 LLM calls, $0.00148.
-- `JEV_DISAGREE_P=1.01 NUMERIC_BACKSTOP=false python eval.py` → Q3, Q4 FAIL, exit 1 (the eval
-  catches a system that gives one answer to a disputed question).
-- `JEV_DISAGREE_P=1.01 python main.py demo` → Q3, Q4 still disputed by the number check alone.
+- `python eval.py` → 18/18 PASS, exit 0 (judge Jev). 33 LLM calls + 17 Jev calls, $0.0031.
+- `JUDGE=llm python eval.py` → 18/18 PASS, exit 0. 50 LLM calls, $0.0041.
+- In both runs the number check on the answer fired once (a parental leave answer restated
+  "12 weeks") and the retry was clean.
+- `JEV_DISAGREE_P=1.01 python eval.py` (judge never reports a dispute) → only Q8 FAIL, exit 1:
+  the number check still catches Q3 and Q4, but not the word dispute Q8.
+- `JEV_DISAGREE_P=1.01 NUMERIC_BACKSTOP=false python eval.py` → Q3, Q4, Q8 FAIL, exit 1.
 - `python main.py demo` → Q1 answered [D14]; Q2 answered [D02] + outdated D01 (2024-03-01) →
   D02 (2025-06-15); Q3 disputed D03/D04; Q4 disputed D05/D06; Q5 abstained.
 - Structured output: `json_schema` (default), `function_calling` and `json_mode` each work alone
@@ -51,8 +59,7 @@ Nothing required. Open items, if wanted:
 
 1. Add a LangSmith key and run `python eval.py` with `LANGSMITH_TRACING=true` to check the traces
    and the LangSmith experiment (the code is written, not yet run).
-2. More questions in `questions.json` (for example the spare password dispute and paraphrases
-   that were checked by hand in M3).
+2. More questions in `questions.json` (for example the paraphrases checked by hand in M3).
 
 ## Known issues
 
@@ -66,6 +73,10 @@ Nothing required. Open items, if wanted:
     which made OpenRouter find no host);
   - the state has a `closest` field (for "I don't know"), and `judge_used` can be `none`;
   - running spend total in `.spend.json`.
+- Disputes in words (not two numbers for the same thing), like Q8, are caught only by the judge.
+  The number checks cannot see them.
+- The number check on the answer only knows about numbers. If an answer adds a disputed detail in
+  words, only the claims-only rule stops it.
 - The score cutoff cannot separate every off-topic question from an answerable one (off-topic
   questions reach 0.70, answerable paraphrases go down to 0.62). The judge is the real gate; it
   rejected every off-topic doc in the tests.
@@ -77,6 +88,8 @@ Nothing required. Open items, if wanted:
 |---|---|---|
 | 2026-09-29 | two probe calls by hand (Jev, gpt-6-luna) | 0.00004 |
 | 2026-09-29 | all app runs, M1–M5 (from `.spend.json`, 40+ runs) | 0.01809 |
-| **total** | | **0.01813** |
+| 2026-09-29 | dispute check round: app runs (from `.spend.json`) | 0.01392 |
+| 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
+| **total** | | **0.04163** |
 
-Budget: $4.00. Left: about $3.98.
+Budget: $4.00. Left: about $3.96.

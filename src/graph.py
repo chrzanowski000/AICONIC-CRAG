@@ -267,15 +267,37 @@ def _citation(doc: RetrievedDoc, claims: dict) -> Citation:
 _DOC_ID = re.compile(r"\[(D\d{2})\]")
 
 
+def disputed_numbers(docs: list[RetrievedDoc]) -> dict[str, dict[str, set[float]]]:
+    """Numbers that current same-topic docs give differently in their full text.
+
+    {"week": {"D03": {16.0}, "D04": {12.0}}}. The answer must not state these: the question did
+    not ask about them (else the route would be "conflict"), and stating one would pick a side.
+    """
+    found: dict[str, dict[str, set[float]]] = {}
+    numbers = {d["doc_id"]: quantities(d["text"]) for d in docs}
+    for a, b in itertools.combinations(docs, 2):
+        if a["topic"] != b["topic"] or same_chain(a["doc_id"], b["doc_id"]):
+            continue
+        qa, qb = numbers[a["doc_id"]], numbers[b["doc_id"]]
+        for unit in set(qa) & set(qb):
+            if qa[unit] != qb[unit]:
+                found.setdefault(unit, {})[a["doc_id"]] = qa[unit]
+                found[unit][b["doc_id"]] = qb[unit]
+    return found
+
+
 def answer(state: RAGState) -> dict:
     claims = state["claims"]
     by_id = {d["doc_id"]: d for d in state["retrieved"]}
     allowed = [i for i in state["relevant_ids"] if i in by_id]
     docs = [by_id[i] for i in allowed]
-    messages = answer_messages(state["question"], docs)
+    # The answer is written from the checked claims only, not from the full documents, so it can
+    # only restate what the judge compared.
+    messages = answer_messages(state["question"], docs, claims)
+    disputed = disputed_numbers(docs)
 
-    text, cited = None, []
-    for attempt in range(2):  # one more try if no allowed citation is left
+    text, cited, leaked = None, [], []
+    for attempt in range(2):  # one more try if a citation or a number is wrong
         try:
             out, _ = structured(Answer, messages)
             text, raw_cites = out.answer.strip(), [c.strip("[] ") for c in out.citations]
@@ -286,25 +308,41 @@ def answer(state: RAGState) -> dict:
         in_text = _DOC_ID.findall(text)
         bad = sorted({c for c in raw_cites + in_text if c not in allowed})
         cited = [c for c in dict.fromkeys(raw_cites + in_text) if c in allowed]
+        leaked = sorted(set(quantities(text)) & set(disputed))
         if bad:
             log.warning("Answer cited documents that are not allowed: %s", bad)
-        if cited and not bad:
+        if leaked:
+            log.warning("Answer states a number the documents disagree on: %s", leaked)
+        if cited and not bad and not leaked:
             break
         if attempt == 0:
-            log.warning("Asking once more for an answer with valid citations.")
-            messages = messages + [HumanMessage(
-                f"Use only these document ids as citations: {', '.join(allowed)}.")]
+            fix = []
+            if not cited or bad:
+                fix.append(f"Use only these document ids as citations: {', '.join(allowed)}.")
+            if leaked:
+                fix.append(f"Leave out any {' / '.join(leaked)} figure: the documents give "
+                           "different values for it, and the question does not ask about it.")
+            log.warning("Asking once more for the answer.")
+            messages = messages + [HumanMessage(" ".join(fix))]
     if not cited:
         return {"result": FinalOutput(
             status="abstained",
             reason="An answer was written but could not be tied to the documents, so it is not shown.",
         ).model_dump()}
 
+    note = None
+    if leaked:  # still there after the retry: show both values, built by code
+        parts = [f"{unit}: " + "; ".join(
+            f"[{i}] ({by_id[i]['date']}) " + "/".join(f"{v:g}" for v in sorted(vals))
+            for i, vals in disputed[unit].items()) for unit in leaked]
+        note = ("Note: the documents give different values for " + ", ".join(parts)
+                + ". " + NOT_SETTLED)
     result = FinalOutput(
         status="answered",
         answer=text,
         citations=[_citation(by_id[c], claims) for c in cited],
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
+        reason=note,
     )
     return {"result": result.model_dump()}
 

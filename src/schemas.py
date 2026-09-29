@@ -12,8 +12,8 @@ class DocClaim(BaseModel):
     claim: str | None = Field(
         description=(
             "What this document says in answer to the question, in one sentence, with numbers, "
-            "amounts, dates and names copied exactly as written; null if the document says "
-            "nothing about the question"
+            "amounts, dates and names copied exactly as written; only the part that answers the "
+            "question, not other details; null if the document says nothing about the question"
         )
     )
 

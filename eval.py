@@ -210,12 +210,10 @@ def main() -> int:
     if config.TRACING_WARNING:
         print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
 
-    from main import flush_traces
+    from main import flush_traces, known_errors
     from src.graph import build_graph
-    from src.jev import JevError
-    from src.llm import USAGE, StructuredOutputError, record_spend
-    from src.load_docs import CorpusError
-    from src.vectorstore import LockedStorageError, ensure_index
+    from src.llm import USAGE, record_spend
+    from src.vectorstore import ensure_index
 
     try:
         ensure_index()
@@ -227,7 +225,7 @@ def main() -> int:
         else:
             print("LangSmith eval skipped (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY "
                   "to run it).")
-    except (LockedStorageError, JevError, StructuredOutputError, CorpusError) as err:
+    except known_errors() as err:
         print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
         ok = False
     print()

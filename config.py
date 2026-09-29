@@ -55,9 +55,6 @@ LLM_TIMEOUT_S = env("LLM_TIMEOUT_S", 90.0, float)
 LLM_MAX_RETRIES = env("LLM_MAX_RETRIES", 3, int)
 LLM_REQUIRE_PARAMETERS = env("LLM_REQUIRE_PARAMETERS", True, _bool)
 LLM_PROVIDER_ORDER = env("LLM_PROVIDER_ORDER", [], _list)
-LLM_STRUCTURED_METHODS = env(
-    "LLM_STRUCTURED_METHODS", ["json_schema", "function_calling", "json_mode"], _list
-)
 LLM_APP_TITLE = env("LLM_APP_TITLE", "rag-conflicts")
 LLM_HTTP_REFERER = env("LLM_HTTP_REFERER", "local-demo")
 # Used to work out the cost when OpenRouter does not report it (USD per million tokens).
@@ -65,8 +62,7 @@ LLM_PRICE_IN_PER_M = env("LLM_PRICE_IN_PER_M", 0.10, float)
 LLM_PRICE_OUT_PER_M = env("LLM_PRICE_OUT_PER_M", 0.50, float)
 
 # --- judge (decides relevance and agree / disagree) ------------------------------------------
-JUDGE = env("JUDGE", "jev")  # jev | llm
-JUDGE_FALLBACK = env("JUDGE_FALLBACK", "llm")  # llm | none
+JUDGE = env("JUDGE", "jev")  # jev | llm (if Jev fails, the LLM judges instead)
 JEV_MODEL = env("JEV_MODEL", "typesafe/jev-1.13")
 JEV_URL = env("JEV_URL", "https://openrouter.ai/api/alpha/decisions")
 JEV_TIMEOUT_S = env("JEV_TIMEOUT_S", 30.0, float)

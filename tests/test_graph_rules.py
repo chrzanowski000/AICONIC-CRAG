@@ -37,8 +37,8 @@ def _state(claims, relevance, pairs=()):
 
 
 def test_reconcile_moves_a_replaced_doc_to_outdated_even_when_the_numbers_differ():
-    out = reconcile(_state({"D09": "38 minutes of flight time.", "D10": "45 minutes of flight time."},
-                           {"D09": 0.9, "D10": 0.9}))
+    claims = {"D09": "38 minutes of flight time.", "D10": "45 minutes of flight time."}
+    out = reconcile(_state(claims, {"D09": 0.9, "D10": 0.9}))
     assert out["route"] == "answer"
     assert out["relevant_ids"] == ["D10"]
     assert [(o["old_id"], o["new_id"]) for o in out["outdated"]] == [("D09", "D10")]
@@ -47,7 +47,8 @@ def test_reconcile_moves_a_replaced_doc_to_outdated_even_when_the_numbers_differ
 
 def test_reconcile_keeps_a_dispute_the_judge_reports():
     pair = {"doc_a": "D03", "doc_b": "D04", "relation": "disagree", "p_disagree": 0.99}
-    out = reconcile(_state({"D03": "16 weeks.", "D04": "12 weeks."}, {"D03": 0.9, "D04": 0.9}, [pair]))
+    claims = {"D03": "16 weeks.", "D04": "12 weeks."}
+    out = reconcile(_state(claims, {"D03": 0.9, "D04": 0.9}, [pair]))
     assert out["route"] == "conflict"
     assert [(d["doc_a"], d["doc_b"]) for d in out["disputes"]] == [("D03", "D04")]
 

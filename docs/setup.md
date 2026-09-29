@@ -116,8 +116,9 @@ results as embedded mode.
 at a time. Close the other `main.py` or `eval.py` run. If none is running, delete
 `qdrant_data/.lock`. Or use server mode.
 
-**A command stops with `ERROR (JevError)`.** Jev failed and `JUDGE_FALLBACK=none` is set. With
-the default `JUDGE_FALLBACK=llm` the LLM judges instead and a warning is logged.
+**"Jev failed ... The LLM judges instead."** A warning, not an error: the Decisions API did not
+answer, so the LLM decided relevance and agree / disagree for this run. `jev-test` shows the
+Jev error itself.
 
 **The embedding model does not download.** FastEmbed needs to reach Hugging Face once. If ONNX
 does not work on your machine, install `langchain-huggingface sentence-transformers` and set

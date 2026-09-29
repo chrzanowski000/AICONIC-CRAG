@@ -86,10 +86,7 @@ them with the values in use.
 | what fails | what happens |
 |---|---|
 | no document scores above the cutoff | abstain at once, no model call |
-| `json_schema` structured output not supported | try `function_calling`, then `json_mode` + Pydantic (all three tested in M5) |
-| claims cannot be parsed at all | use the first 300 characters of each doc (headings removed) as its claim |
+| the LLM reply cannot be parsed, or the LLM call fails | the run stops with a one-line `ERROR (...)` message, exit code 2 |
 | Jev call fails (error, timeout, bad format) | the LLM judges with structured output; `judge_used=llm` |
 | the answer cites a doc that is not allowed | drop it; if none left, ask once more; then abstain |
 | Qdrant folder locked by another process | clear error message with three ways out |
-| Jev fails and `JUDGE_FALLBACK=none` | the run stops with a one-line `ERROR (JevError)` message, exit code 2 |
-| every structured-output method fails | claims = start of each doc (judge still runs); answer = plain text with `[Dxx]` citations picked out of it (tested in M5) |

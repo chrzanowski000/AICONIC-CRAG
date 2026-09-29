@@ -18,7 +18,7 @@ from langgraph.graph import END, START, StateGraph
 
 import config
 from src import jev
-from src.llm import StructuredOutputError, plain, structured
+from src.llm import structured
 from src.load_docs import doc_map
 from src.prompts import answer_messages, assess_messages, extract_claims_messages
 from src.quantities import numbers_clash, quantities
@@ -94,24 +94,11 @@ def _clean_claim(value: str | None) -> str | None:
     return value
 
 
-def _text_start(text: str, limit: int = 300) -> str:
-    """The first `limit` characters of a doc, without markdown headings, on one line."""
-    body = " ".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
-    body = " ".join(body.replace("**", "").split())
-    return body if len(body) <= limit else body[:limit].rsplit(" ", 1)[0] + " ..."
-
-
 def extract_claims(state: RAGState) -> dict:
     docs = state["retrieved"]
-    ids = [d["doc_id"] for d in docs]
-    try:
-        out, _ = structured(Claims, extract_claims_messages(state["question"], docs))
-        by_id = {c.doc_id.strip("[] "): _clean_claim(c.claim) for c in out.claims}
-        claims = {i: by_id.get(i) for i in ids}
-    except StructuredOutputError as err:
-        log.warning("Claims could not be parsed (%s). Using the start of each doc instead.", err)
-        claims = {d["doc_id"]: _text_start(d["text"]) for d in docs}
-    return {"claims": claims}
+    out = structured(Claims, extract_claims_messages(state["question"], docs))
+    by_id = {c.doc_id.strip("[] "): _clean_claim(c.claim) for c in out.claims}
+    return {"claims": {d["doc_id"]: by_id.get(d["doc_id"]) for d in docs}}
 
 
 def _supersession_facts(docs: list[RetrievedDoc]) -> str:
@@ -120,8 +107,7 @@ def _supersession_facts(docs: list[RetrievedDoc]) -> str:
 
 
 def _judge_with_llm(question: str, docs: list[RetrievedDoc], claims: dict) -> dict:
-    out, _ = structured(Assessment, assess_messages(question, docs, claims,
-                                                    _supersession_facts(docs)))
+    out = structured(Assessment, assess_messages(question, docs, claims, _supersession_facts(docs)))
     ids = {d["doc_id"] for d in docs}
     relevance = {d: 0.0 for d in ids}
     for item in out.docs:
@@ -150,8 +136,6 @@ def judge(state: RAGState) -> dict:
             out = jev.judge(state["question"], jev_docs, linked)
             return {"judge_used": "jev", "relevance": out["relevance"], "pairs": out["pairs"]}
         except Exception as err:  # any failure of the alpha API: fall back, and say so
-            if config.JUDGE_FALLBACK != "llm":
-                raise
             log.warning("Jev failed (%s). The LLM judges instead.", str(err)[:300])
     elif config.JUDGE != "llm":
         raise ValueError(f"Unknown JUDGE '{config.JUDGE}'")
@@ -259,13 +243,8 @@ def answer(state: RAGState) -> dict:
 
     text, cited, leaked = None, [], []
     for attempt in range(2):  # one more try if a citation or a number is wrong
-        try:
-            out, _ = structured(Answer, messages)
-            text, raw_cites = out.answer.strip(), [c.strip("[] ") for c in out.citations]
-        except StructuredOutputError as err:
-            log.warning("Answer could not be parsed (%s). Using plain text.", err)
-            text = plain(messages).strip()
-            raw_cites = []
+        out = structured(Answer, messages)
+        text, raw_cites = out.answer.strip(), [c.strip("[] ") for c in out.citations]
         in_text = _DOC_ID.findall(text)
         bad = sorted({c for c in raw_cites + in_text if c not in allowed})
         cited = [c for c in dict.fromkeys(raw_cites + in_text) if c in allowed]

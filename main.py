@@ -63,12 +63,11 @@ def cmd_llm_test(args) -> None:
 
     question = "How many weeks of paid parental leave does Helios Dynamics offer?"
     docs = [_to_retrieved(doc_map()[i], None) for i in ("D03", "D04", "D13")]
-    print(f"Model: {config.LLM_MODEL}  reasoning_effort: {config.LLM_REASONING_EFFORT or '-'}  "
-          f"methods: {','.join(config.LLM_STRUCTURED_METHODS)}")
+    print(f"Model: {config.LLM_MODEL}  reasoning_effort: {config.LLM_REASONING_EFFORT or '-'}")
     print(f"Question: {question}")
     started = time.time()
-    claims, method = structured(Claims, extract_claims_messages(question, docs))
-    print(f"Method used: {method}   time: {time.time() - started:.1f}s")
+    claims = structured(Claims, extract_claims_messages(question, docs))
+    print(f"Time: {time.time() - started:.1f}s")
     for item in claims.claims:
         print(f"  [{item.doc_id}] {item.claim}")
     print(f"Tokens: {USAGE.input_tokens} in / {USAGE.output_tokens} out   cost: ${USAGE.llm_cost:.6f}")
@@ -203,22 +202,27 @@ def flush_traces() -> None:
     print(f"Traces sent to LangSmith project '{config.LANGSMITH_PROJECT}'.")
 
 
-def main(argv: list[str] | None = None) -> int:
-    setup_logging()
-    args = build_parser().parse_args(argv)
-    if config.TRACING_WARNING:
-        print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
+def known_errors() -> tuple[type[Exception], ...]:
+    """Problems that get a one-line message instead of a long traceback."""
+    from openai import APIError
+
     from src.jev import JevError
     from src.llm import StructuredOutputError
     from src.load_docs import CorpusError
     from src.vectorstore import LockedStorageError
 
-    # Known problems get a short message instead of a long traceback.
-    known = (LockedStorageError, JevError, StructuredOutputError, CorpusError)
+    return (LockedStorageError, JevError, StructuredOutputError, CorpusError, APIError)
+
+
+def main(argv: list[str] | None = None) -> int:
+    setup_logging()
+    args = build_parser().parse_args(argv)
+    if config.TRACING_WARNING:
+        print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
     code = 0
     try:
         args.func(args)
-    except known as err:
+    except known_errors() as err:
         print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
         code = 2
     finally:

@@ -49,6 +49,14 @@ branch `simplification` (less code, same results).
     makes; it is replaced by 5 `reconcile` tests (outdated, judge dispute, number check, agree,
     abstain). Checked: `reconcile` and `disputed_numbers` give the same output as `main` on 2000
     random states (all three routes); `pytest` 34 passed.
+  - Step 3, fallbacks: structured output uses `json_schema` only (it was used in every run).
+    Gone: the `function_calling` and `json_mode` paths, the "method that worked last" memory, the
+    claims fallback (start of each doc; it would bring back the false disputes), the plain-text
+    answer fallback, `LLM_STRUCTURED_METHODS` and `JUDGE_FALLBACK` (Jev failing always hands over
+    to the LLM judge). A parse or API error now stops the run with a one-line `ERROR`; the list
+    of such errors is shared by `main.py` and `eval.py`. `src/llm.py` 209 → 142 lines. Checked:
+    `pytest` 34 passed; `llm-test` OK; bad model id → one-line error, exit 2; Jev made to fail →
+    LLM judges, Q3 still DISPUTED; `eval.py` (Jev) 18/18 PASS.
 
 ## Last verified outputs (2026-09-29)
 
@@ -143,7 +151,7 @@ paraphrases checked by hand in M3). After changing `questions.json`, delete the 
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.00558 |
-| **total** | | **0.06619** |
+| 2026-09-29 | review + simplification round: evals, demos, probe questions (from `.spend.json`) | 0.00898 |
+| **total** | | **0.06959** |
 
 Budget: $4.00. Left: about $3.93.

@@ -160,6 +160,8 @@ when documents agree, all of them are cited.
       Decided 2026-09-30: the answer answers only the question; source lines show each snippet
       as extracted, even with other information (D04's "12 weeks" on Q14), with no comment.
       Not a known issue (`docs/decisions.md` 3b).
+      (The docs commit also picked up a local `.claude/worktrees/` folder by mistake; it is
+      removed from git again and now ignored.)
 
 ## Last verified outputs (2026-09-29)
 

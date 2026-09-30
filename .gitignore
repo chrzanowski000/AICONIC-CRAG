@@ -16,3 +16,6 @@ models/
 
 # Local state of `langgraph dev`
 .langgraph_api/
+
+# Local worktrees made by tools
+.claude/worktrees/

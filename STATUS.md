@@ -60,6 +60,15 @@ every round is in the git log.
   claim keeps the whole sentence. The answer check catches it and asks again; if the second try
   still has it, the answer is shown with a note and the eval fails Q14. Seen once in about 11
   runs since the answer-prompt fix.
+  **Root cause: the claim prompt** (`EXTRACT_CLAIMS` in `src/prompts.py`, and the `claim` field
+  description in `src/schemas.py`) gives two instructions that pull against each other: "keep
+  only the part that answers the question; leave out ... other numbers" and "copy numbers ...
+  exactly as written". D04 says both facts in one sentence ("Employees receive 12 weeks of paid
+  parental leave at full salary"). Doing both would mean rewriting it as "Leave is paid at full
+  salary"; the model copies the sentence whole instead. The field description puts "numbers ...
+  copied exactly as written" first, which makes this more likely. One rewording was tried (a
+  colour/price example: rewrite without the extra details, copy exactly the values you keep);
+  D04's claim still kept "12 weeks", so it was reverted. Not fixed yet.
 - One model reads everything: there is no second opinion and no probability to tune, and it can
   answer differently from run to run. Run the eval twice after a change to a prompt, a threshold,
   a document or the model.

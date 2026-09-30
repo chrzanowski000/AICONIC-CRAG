@@ -14,7 +14,7 @@
 
 ## What this project is
 
-A small RAG system over 20 made-up documents about a fictional company (Helios Dynamics).
+A small RAG system over 40 made-up documents about a fictional company (Helios Dynamics).
 Some documents contradict each other. Some are old and replaced by newer ones.
 
 The system must:
@@ -64,7 +64,7 @@ python main.py index [--reindex] # build or refresh the Qdrant collection
 python main.py search "<q>"      # retrieval smoke test, no LLM
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
+python main.py demo [--all]      # run the 5 demo questions (--all: all 30)
 python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmith eval if tracing is on
 python -m pytest                 # unit tests, no model calls (needs requirements-dev.txt)
 langgraph dev                    # LangGraph Studio server on 127.0.0.1:2024 (needs requirements-dev.txt)
@@ -76,9 +76,9 @@ langgraph dev                    # LangGraph Studio server on 127.0.0.1:2024 (ne
 config.py          the one place for every setting (models, URLs, thresholds, paths, flags)
 main.py            CLI
 eval.py            evaluation
-questions.json     18 questions with expected results (Q1-Q5 are the demo)
+questions.json     30 questions with expected results (Q1-Q5 are the demo)
 langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
-data/corpus/       the 20 documents (markdown with frontmatter)
+data/corpus/       the 40 documents (markdown with frontmatter); cases listed in docs/corpus.md
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,
                    studio (Studio entry point)
 tests/             unit tests: graph rules, citations, dates in the output, corpus checks (pytest)

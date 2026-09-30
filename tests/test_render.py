@@ -29,3 +29,10 @@ def test_dispute_shows_both_dates():
     assert "[D04] People Ops wiki (created 2025-02-20): 12 weeks." in text
     assert "What differs:" in text
     assert "(created 2025-01-10) vs [D04] (created 2025-02-20)" in text
+
+
+def test_dispute_with_three_versions_says_all_three():
+    d25 = {"doc_id": "D25", "date": "2025-06-02", "source": "#learning Slack digest", "claim": "€1,500."}
+    text = render("q", {"status": "disputed", "versions": [CITE_D03, CITE_D04, d25]})
+    assert "The sources disagree. All 3 versions:" in text
+    assert "[D25] #learning Slack digest (created 2025-06-02): €1,500." in text

@@ -4,8 +4,9 @@ Last update: 2026-09-30. All milestones of `docs/plan.md` are done, plus a round
 dispute detection and the LangSmith connection (see below). Latest: a simplification round on the
 branch `simplification` (less code, same results, all evals pass). Then the branch `llm-judge`
 (from `simplification`): the LLM does all judging; Jev and the regex number check are removed.
-Latest: the branch `document-dates` (from `llm-judge`): every document shown carries its
-creation date.
+Then the branch `document-dates` (from `llm-judge`): every document shown carries its
+creation date. Latest: the branch `more-documents` (from `document-dates`): 40 documents and 30
+questions, covering every case.
 
 ## Milestones
 
@@ -128,6 +129,18 @@ creation date.
       `docs/corpus.md`: real word counts, the topic rule. `docs/plan.md`: marked as history.
       README and `CLAUDE.md`: reading order. Checked by a separate read of every doc against the
       code.
+- [x] **40 documents, 30 questions** (branch `more-documents`): 20 new documents (D21–D40) and 12
+      new questions (Q19–Q30), so every case is in the corpus at least twice (table in
+      `docs/corpus.md`, "The cases"): documents agree (D21+D22 laptops, D38+D39 expense deadline,
+      D18+D30+D31 warranty in different words), disagree (D23/D24/D25 learning budget, three
+      sides; D32/D33 release cadence, in words; D34/D35 ticket retention), one document answers
+      (D26 sick note, D36 public transport, D37 summer party), no document answers but close to a
+      real topic (gym, paid sick days), and a chain of three replaced documents (D27 → D28 → D29
+      annual leave). Three sentences were changed before the first run so they could not clash
+      with existing documents (HQ hours, onboarding week, parking). A dispute with three
+      versions now says "All 3 versions:" instead of "Both versions:" (new unit test).
+      Checked: retrieval for the 18 old questions still finds their documents; `pytest` 19
+      passed; `eval.py` twice → 30/30 PASS both times ($0.011 and $0.0085).
 
 ## Last verified outputs (2026-09-29)
 
@@ -190,8 +203,8 @@ creation date.
 
 ## Next step
 
-1. Review and merge the branch `document-dates` into `main` (it holds `llm-judge` and
-   `simplification` too).
+1. Review and merge the branch `more-documents` into `main` (it holds `document-dates`,
+   `llm-judge` and `simplification` too).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -235,7 +248,7 @@ creation date.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.05578 |
-| **total** | | **0.11639** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.07722 |
+| **total** | | **0.13783** |
 
-Budget: $4.00. Left: about $3.88.
+Budget: $4.00. Left: about $3.86.

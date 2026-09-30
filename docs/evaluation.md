@@ -13,7 +13,7 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 ## The questions
 
-18 questions. Q1–Q5 are the demo questions (`python main.py demo`); the rest are extra checks
+30 questions. Q1–Q5 are the demo questions (`python main.py demo`); the rest are extra checks
 (`python main.py demo --all` runs all of them without the checks). The `note` field in
 `questions.json` says what each question tests.
 
@@ -37,9 +37,33 @@ threshold, a document or the model, run it twice; both runs must pass.
 | Q16 | Do I keep my health insurance during parental leave? | only one doc answers | `answered`; cites D04; contains "yes" or "continue" |
 | Q17 | How long must passwords be? | only one doc answers | `answered`; cites D11; contains "14" |
 | Q18 | What are the HQ office opening hours? | replaced doc with the same value | `answered`; cites D08; outdated D07 → D08; contains "7:00" |
+| Q19 | How often are company laptops replaced? | docs agree | `answered`; cites D21 or D22; contains "3" or "three" |
+| Q20 | What is the yearly learning budget per employee? | real dispute, three documents | `disputed`; D23, D24 and D25, each with a date; no answer |
+| Q21 | When do I need a doctor's note for sick leave? | only one doc answers | `answered`; cites D26; contains "three" or "3" |
+| Q22 | How many days of annual leave do employees get per year? | chain of three replaced docs | `answered`; cites D29; outdated D27 → D29 and D28 → D29; contains "30" |
+| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | `answered`; cites D18, D30 or D31; contains "one year", "one-year", "12 months" or "1 year" |
+| Q24 | How often does engineering ship a release? | real dispute, in words and days | `disputed`; D32 and D33 |
+| Q25 | How long are customer support tickets kept? | real dispute | `disputed`; D34 and D35 |
+| Q26 | Does Helios Dynamics pay for public transport to work? | only one doc answers | `answered`; cites D36; contains "100%", "yes" or "full" |
+| Q27 | When is the summer party? | only one doc answers | `answered`; cites D37; contains "20 June" |
+| Q28 | How long do I have to submit an expense claim? | docs agree | `answered`; cites D38 or D39; contains "30" |
+| Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `abstained` |
+| Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `abstained` |
 
-Why Q9–Q18: a system that shows a dispute every time two documents mention different numbers
-would pass Q3, Q4 and Q8 easily. These questions check the other side: documents that agree,
+The questions by case (details in `corpus.md`, "The cases"):
+
+| case | questions |
+|---|---|
+| documents agree → answered | Q9, Q10, Q12, Q19, Q23, Q28 |
+| documents disagree → disputed | Q3, Q4, Q8, Q20 (three documents), Q24, Q25 |
+| one document answers → answered | Q1, Q16, Q17, Q21, Q26, Q27 |
+| no document answers → abstained | Q5, Q29, Q30 |
+| replaced document → answered with an outdated note | Q2, Q6, Q7, Q18, Q22 (a chain of three) |
+| disputed pair that agrees on what is asked → answered | Q11, Q13, Q14 |
+| docs add different facts → answered | Q15 |
+
+Why so many "answered" questions: a system that shows a dispute every time two documents mention
+different numbers would pass Q3, Q4 and Q8 easily. These questions check the other side: documents that agree,
 documents that add different facts, and above all Q11, Q13 and Q14, where the two documents of a
 real dispute (D03, D04) agree on what is asked. There the right result is an answer, and the
 answer must not quietly state one side's number of weeks.
@@ -56,7 +80,7 @@ comment `n/a`. A question passes only if every check scores 1.
 |---|---|
 | `status_matches` | Is the status (`answered` / `disputed` / `abstained`) the expected one? |
 | `cites_required_docs` | Are all docs in `cites` cited, and at least one doc in `cites_any`? Each citation has a date and a source. |
-| `disputed_shows_both_sides` | For a dispute: at least 2 different versions, the required ones among them, each with a date and a claim, and **no** single answer. |
+| `disputed_shows_both_sides` | For a dispute: at least 2 different versions (Q20 has 3), the required ones among them, each with a date and a claim, and **no** single answer. |
 | `marks_outdated` | Is there an outdated note for each expected old → new pair, with both dates? |
 | `abstained_cleanly` | For "I don't know": no answer, no citations, no versions. |
 | `answer_contains` | Does the answer contain one of the expected strings? |
@@ -83,9 +107,9 @@ calls, cost nothing and take about 2 seconds. They use the real corpus.
 
 The unit tests cover the plain-code rules. What the LLM says can only be checked by the eval.
 
-## Results (2026-09-29, LLM-only judge)
+## Results (2026-09-30, 40 documents, LLM-only judge)
 
-`python eval.py`: **18/18 PASS** on three runs in a row, exit code 0.
+`python eval.py`: **30/30 PASS** on two runs in a row, exit code 0. One run:
 
 ```
 Q1  PASS  answered  ...; cited ['D14']; contains '2'
@@ -97,24 +121,37 @@ Q6  PASS  answered  ...; cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contai
 Q7  PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'
 Q8  PASS  disputed  ...; versions ['D11', 'D12'], each with date and claim, no answer
 Q9  PASS  answered  ...; cited ['D18']; contains '1.2'
-Q10 PASS  answered  ...; cited ['D10']; contains '300'
+Q10 PASS  answered  ...; cited ['D10', 'D18']; contains '300'
 Q11 PASS  answered  ...; cited ['D03', 'D04']; contains 'adopt'; avoids ['16', '12']
-Q12 PASS  answered  ...; cited ['D11']; contains 'required'
+Q12 PASS  answered  ...; cited ['D11', 'D12']; contains 'required'
 Q13 PASS  answered  ...; cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']
-Q14 PASS  answered  ...; cited ['D03']; contains '100%'; avoids ['16', '12']
+Q14 PASS  answered  ...; cited ['D03', 'D04']; contains 'full'; avoids ['16', '12']
 Q15 PASS  answered  ...; cited ['D15', 'D20']
 Q16 PASS  answered  ...; cited ['D04']; contains 'yes'
 Q17 PASS  answered  ...; cited ['D11']; contains '14'
 Q18 PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'
+Q19 PASS  answered  ...; cited ['D22']; contains '3'
+Q20 PASS  disputed  ...; versions ['D23', 'D24', 'D25'], each with date and claim, no answer
+Q21 PASS  answered  ...; cited ['D26']; contains 'three'
+Q22 PASS  answered  ...; cited ['D29']; D27(2023-01-01)->D29(2025-01-01), D28(2024-01-01)->D29(2025-01-01); contains '30'
+Q23 PASS  answered  ...; cited ['D30']; contains 'one year'
+Q24 PASS  disputed  ...; versions ['D32', 'D33'], each with date and claim, no answer
+Q25 PASS  disputed  ...; versions ['D34', 'D35'], each with date and claim, no answer
+Q26 PASS  answered  ...; cited ['D36']; contains '100%'
+Q27 PASS  answered  ...; cited ['D37']; contains '20 June'
+Q28 PASS  answered  ...; cited ['D38']; contains '30'
+Q29 PASS  abstained ...; no answer, no citations, no versions
+Q30 PASS  abstained ...; no answer, no citations, no versions
 Summary: all passed.
-LLM: 63 calls, 38989 in / 4199 out tokens. This run: $0.005611.
+LLM: 101 calls, 70658 in / 6970 out tokens. This run: $0.010918.
 ```
 
-The check on the answer (see `pipeline.md`, step 5a) sometimes catches an answer about parental
-leave that restates D04's "12 weeks"; the second try is clean, so Q11–Q14 still avoid "16" and
-"12". In `demo --all` no correct answer got a note.
+The check on the answer (see `pipeline.md`, step 5a) caught an answer about parental leave that
+restated D04's "12 weeks" once in each run; the second try was clean, so Q11–Q14 still avoid "16"
+and "12".
 
-Earlier results (Jev as judge, then the LLM as Jev's fallback, both 18/18) are in `STATUS.md`.
+Earlier results (20 documents and 18 questions: Jev as judge, then the LLM as Jev's fallback,
+then the LLM alone, all 18/18) are in `STATUS.md`.
 
 ## What this found, and what was fixed
 
@@ -181,6 +218,7 @@ The local table passed 18/18 in both runs as well.
 
 ## Cost
 
-One full eval (18 questions) costs about $0.0056 with the LLM-only judge (it was $0.003 with Jev,
-which used fewer LLM calls; the check on the answer adds one call per answered question). The
+One full eval (30 questions, 40 documents) costs about $0.009 to $0.011 with the LLM-only judge.
+(With 18 questions it was $0.0056, and $0.003 with Jev, which used fewer LLM calls; the check on
+the answer adds one call per answered question.) The
 LangSmith eval runs the pipeline a second time, so it doubles that.

@@ -13,7 +13,7 @@ def _write(folder, doc_id, topic, supersedes="null"):
 
 
 def test_the_real_corpus_loads():
-    assert len(load_documents()) == 20
+    assert len(load_documents()) == 40
 
 
 def test_a_replaced_doc_must_exist(tmp_path):

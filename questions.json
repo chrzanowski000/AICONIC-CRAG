@@ -16,5 +16,17 @@
   {"id": "Q15", "demo": false, "note": "docs add different facts", "question": "What should I do during a Sev1 incident and who is on call?", "expected": {"status": "answered", "cites_any": ["D15", "D20"]}},
   {"id": "Q16", "demo": false, "note": "only one doc answers", "question": "Do I keep my health insurance during parental leave?", "expected": {"status": "answered", "cites": ["D04"], "answer_contains": ["yes", "continue"]}},
   {"id": "Q17", "demo": false, "note": "only one doc answers", "question": "How long must passwords be?", "expected": {"status": "answered", "cites": ["D11"], "answer_contains": ["14"]}},
-  {"id": "Q18", "demo": false, "note": "replaced doc with the same value", "question": "What are the HQ office opening hours?", "expected": {"status": "answered", "cites": ["D08"], "outdated": [["D07", "D08"]], "answer_contains": ["7:00"]}}
+  {"id": "Q18", "demo": false, "note": "replaced doc with the same value", "question": "What are the HQ office opening hours?", "expected": {"status": "answered", "cites": ["D08"], "outdated": [["D07", "D08"]], "answer_contains": ["7:00"]}},
+  {"id": "Q19", "demo": false, "note": "docs agree", "question": "How often are company laptops replaced?", "expected": {"status": "answered", "cites_any": ["D21", "D22"], "answer_contains": ["3", "three"]}},
+  {"id": "Q20", "demo": false, "note": "real dispute, three documents", "question": "What is the yearly learning budget per employee?", "expected": {"status": "disputed", "versions": ["D23", "D24", "D25"]}},
+  {"id": "Q21", "demo": false, "note": "only one doc answers", "question": "When do I need a doctor's note for sick leave?", "expected": {"status": "answered", "cites": ["D26"], "answer_contains": ["three", "3"]}},
+  {"id": "Q22", "demo": false, "note": "chain of three replaced docs", "question": "How many days of annual leave do employees get per year?", "expected": {"status": "answered", "cites": ["D29"], "outdated": [["D27", "D29"], ["D28", "D29"]], "answer_contains": ["30"]}},
+  {"id": "Q23", "demo": false, "note": "three docs agree in different words (12 months, one year)", "question": "How long is the Kestrel X2 warranty?", "expected": {"status": "answered", "cites_any": ["D18", "D30", "D31"], "answer_contains": ["one year", "one-year", "12 months", "1 year"]}},
+  {"id": "Q24", "demo": false, "note": "real dispute, in words and days", "question": "How often does engineering ship a release?", "expected": {"status": "disputed", "versions": ["D32", "D33"]}},
+  {"id": "Q25", "demo": false, "note": "real dispute", "question": "How long are customer support tickets kept?", "expected": {"status": "disputed", "versions": ["D34", "D35"]}},
+  {"id": "Q26", "demo": false, "note": "only one doc answers", "question": "Does Helios Dynamics pay for public transport to work?", "expected": {"status": "answered", "cites": ["D36"], "answer_contains": ["100%", "yes", "full"]}},
+  {"id": "Q27", "demo": false, "note": "only one doc answers", "question": "When is the summer party?", "expected": {"status": "answered", "cites": ["D37"], "answer_contains": ["20 June"]}},
+  {"id": "Q28", "demo": false, "note": "docs agree", "question": "How long do I have to submit an expense claim?", "expected": {"status": "answered", "cites_any": ["D38", "D39"], "answer_contains": ["30"]}},
+  {"id": "Q29", "demo": false, "note": "no answer, near a real topic (benefits)", "question": "Does Helios Dynamics offer a gym membership?", "expected": {"status": "abstained"}},
+  {"id": "Q30", "demo": false, "note": "no answer, near a real topic (sick leave)", "question": "How many paid sick days do employees get per year?", "expected": {"status": "abstained"}}
 ]

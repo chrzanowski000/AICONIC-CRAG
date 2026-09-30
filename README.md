@@ -1,6 +1,6 @@
 # Helios RAG: answers that admit what they don't know
 
-A small question-answering demo over 20 made-up documents about a fictional company, Helios
+A small question-answering demo over 40 made-up documents about a fictional company, Helios
 Dynamics. Some documents disagree. Some are old and replaced by newer ones.
 
 The system:
@@ -94,7 +94,7 @@ python main.py index [--reindex] # build or refresh the Qdrant collection
 python main.py search "<q>"      # retrieval test, no model calls
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: all 18)
+python main.py demo [--all]      # run the 5 demo questions (--all: all 30)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
 python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
@@ -109,9 +109,11 @@ runs a LangSmith experiment on the same checks.
 
 ## Results
 
-`python eval.py` passes all 18 questions (checked on three runs in a row): real disputes (in
-numbers and in words), documents that agree, replaced documents, and questions where the two
-sides of a dispute agree on the point asked. A full eval costs about $0.006. The 18 unit tests
+`python eval.py` passes all 30 questions (checked on two runs in a row). They cover every case:
+documents that agree (also in different words), documents that disagree (in numbers, in words,
+and three at once), one document that answers, no document that answers (also close to a real
+topic), replaced documents (also a chain of three), and questions where the two sides of a
+dispute agree on the point asked. A full eval costs about $0.01. The 18 unit tests
 (`python -m pytest`) check the plain-code rules for free. See
 [`docs/evaluation.md`](docs/evaluation.md).
 
@@ -125,7 +127,7 @@ To understand the system, read `docs/architecture.md` first (the parts and who d
 | [`docs/architecture.md`](docs/architecture.md) | the big picture: parts, one question start to finish, who does what, modules, output, settings, failure handling |
 | [`docs/pipeline.md`](docs/pipeline.md) | how the cases are told apart, the state, every step in detail, real traces, known limits |
 | [`docs/decisions.md`](docs/decisions.md) | every design decision with its reason |
-| [`docs/corpus.md`](docs/corpus.md) | the 20 documents and the rules they follow |
+| [`docs/corpus.md`](docs/corpus.md) | the 40 documents, which case each one tests, and the rules they follow |
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
 | [`docs/setup.md`](docs/setup.md) | install, settings, server mode, problems |
 | [`docs/research.md`](docs/research.md) | published work behind the design |

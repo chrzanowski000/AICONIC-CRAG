@@ -1,6 +1,6 @@
 # How the pipeline works
 
-The system answers a question from 20 internal documents. It never pretends to know more than
+The system answers a question from 40 internal documents. It never pretends to know more than
 the documents say. There are three possible outcomes:
 
 | outcome | when | what the user sees |
@@ -18,7 +18,7 @@ win.** A newer date, a more official-looking source, or the language model's opi
 |---|---|---|
 | one document answers, or several agree | the LLM marks the claims relevant; every pair is `same` or `unrelated` | **answered**, citing them |
 | an old document is replaced by a newer one (`D02 supersedes D01`) | Python finds the link in the metadata; the old one moves to "outdated", the pair is never compared | **answered** from the new one, with an "Outdated" note showing the old claim and both dates |
-| two current documents give different answers, no link between them | the LLM marks the pair `different` and says what differs | **disputed**: both versions and dates, no answer |
+| two (or more) current documents give different answers, no link between them | the LLM marks each such pair `different` and says what differs | **disputed**: every version with its date, what differs, no answer |
 | two documents disagree on something, but agree on what is asked | claims keep only the part that answers the question, so the LLM sees `same` | **answered**; the answer check keeps the disputed detail out |
 | nothing close enough to the question | every search score is under the cutoff | **abstained**, no model call |
 | documents found, but none answers the question | every claim is `null`, or the LLM marks none relevant | **abstained** |
@@ -325,7 +325,7 @@ cutoff 0.58) is stopped at the search and costs nothing.
   in the outdated note. Example: "Is the HQ office open on weekends?".
 - **One model reads everything.** The LLM decides relevance and same / different. There is no
   second opinion and no probability; the eval (run twice after a change) is the guard.
-- **Tested on this corpus only.** 20 documents and 18 questions (see `evaluation.md`).
+- **Tested on this corpus only.** 40 documents and 30 questions (see `evaluation.md`).
 
 The open items are tracked in `STATUS.md`.
 

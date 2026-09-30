@@ -24,7 +24,8 @@ def render(question: str, result: dict) -> str:
         if out.reason:
             lines.append(_wrap(out.reason))
     elif out.status == "disputed":
-        lines.append("The sources disagree. Both versions:")
+        n = len(out.versions)
+        lines.append("The sources disagree. " + ("Both versions:" if n == 2 else f"All {n} versions:"))
         lines += [_source_line(c) for c in out.versions]
         if out.differences:
             lines.append("What differs:")

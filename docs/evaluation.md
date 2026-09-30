@@ -259,7 +259,7 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
 1. reads the LangSmith dataset `rag-conflicts-<name>-<fingerprint>` of the dataset in use (for
    example `rag-conflicts-helios-536567d3`), or creates it from `data/<name>/questions.json` if
    it does not exist (inputs: `question`, `id`; outputs: the `expected`
-   block);
+   block; split: `one_answer`, `dispute` or `no_answer`, to filter by outcome in the UI);
 2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included),
    experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time: the cost
    counter is not thread safe);

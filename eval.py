@@ -246,10 +246,12 @@ def run_local(questions: list[dict]) -> bool:
     return all_ok
 
 
-def run_langsmith(questions: list[dict]) -> None:
-    from langsmith import Client
+def outcome(expected: dict) -> str:
+    return "dispute" if expected["dispute"] else "no_answer" if expected["no_answer"] else "one_answer"
 
-    client = Client()
+
+def langsmith_dataset(client, questions: list[dict]) -> str:
+    """The LangSmith dataset of these questions: reused if it exists, else created. Its name."""
     # The name ends with a fingerprint of the questions, so any change to questions.json gets a
     # new dataset instead of grading against old examples.
     fingerprint = hashlib.sha256(json.dumps(questions, sort_keys=True).encode()).hexdigest()[:8]
@@ -259,9 +261,18 @@ def run_langsmith(questions: list[dict]) -> None:
     else:
         dataset = client.create_dataset(name, description=f"RAG demo questions ({config.DATASET})")
         client.create_examples(dataset_id=dataset.id, examples=[
-            {"inputs": {"question": q["question"], "id": q["id"]}, "outputs": q["expected"]}
+            {"inputs": {"question": q["question"], "id": q["id"]}, "outputs": q["expected"],
+             "split": outcome(q["expected"])}  # to filter by outcome in the LangSmith UI
             for q in questions])
         print(f"LangSmith: created dataset '{name}' with {len(questions)} examples.")
+    return name
+
+
+def run_langsmith(questions: list[dict]) -> None:
+    from langsmith import Client
+
+    client = Client()
+    name = langsmith_dataset(client, questions)
     results = client.evaluate(
         target,
         data=name,

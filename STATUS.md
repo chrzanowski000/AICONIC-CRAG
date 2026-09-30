@@ -61,15 +61,17 @@ every round is in the git log.
   `llm-test` uses the first dispute question of the dataset. Docs: `docs/datasets.md`,
   decision 34. Checked: `pytest` 42 passed (a new test loads every dataset and checks that its
   questions name real documents); Brightwater eval run twice, 26/26 both times (the second with LangSmith: dataset `rag-conflicts-brightwater-3aaded38` created, experiment `rag-conflicts-brightwater-35ee8948`, every check 1 except Q15, which hit an OpenRouter rate limit in the LangSmith pass and got no output); Helios `demo` 5/5 on the new layout; `--dataset brightwater llm-test` works. Merged into `main` (2026-09-30).
+- **LangSmith datasets rebuilt** (2026-10-01): the old datasets were gone (deleted in the UI,
+  with their experiments). Both were created again from the question files, now with a split per
+  outcome, made by code (`eval.langsmith_dataset`): `rag-conflicts-helios-536567d3` (34: 22
+  `one_answer`, 7 `dispute`, 5 `no_answer`) and `rag-conflicts-brightwater-3aaded38` (26: 16, 5,
+  5). No experiments yet.
 
 ## Next steps
 
 1. Decide and fix the "newer doc is silent" case (see Known issues), then add that question to
    the eval.
 2. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
-3. The next `LANGSMITH_TRACING=true python eval.py` creates
-   `rag-conflicts-helios-536567d3`; the old LangSmith dataset `rag-conflicts-demo-536567d3` is then
-   no longer used and can be deleted.
 
 ## Known issues
 

@@ -176,6 +176,13 @@ when documents agree, all of them are cited. Latest: the branch `test-coverage` 
       replaces itself, "I don't know" with no sources. Not covered on purpose: the "newer doc is
       silent" case (behaviour not decided yet). Checked: `pytest` 35 passed; `eval.py` twice →
       34/34 PASS both times ($0.012 and $0.009).
+- [x] **Fix: error inside a 200 reply** (branch `eval-answer-judge`): about 1 request in 20
+      came back as HTTP 200 with `{"error": {"code": 429, "message": "openai/gpt-6-luna is
+      temporarily rate-limited upstream ..."}}` and no `choices`. The OpenAI client does not
+      retry that and crashed with `TypeError: 'NoneType' object is not iterable` (seen in the
+      `compare` step, three eval runs in a row). `src/llm.py` now waits and retries (2, 4, 8 s,
+      `LLM_MAX_RETRIES`), then stops with a one-line `StructuredOutputError`. Other `TypeError`s
+      are not hidden. 3 unit tests (`tests/test_llm.py`).
 
 ## Last verified outputs (2026-09-29)
 

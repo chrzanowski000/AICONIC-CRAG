@@ -93,6 +93,9 @@ os.environ["LANGSMITH_TRACING"] = "true" if TRACING_ON else "false"
 # --- eval ------------------------------------------------------------------------------------
 EVAL_DATASET_NAME = env("EVAL_DATASET_NAME", "rag-conflicts-demo")
 EVAL_EXPERIMENT_PREFIX = env("EVAL_EXPERIMENT_PREFIX", "rag-conflicts")
+# The model that grades answers against the reference answers. Default: the same as LLM_MODEL
+# (cheap, but a model grading its own kind of output is biased; set another model to avoid that).
+EVAL_JUDGE_MODEL = env("EVAL_JUDGE_MODEL", "") or LLM_MODEL
 
 # --- output ----------------------------------------------------------------------------------
 SHOW_SCORES = env("SHOW_SCORES", True, _bool)

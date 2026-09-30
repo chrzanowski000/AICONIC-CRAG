@@ -62,3 +62,24 @@ def test_answer_contains_and_excludes():
     assert answer_contains(Q, out, {"answer_contains": ["full", "100%"]})["score"] == 1
     assert answer_excludes(Q, out, {"answer_excludes": ["16", "12"]})["score"] == 1
     assert answer_excludes(Q, {"answer": "Paid for 12 weeks."}, {"answer_excludes": ["12"]})["score"] == 0
+
+
+def test_answer_is_correct_passes_only_on_correct(monkeypatch):
+    import eval as ev
+
+    seen = {}
+
+    def fake_grade(question, output_text, reference):
+        seen["text"], seen["reference"] = output_text, reference
+        return ev.Grade(verdict=verdict, reason="because")
+
+    monkeypatch.setattr(ev, "grade", fake_grade)
+    out = {"status": "answered", "answer": "Two approvals [D14].", "citations": [_cite("D14")]}
+    ref = {"reference_answer": "A pull request needs 2 approvals (D14)."}
+    for verdict, score in (("correct", 1), ("partly correct", 0), ("incorrect", 0)):
+        result = ev.answer_is_correct(Q, out, ref)
+        assert result["score"] == score
+        assert result["comment"] == f"{verdict}: because"
+    assert "Two approvals [D14]." in seen["text"] and "[D14] S (created 2025-01-01)" in seen["text"]
+    assert seen["reference"] == ref["reference_answer"]
+    assert ev.answer_is_correct(Q, out, {})["comment"] == "n/a"  # no reference answer, no grading

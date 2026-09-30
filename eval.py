@@ -11,6 +11,10 @@ question scores 1 with the comment "n/a".
 """
 
 import sys
+from typing import Literal
+
+from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel, Field
 
 import config
 
@@ -158,8 +162,54 @@ def answer_excludes(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
     return _result(key, True, f"avoids {banned}")
 
 
+# --- the grader: an LLM compares the output with the reference answer -------------------------
+
+GRADE = """\
+You grade the output of a question-answering system that works from company documents. You get
+the question, a reference answer written by a person, and the system's output. Decide:
+- correct: the output has the same outcome as the reference (one answer; the documents disagree
+  and every version is shown with no single answer; or "I don't know") and gives every key fact
+  of the reference. Nothing in it contradicts the reference. Extra details that do not contradict
+  the reference are fine.
+- partly correct: the same outcome, but a key fact of the reference is missing.
+- incorrect: a different outcome (for example one answer where the reference says the documents
+  disagree, or an answer where the reference says the documents do not say), or a fact that
+  contradicts the reference, or the answer picks one side of a disagreement.
+The key facts are the facts in the reference that answer the question. A reference may end with
+"Also fine: ...": those details are optional; the output may give them or leave them out.
+Lines starting with "- [Dxx]" under "Sources" or "Outdated" quote the documents; details in them
+are not claims of the answer. In a disagreement, the listed versions are the output's content.
+Give the reason in one short sentence. Return only the structured object."""
+
+
+class Grade(BaseModel):
+    verdict: Literal["correct", "partly correct", "incorrect"]
+    reason: str = Field(description="One short sentence")
+
+
+def grade(question: str, output_text: str, reference: str) -> Grade:
+    """Ask the grader model to compare the output with the reference answer."""
+    from src.llm import structured
+
+    return structured(Grade, [SystemMessage(GRADE), HumanMessage(
+        f"Question: {question}\n\nReference answer: {reference}\n\nSystem output:\n{output_text}")],
+        model=config.EVAL_JUDGE_MODEL)
+
+
+def answer_is_correct(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+    """The grader says the output matches the reference answer (only "correct" passes)."""
+    key = "answer_is_correct"
+    reference = reference_outputs.get("reference_answer")
+    if not reference:
+        return _na(key)
+    from src.render import render
+
+    verdict = grade(inputs["question"], render(inputs["question"], outputs), reference)
+    return _result(key, verdict.verdict == "correct", f"{verdict.verdict}: {verdict.reason}")
+
+
 CHECKS = [status_matches, cites_required_docs, disputed_shows_both_sides, marks_outdated,
-          abstained_cleanly, answer_contains, answer_excludes]
+          abstained_cleanly, answer_contains, answer_excludes, answer_is_correct]
 
 
 def target(inputs: dict) -> dict:

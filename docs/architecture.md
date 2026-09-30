@@ -158,6 +158,7 @@ All in `config.py`; each one can be set in `.env` or the shell with the same nam
 | retrieval | `TOP_K` (6), `SCORE_THRESHOLD` (0.58), `SCORE_MARGIN` (0.10), `MAX_CONTEXT_DOCS` (10), `EMBEDDING_MODEL` |
 | Qdrant | `QDRANT_MODE` (`embedded` or `server`), `QDRANT_PATH`, `QDRANT_URL`, `QDRANT_COLLECTION` |
 | LangSmith | `LANGSMITH_TRACING` (false), `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`, `EVAL_DATASET_NAME` |
+| eval | `EVAL_JUDGE_MODEL` (the grader's model; default: `LLM_MODEL`) |
 | output and budget | `SHOW_SCORES` (true: print the trace), `LOG_LEVEL`, `BUDGET_USD` (4.0) |
 
 The OpenRouter key is read from `LLM_API_OR`.
@@ -171,6 +172,7 @@ The OpenRouter key is read from `LLM_API_OR`.
 | the LLM leaves a pair out of its comparison | the pair counts as unrelated, with a warning |
 | the answer cites no allowed doc, or a doc that is not allowed | ask once more; then leave out the ids that are not allowed, and abstain if no allowed id is left |
 | the answer check finds a problem | ask once more with the problems as the fix; then keep the answer with a note that lists them |
+| OpenRouter answers HTTP 200 with an error inside instead of a reply (e.g. a short upstream rate limit) | wait and try again (2, 4, 8 s); then as below |
 | the LLM reply cannot be parsed, or the LLM call fails | the run stops with a one-line `ERROR (...)` message (exit code 2 from `main.py`, 1 from `eval.py`); the cost so far is still recorded |
 | a document has bad frontmatter | `ERROR (CorpusError)` naming the file |
 | the Qdrant folder is locked by another process | `ERROR (LockedStorageError)` with three ways out |
@@ -180,5 +182,6 @@ The OpenRouter key is read from `LLM_API_OR`.
 - **Unit tests** (`python -m pytest`, free, no model calls): the rules in `reconcile`, reading the
   LLM's comparison, the "replaces" chains, finding citations, the dates in the output, and the
   corpus checks. They use the real corpus.
-- **Eval** (`python eval.py`, live, about $0.01): all 34 questions through the full pipeline,
-  with checks on the structure of each result. See [`evaluation.md`](evaluation.md).
+- **Eval** (`python eval.py`, live, about $0.012): all 34 questions through the full pipeline,
+  with checks on the structure of each result, and an LLM grader that compares the output
+  with a reference answer written for each question. See [`evaluation.md`](evaluation.md).

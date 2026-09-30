@@ -90,14 +90,62 @@ comment `n/a`. A question passes only if every check scores 1.
 | `abstained_cleanly` | For "I don't know": no answer, no citations, no versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
 | `answer_contains` | Does the answer contain one of the expected strings, as a whole word or number? |
 | `answer_excludes` | Does the answer avoid all of these strings, as whole words or numbers (for example a number the documents disagree on)? |
+| `answer_is_correct` | **The grader**: an LLM compares the whole output with the question's `reference_answer` and says `correct`, `partly correct` or `incorrect`, with a reason. Only `correct` passes. |
 
 Words and numbers are matched whole (`mentions()` in `eval.py`): "2" is found in "needs 2
 approvals" but not in "2025" or "[D12]", and "12" is not found in the date "2025-02-12". So
 "contains" needs the full word ("adoption", not "adopt").
 
-The checks look at the structure of the output, not at the wording. A disputed question passes
-only when the system refuses to give one answer; an unanswerable question passes only when the
-system says nothing that looks like an answer. Guessing is never rewarded.
+The first seven checks look at the structure of the output. A disputed question passes only when
+the system refuses to give one answer; an unanswerable question passes only when the system says
+nothing that looks like an answer. Guessing is never rewarded.
+
+### The grader (`answer_is_correct`)
+
+The structure checks cannot tell whether the answer is actually right. For that, every question
+has a **reference answer** in `questions.json` (`expected.reference_answer`), written by hand from
+the documents:
+
+```json
+{"id": "Q27", "question": "When is the summer party?",
+ "expected": {"status": "answered", "cites": ["D37"], "answer_contains": ["20 June"],
+              "reference_answer": "On Friday 20 June 2025 (D37). Also fine: from 16:00, at Pirita beach."}}
+```
+
+- For an answer, the reference holds the facts that answer the question. Details the question
+  does not ask about go after "Also fine:": the answer may give them or leave them out (the
+  system answers only what is asked).
+- For a dispute, the reference names every version and says there is no single answer.
+- For "I don't know", the reference says the documents do not answer.
+
+The grader gets the question, the reference and the system's full printed output (answer, sources,
+versions, notes), and decides:
+
+| verdict | when |
+|---|---|
+| `correct` | same outcome as the reference (one answer / the documents disagree / "I don't know") and every key fact; nothing contradicts it; extra details that do not contradict are fine |
+| `partly correct` | same outcome, but a key fact is missing |
+| `incorrect` | a different outcome, a fact that contradicts the reference, or the answer picks one side of a disagreement |
+
+Source lines quote the documents and are not claims of the answer: for Q14 D04's source line
+says "12 weeks", but the answer itself does not, so it is `correct`.
+
+Checked by hand before trusting it (2026-09-30), on outputs with a known verdict:
+
+| output | grader said |
+|---|---|
+| Q3 dispute with both versions | correct |
+| Q3 answered "16 weeks [D03]" (picks a side) | incorrect |
+| Q14 answer on pay, D04's source line says 12 weeks | correct |
+| Q14 answer "full salary for 12 weeks" | incorrect |
+| Q5 invented "pets are allowed on Fridays" | incorrect |
+| Q5 "I don't know" | correct |
+| Q15 only the Sev1 part | partly correct |
+
+The grader model is `EVAL_JUDGE_MODEL`, by default the same model as the system
+(`openai/gpt-6-luna`). That is cheap, but a model grading output like its own can be too kind;
+set another model (for example `EVAL_JUDGE_MODEL=z-ai/glm-5.3-flash python eval.py`) for a second
+opinion. The grader adds one LLM call per question (34 per run).
 
 ## Unit tests
 
@@ -111,13 +159,21 @@ calls, cost nothing and take about 2 seconds. They use the real corpus.
 | `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics, a duplicate id, a bad date and a document that replaces itself are refused |
 | `tests/test_eval_checks.py` | the eval's own checks: whole-word matching, citations (`cites` and `cites_any`), every version of a three-way dispute, outdated notes for a chain of three, "I don't know" at the search or after reading, contains / excludes |
 | `tests/test_retrieval.py` | the score cutoff and the margin below the best hit |
+| `tests/test_llm.py` | a reply that holds an error instead of an answer is retried, then stops with a clear error; other errors are not hidden |
 
 The unit tests cover the plain-code rules. What the LLM says can only be checked by the eval.
 
 ## Results (2026-09-30, 40 documents, 34 questions)
 
-`python eval.py`: **34/34 PASS** on two runs in a row, exit code 0. `python -m pytest`: 35 unit
-tests pass. One eval run:
+With the grader (latest): one run **34/34 PASS**, one run **33/34** — Q15 was `partly correct`:
+that answer described the incident steps and the on-call rotation but left out that a Sev1 alert
+must be acknowledged within 15 minutes. That is a real gap in that answer, found only by the
+grader; the answer step does not always cover both parts of a two-part question in full. It is
+tracked in `STATUS.md`. The first grader runs also showed that some reference answers asked for
+details the question did not ask about (pension, location, the Finance lead); those were moved
+to "Also fine:". `python -m pytest`: 39 unit tests pass.
+
+Before the grader: **34/34 PASS** on two runs in a row. One of those runs:
 
 ```
 Q1  PASS  answered  ...; cited ['D14']; contains '2'
@@ -213,7 +269,7 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
 1. reads the dataset `EVAL_DATASET_NAME` (default `rag-conflicts-demo`), or creates it from
    `questions.json` if it does not exist (inputs: `question`, `id`; outputs: the `expected`
    block);
-2. runs `client.evaluate(...)` with the same seven checks as evaluators, experiment prefix
+2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included), experiment prefix
    `rag-conflicts`, `max_concurrency=1` (one question at a time: the cost counter is not
    thread safe);
 3. prints the experiment name and URL.

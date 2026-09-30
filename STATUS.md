@@ -7,8 +7,10 @@ branch `simplification` (less code, same results, all evals pass). Then the bran
 Then the branch `document-dates` (from `llm-judge`): every document shown carries its
 creation date. Then the branch `more-documents` (from `document-dates`): 40 documents and 30
 questions, covering every case. Then the branch `cite-all-agreeing` (from `more-documents`):
-when documents agree, all of them are cited. Latest: the branch `test-coverage` (from
-`cite-all-agreeing`): 34 questions and 35 unit tests, covering every path.
+when documents agree, all of them are cited. Then the branch `test-coverage` (from
+`cite-all-agreeing`): 34 questions and 35 unit tests, covering every path. Latest: the branch
+`eval-answer-judge` (from `test-coverage`): an LLM grader checks each answer against a
+reference answer.
 
 ## Milestones
 
@@ -183,6 +185,18 @@ when documents agree, all of them are cited. Latest: the branch `test-coverage` 
       `compare` step, three eval runs in a row). `src/llm.py` now waits and retries (2, 4, 8 s,
       `LLM_MAX_RETRIES`), then stops with a one-line `StructuredOutputError`. Other `TypeError`s
       are not hidden. 3 unit tests (`tests/test_llm.py`).
+- [x] **Answer grader** (branch `eval-answer-judge`): every question in `questions.json` has a
+      hand-written `reference_answer` (facts that answer the question; extra details after
+      "Also fine:"). New eval check `answer_is_correct`: an LLM compares the full printed
+      output with the reference and says correct / partly correct / incorrect with a reason;
+      only correct passes. Model `EVAL_JUDGE_MODEL` (default `LLM_MODEL`; set another model
+      for a less biased second opinion). `structured()` takes an optional `model`. Checked by
+      hand on 7 outputs with a known verdict (right dispute, a side picked, the Q14 source line
+      with "12 weeks", "full salary for 12 weeks", an invented pet rule, "I don't know", half
+      of Q15): all 7 verdicts right. The first runs failed 6 answers as "partly correct" because
+      the references asked for details the questions did not ask about (pension, location,
+      Finance lead, start of the warranty); those moved to "Also fine:". Last two runs: 34/34
+      and 33/34 (Q15, see Known issues). `pytest` 39 passed. About $0.012 per eval run.
 
 ## Last verified outputs (2026-09-29)
 
@@ -245,8 +259,9 @@ when documents agree, all of them are cited. Latest: the branch `test-coverage` 
 
 ## Next step
 
-1. Review and merge the branch `test-coverage` into `main` (it holds every earlier branch:
-   `cite-all-agreeing`, `more-documents`, `document-dates`, `llm-judge`, `simplification`).
+1. Review and merge the branch `eval-answer-judge` into `main` (it holds every earlier
+   branch: `test-coverage`, `cite-all-agreeing`, `more-documents`, `document-dates`,
+   `llm-judge`, `simplification`).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -256,6 +271,10 @@ when documents agree, all of them are cited. Latest: the branch `test-coverage` 
 
 ## Known issues
 
+- Q15 ("What should I do during a Sev1 incident and who is on call?") is sometimes graded
+  `partly correct`: the answer covers the rotation and incident steps but can leave out that a
+  Sev1 alert must be acknowledged within 15 minutes. The answer step does not always cover
+  both parts of a two-part question in full. Seen in 1 of the last 2 runs.
 - If only the replaced doc answers the question and the doc that replaces it says nothing about
   it, the result is ANSWERED with a non-answer ("the information does not say ... [D08]") and the
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where
@@ -290,7 +309,7 @@ when documents agree, all of them are cited. Latest: the branch `test-coverage` 
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.20522 |
-| **total** | | **0.26583** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.25959 |
+| **total** | | **0.32020** |
 
-Budget: $4.00. Left: about $3.73.
+Budget: $4.00. Left: about $3.68.

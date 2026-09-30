@@ -64,7 +64,7 @@ def point_id(doc_id: str) -> str:
 
 
 def _hash_file() -> Path:
-    return Path(config.QDRANT_PATH) / "corpus.sha256"
+    return Path(config.QDRANT_PATH) / f"{config.QDRANT_COLLECTION}.sha256"
 
 
 def _stored_hash() -> str | None:

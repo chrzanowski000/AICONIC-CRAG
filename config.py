@@ -71,11 +71,6 @@ QDRANT_MODE = env("QDRANT_MODE", "embedded")  # embedded | server
 QDRANT_PATH = _path(env("QDRANT_PATH", "./qdrant_data"))
 QDRANT_URL = env("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = env("QDRANT_API_KEY", "")
-QDRANT_COLLECTION = env("QDRANT_COLLECTION", "helios_docs")
-
-# --- corpus ----------------------------------------------------------------------------------
-CORPUS_DIR = _path(env("CORPUS_DIR", "./data/corpus"))
-QUESTIONS_FILE = _path(env("QUESTIONS_FILE", "./questions.json"))
 
 # --- langsmith (the langsmith library reads these from the environment itself) ---------------
 LANGSMITH_TRACING = env("LANGSMITH_TRACING", False, _bool)
@@ -91,8 +86,6 @@ os.environ["LANGSMITH_PROJECT"] = LANGSMITH_PROJECT
 os.environ["LANGSMITH_TRACING"] = "true" if TRACING_ON else "false"
 
 # --- eval ------------------------------------------------------------------------------------
-EVAL_DATASET_NAME = env("EVAL_DATASET_NAME", "rag-conflicts-demo")
-EVAL_EXPERIMENT_PREFIX = env("EVAL_EXPERIMENT_PREFIX", "rag-conflicts")
 # The model that grades answers against the reference answers. Default: the same as LLM_MODEL
 # (cheap, but a model grading its own kind of output is biased; set another model to avoid that).
 EVAL_JUDGE_MODEL = env("EVAL_JUDGE_MODEL", "") or LLM_MODEL
@@ -104,6 +97,33 @@ LOG_LEVEL = env("LOG_LEVEL", "INFO").upper() or "INFO"
 # --- budget ----------------------------------------------------------------------------------
 BUDGET_USD = env("BUDGET_USD", 4.0, float)
 SPEND_FILE = _path(env("SPEND_FILE", "./.spend.json"))  # running total of money spent by this app
+
+# --- dataset ---------------------------------------------------------------------------------
+# A dataset is a folder data/<name>/ with corpus/ (the documents) and questions.json. Each one has
+# its own Qdrant collection and its own LangSmith dataset, so they never mix.
+DATA_DIR = ROOT / "data"
+
+
+def datasets() -> list[str]:
+    """The names of the datasets in data/."""
+    return sorted(p.name for p in DATA_DIR.iterdir() if (p / "corpus").is_dir())
+
+
+def use_dataset(name: str) -> None:
+    """Switch every dataset setting to data/<name>/. Call it before anything is loaded."""
+    global DATASET, CORPUS_DIR, QUESTIONS_FILE, QDRANT_COLLECTION
+    global EVAL_DATASET_NAME, EVAL_EXPERIMENT_PREFIX
+    if name not in datasets():
+        raise SystemExit(f"Unknown dataset '{name}'. Choose one of: {', '.join(datasets())}.")
+    DATASET = name
+    CORPUS_DIR = str(DATA_DIR / name / "corpus")
+    QUESTIONS_FILE = str(DATA_DIR / name / "questions.json")
+    QDRANT_COLLECTION = f"{name}_docs"
+    EVAL_DATASET_NAME = f"rag-conflicts-{name}"  # the LangSmith dataset (plus a fingerprint)
+    EVAL_EXPERIMENT_PREFIX = f"rag-conflicts-{name}"
+
+
+use_dataset(env("DATASET", "helios"))
 
 SECRET_NAMES = {"LLM_API_KEY", "QDRANT_API_KEY", "LANGSMITH_API_KEY"}
 

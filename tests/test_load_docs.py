@@ -1,7 +1,10 @@
 """Tests for the corpus checks in src/load_docs.py."""
 
+import json
+
 import pytest
 
+import config
 from src.load_docs import CorpusError, load_documents
 
 
@@ -47,3 +50,17 @@ def test_a_doc_cannot_replace_itself(tmp_path):
     _write(tmp_path, "D01", "a", supersedes="D01")
     with pytest.raises(CorpusError, match="supersedes itself"):
         load_documents(str(tmp_path))
+
+
+@pytest.mark.parametrize("name", config.datasets())
+def test_every_dataset_loads_and_its_questions_name_real_docs(name):
+    folder = config.DATA_DIR / name
+    ids = {d.metadata["id"] for d in load_documents(str(folder / "corpus"))}
+    questions = json.loads((folder / "questions.json").read_text())
+    assert len({q["id"] for q in questions}) == len(questions)
+    for q in questions:
+        want = q["expected"]
+        assert {"dispute", "no_answer"} <= want.keys(), q["id"]
+        named = set(want.get("cites", []) + want.get("cites_any", []) + want.get("versions", []))
+        named |= {i for pair in want.get("outdated", []) for i in pair}
+        assert named <= ids, f"{name} {q['id']} names unknown docs {named - ids}"

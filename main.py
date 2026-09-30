@@ -1,4 +1,4 @@
-"""Command line for the Helios RAG demo. Run `python main.py -h` for the commands."""
+"""Command line for the RAG demo. Run `python main.py -h` for the commands."""
 
 import argparse
 import json
@@ -61,8 +61,10 @@ def cmd_llm_test(args) -> None:
     from src.schemas import Claims
     from src.vectorstore import _to_retrieved
 
-    question = "How many weeks of paid parental leave does Helios Dynamics offer?"
-    docs = [_to_retrieved(doc_map()[i], None) for i in ("D03", "D04", "D13")]
+    # the first dispute question of the dataset, with the documents that disagree
+    q = next(q for q in load_questions() if q["expected"].get("versions"))
+    question = q["question"]
+    docs = [_to_retrieved(doc_map()[i], None) for i in q["expected"]["versions"]]
     print(f"Model: {config.LLM_MODEL}  reasoning_effort: {config.LLM_REASONING_EFFORT or '-'}")
     print(f"Question: {question}")
     started = time.time()
@@ -109,7 +111,10 @@ def cmd_demo(args) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Helios RAG demo")
+    parser = argparse.ArgumentParser(description="RAG demo")
+    parser.add_argument("--dataset", choices=config.datasets(),
+                        help=f"which data/<name>/ to use (default: {config.DATASET}, "
+                             "or DATASET in .env)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("config", help="print every setting (secrets hidden)").set_defaults(
@@ -171,6 +176,8 @@ def known_errors() -> tuple[type[Exception], ...]:
 def main(argv: list[str] | None = None) -> int:
     setup_logging()
     args = build_parser().parse_args(argv)
+    if args.dataset:
+        config.use_dataset(args.dataset)
     if config.TRACING_WARNING:
         print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
     code = 0

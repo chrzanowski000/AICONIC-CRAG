@@ -1,7 +1,8 @@
 # Status
 
 Last update: 2026-09-30. The system works end to end on `main`: 40 documents, 34 eval questions,
-34/34 PASS, 40 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
+34/34 PASS, 40 unit tests pass. Branch `second-dataset` adds a second, separate dataset
+(Brightwater Ferries: 30 documents, 26 questions) and a switch between datasets. Read `docs/architecture.md` for how it works. Detailed history of
 every round is in the git log.
 
 ## What is done
@@ -48,12 +49,27 @@ every round is in the git log.
   fingerprint of `questions.json`). The old dataset `rag-conflicts-demo` (18 questions, old
   format) was deleted. Checked with a 4-question LangSmith run (Q1, Q3, Q5, Q31, experiment
   `rag-conflicts-smoke-1fb08e69`): all 8 checks scored 1 on each.
+- **Second dataset** (branch `second-dataset`, 2026-09-30): Helios moved to `data/helios/`
+  (`corpus/`, `questions.json`); a new dataset `data/brightwater/` about Brightwater Ferries, 30
+  documents and 26 questions covering every case (agree, disagree, three documents disagree,
+  one document answers, no answer, a replaced document, a chain of three, reworded questions,
+  stopped at the search). One setting, `DATASET` (default `helios`), or the flag `--dataset` on
+  `main.py` and `eval.py`, picks the folder, the Qdrant collection (`<name>_docs`, with its own
+  hash file) and the LangSmith dataset and experiment prefix (`rag-conflicts-<name>`). Traces
+  carry `dataset` in their metadata. `QDRANT_COLLECTION`, `CORPUS_DIR`, `QUESTIONS_FILE`,
+  `EVAL_DATASET_NAME` and `EVAL_EXPERIMENT_PREFIX` are no longer settings of their own.
+  `llm-test` uses the first dispute question of the dataset. Docs: `docs/datasets.md`,
+  decision 34. Checked: `pytest` 42 passed (a new test loads every dataset and checks that its
+  questions name real documents); Brightwater eval run twice, 26/26 both times (the second with LangSmith: dataset `rag-conflicts-brightwater-3aaded38` created, experiment `rag-conflicts-brightwater-35ee8948`, every check 1 except Q15, which hit an OpenRouter rate limit in the LangSmith pass and got no output); Helios `demo` 5/5 on the new layout; `--dataset brightwater llm-test` works. Not merged yet.
 
 ## Next steps
 
 1. Decide and fix the "newer doc is silent" case (see Known issues), then add that question to
    the eval.
 2. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
+3. After merging `second-dataset`: the next `LANGSMITH_TRACING=true python eval.py` creates
+   `rag-conflicts-helios-536567d3`; the old LangSmith dataset `rag-conflicts-demo-536567d3` is then
+   no longer used and can be deleted.
 
 ## Known issues
 
@@ -80,7 +96,12 @@ every round is in the git log.
   a document or the model.
 - The score cutoff cannot separate every off-topic question from an answerable one (off-topic
   questions reach 0.70). The LLM's relevance check is the real gate.
-- Tested on this corpus and these questions only.
+- Tested on these two datasets and their questions only. The score cutoff and margin were chosen
+  on Helios and worked unchanged on Brightwater.
+- OpenRouter rate limits (an error inside an HTTP 200 reply) were frequent on 2026-09-30: two
+  Brightwater eval runs stopped after the 2, 4, 8 s retries, and one run logged 111 retries.
+  `LLM_MAX_RETRIES=5` (waits up to 32 s) got a full run through; one question still failed in its
+  LangSmith pass.
 
 ## Money spent
 
@@ -93,6 +114,7 @@ every round is in the git log.
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
 | 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32907 |
-| **total** | | **0.38968** |
+| 2026-09-30 | second dataset: Brightwater evals (4 runs, 2 stopped early), Helios demo, llm-test (from `.spend.json`) | 0.02705 |
+| **total** | | **0.41673** |
 
-Budget: $4.00. Left: about $3.61.
+Budget: $4.00. Left: about $3.58.

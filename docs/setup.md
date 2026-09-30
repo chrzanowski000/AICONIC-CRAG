@@ -38,7 +38,7 @@ python main.py ask "How many weeks of paid parental leave does Helios Dynamics o
 `ask` prints the result, then a short trace of every step (switch it off with
 `SHOW_SCORES=false`), then the tokens, the cost of this run and the running total.
 
-`index` prints `Rebuilt collection 'helios_docs' (embedded mode): 20 points. Reason: ...` the first
+`index` prints `Rebuilt collection 'helios_docs' (embedded mode): 40 points. Reason: ...` the first
 time, and `Reused ...` after that. It rebuilds by itself when a document changes. Use
 `python main.py index --reindex` to force a rebuild.
 
@@ -47,7 +47,7 @@ time, and `Reused ...` after that. It rebuilds by itself when a document changes
 | folder / file | what | safe to delete? |
 |---|---|---|
 | `models/` | the downloaded embedding model | yes, it is downloaded again |
-| `qdrant_data/` | the Qdrant data (embedded mode) and `corpus.sha256` | yes, run `index` again |
+| `qdrant_data/` | the Qdrant data (embedded mode): one collection per dataset, and `<name>_docs.sha256` | yes, run `index` again |
 | `.spend.json` | running total of money spent by this app | yes, the total starts again at 0 |
 | `.env` | your keys | no, and never commit it |
 
@@ -136,6 +136,6 @@ that the model is read from `./models`.
 could not be read, or the call failed (bad key, no credit, unknown model id, network). The
 message says which. Check the key with `python main.py llm-test`.
 
-**A command stops with `ERROR (CorpusError)`.** A document in `data/corpus/` has missing or bad
+**A command stops with `ERROR (CorpusError)`.** A document in `data/<name>/corpus/` has missing or bad
 frontmatter, a duplicate id, a `supersedes` target that does not exist, or a `supersedes` link
 between two different topics. The message names the file.

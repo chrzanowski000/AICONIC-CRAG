@@ -26,7 +26,7 @@ flowchart TB
         VS["<b>src/vectorstore.py</b><br/>index and search"]:::local
         EMB["<b>FastEmbed</b><br/>bge-small, CPU"]:::local
         QD[("<b>Qdrant</b><br/>./qdrant_data")]:::local
-        DOCS[("<b>data/corpus</b><br/>40 documents")]:::local
+        DOCS[("<b>data/&lt;dataset&gt;/corpus</b><br/>helios: 40 · brightwater: 30")]:::local
     end
     LLM["<b>src/llm.py</b><br/>client · retry · cost"]:::llm
     R["<b>src/render.py</b><br/>text the user sees"]:::code
@@ -126,7 +126,7 @@ source it came from.
 |---|---|
 | `config.py` | Every setting, read once from `.env` or the shell. No other module reads `os.environ`. |
 | `main.py` | The command line: `config`, `index`, `search`, `llm-test`, `ask`, `demo`. Prints cost after every run; turns known errors into one-line messages. |
-| `eval.py` | Runs the 34 questions in `questions.json`, checks each result, prints PASS/FAIL. Optionally runs the same checks as a LangSmith experiment. |
+| `eval.py` | Runs the questions of one dataset (`data/<name>/questions.json`), checks each result, prints PASS/FAIL. Optionally runs the same checks as a LangSmith experiment. |
 | `src/load_docs.py` | Reads the markdown files and their frontmatter. Checks ids, dates, `supersedes` targets, and that a document and the one it replaces share a topic. Gives `doc_map()` (id → document) and the corpus hash. |
 | `src/embeddings.py` | A small LangChain `Embeddings` class around FastEmbed (`BAAI/bge-small-en-v1.5`, CPU). |
 | `src/vectorstore.py` | One Qdrant client per process. Builds the collection, or reuses it while the corpus hash is unchanged. `retrieve()`: search, score cutoff and margin, add every doc on the same topics, cap at 10. |
@@ -146,14 +146,16 @@ the cost.
 
 ## Data
 
-- **Documents:** `data/corpus/Dxx_name.md`, markdown with frontmatter
+- **Datasets:** `data/<name>/` holds `corpus/` and `questions.json`. `helios` (default) and
+  `brightwater`; pick one with `--dataset <name>` or `DATASET`. See [`datasets.md`](datasets.md).
+- **Documents:** `data/<name>/corpus/Dxx_name.md`, markdown with frontmatter
   `id, title, source, date, topic, supersedes`. `date` is the day the document was created and is
   shown next to the document everywhere. `supersedes` names the document this one replaces. See
   [`corpus.md`](corpus.md).
-- **Qdrant collection** `helios_docs`: one point per document. Vector: 384 numbers, cosine.
+- **Qdrant collection** `<name>_docs` (`helios_docs`, `brightwater_docs`): one point per document. Vector: 384 numbers, cosine.
   Payload: the text and the frontmatter. Qdrant is only used for the search; the related
   documents are taken from the corpus in memory.
-- **`qdrant_data/corpus.sha256`:** hash of the corpus files at the last index build. If a
+- **`qdrant_data/<name>_docs.sha256`:** hash of the dataset's corpus files at the last index build. If a
   document changes, the next `index`, `search`, `ask`, `demo` or `eval.py` rebuilds the index.
 - **`.spend.json`:** running total of money spent by this app (not committed).
 
@@ -185,8 +187,9 @@ All in `config.py`; each one can be set in `.env` or the shell with the same nam
 |---|---|
 | LLM | `LLM_MODEL` (`openai/gpt-6-luna`), `LLM_REASONING_EFFORT` (`low`), `LLM_MAX_TOKENS` (1500), `LLM_TIMEOUT_S` (90), `LLM_MAX_RETRIES` (3), `LLM_REQUIRE_PARAMETERS` (true), price per million tokens for the cost estimate |
 | retrieval | `TOP_K` (6), `SCORE_THRESHOLD` (0.58), `SCORE_MARGIN` (0.10), `MAX_CONTEXT_DOCS` (10), `EMBEDDING_MODEL` |
-| Qdrant | `QDRANT_MODE` (`embedded` or `server`), `QDRANT_PATH`, `QDRANT_URL`, `QDRANT_COLLECTION` |
-| LangSmith | `LANGSMITH_TRACING` (false), `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`, `EVAL_DATASET_NAME` |
+| dataset | `DATASET` (`helios`); sets the corpus folder, the questions file, the Qdrant collection and the LangSmith dataset name |
+| Qdrant | `QDRANT_MODE` (`embedded` or `server`), `QDRANT_PATH`, `QDRANT_URL` |
+| LangSmith | `LANGSMITH_TRACING` (false), `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` |
 | eval | `EVAL_JUDGE_MODEL` (the grader's model; default: `LLM_MODEL`) |
 | output and budget | `SHOW_SCORES` (true: print the trace), `LOG_LEVEL`, `BUDGET_USD` (4.0) |
 

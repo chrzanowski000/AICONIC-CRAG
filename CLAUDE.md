@@ -14,8 +14,9 @@
 
 ## What this project is
 
-A small RAG system over 40 made-up documents about a fictional company (Helios Dynamics).
-Some documents contradict each other. Some are old and replaced by newer ones.
+A small RAG system over made-up company documents. There are two separate datasets: Helios
+Dynamics (40 documents, the default) and Brightwater Ferries (30 documents). Some documents
+contradict each other. Some are old and replaced by newer ones.
 
 The system must:
 - answer with citations when there is one current answer,
@@ -66,6 +67,8 @@ python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: all 34)
 python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmith eval if tracing is on
+python main.py --dataset brightwater ask "<q>"   # any command on another dataset (or DATASET= in .env)
+python eval.py --dataset brightwater
 python -m pytest                 # unit tests, no model calls (needs requirements-dev.txt)
 langgraph dev                    # LangGraph Studio server on 127.0.0.1:2024 (needs requirements-dev.txt)
 ```
@@ -76,14 +79,15 @@ langgraph dev                    # LangGraph Studio server on 127.0.0.1:2024 (ne
 config.py          the one place for every setting (models, URLs, thresholds, paths, flags)
 main.py            CLI
 eval.py            evaluation
-questions.json     34 questions with expected results (Q1-Q5 are the demo)
 langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
-data/corpus/       the 40 documents (markdown with frontmatter); cases listed in docs/corpus.md
+data/<name>/       one dataset: corpus/ (the documents) and questions.json (Q1-Q5 are the demo);
+                   helios (40 docs, 34 questions, docs/corpus.md), brightwater (30 docs, 26
+                   questions, docs/datasets.md)
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,
                    studio (Studio entry point)
 tests/             unit tests: graph rules, citations, dates in the output, corpus checks (pytest)
-docs/              documentation of the repo (architecture, pipeline, decisions, corpus, evaluation,
-                   setup, research, models)
+docs/              documentation of the repo (architecture, pipeline, decisions, corpus, datasets,
+                   evaluation, setup, research, models)
 STATUS.md          what is done, what is next, known issues, money spent
 ```
 
@@ -99,7 +103,10 @@ STATUS.md          what is done, what is next, known issues, money spent
   The running total is kept in `.spend.json` (not committed); copy it into `STATUS.md`.
 - After changing a document, a prompt, a threshold or the model: run `python eval.py` twice
   (the LLM can answer differently from run to run); both runs must pass.
-- Documents: `data/corpus/Dxx_name.md` with frontmatter `id, title, source, date, topic, supersedes`.
+- Documents: `data/<name>/corpus/Dxx_name.md` with frontmatter `id, title, source, date, topic, supersedes`.
+- A dataset is chosen with `--dataset <name>` or `DATASET` (default `helios`). Each dataset has its
+  own Qdrant collection (`<name>_docs`) and LangSmith dataset (`rag-conflicts-<name>-<fingerprint>`).
+  Nothing in `src/` may know about a company. See `docs/datasets.md`.
 
 ## Working with this repo
 

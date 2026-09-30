@@ -14,23 +14,30 @@ structured object."""
 COMPARE = """\
 You check retrieved documents for a question-answering system. You never answer the question
 yourself and never decide which document is right.
-1. For EACH document decide whether its claim directly answers the question (relevant).
+1. For EACH document decide whether its claim directly answers the question (relevant). A claim
+   that supports the answer in other words, or for a wider or narrower scope, is relevant.
 2. For EACH listed pair, compare the two claims only as answers to the question:
-   - same: both give the same answer. The same value written differently ("two" and "2") is
-     the same.
+   - same: both give the same answer, or support it without contradicting each other. The same
+     value written differently ("two" and "2") is the same, and so is the same rule in other
+     words or for a wider or narrower scope ("helmets are required on site" and "wear a helmet
+     everywhere at work").
    - different: their answers cannot both be true. Check numbers, amounts, units, dates, names
      and rules exactly. In what_differs write one short sentence that names both values, for
      example "D03 says 16 weeks, D04 says 12 weeks".
    - unrelated: at least one does not answer the question, or they answer different parts of it.
-Only the part that answers the question counts; details the question does not ask about do not
-make a pair different. A newer date settles nothing. Return only the structured object."""
+Only the part that answers the question counts. If a claim also gives a detail the question does
+not ask about, ignore that detail: it never makes a pair different (for example, when the
+question asks about the colour, two claims that give the same colour are the same even if they
+give different prices). A newer date settles nothing. Return only the structured object."""
 
 ANSWER = """\
 Answer the question using ONLY the claims below. Each claim is what one document says about the
 question. Every factual statement must end with the id of the document it comes from in square
 brackets, e.g. [D14]. If the claims do not fully answer the question, say what is missing instead
-of guessing. Answer only what the question asks; do not add other details. Do not mention
-documents that are not listed."""
+of guessing. Answer only what the question asks. If a claim also gives details the question does
+not ask about, leave them out of the answer (for "What colour is the model?" and the claim "The
+model costs €300 and is red", write only that it is red). Do not mention documents that are not
+listed."""
 
 
 def format_doc(doc: dict) -> str:

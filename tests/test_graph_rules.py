@@ -1,7 +1,7 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
 from src.graph import (abstain, conflict_report, find_citations, newest_in_chain,
-                       pairs_to_compare, read_comparison, reconcile, same_chain)
+                       pairs_to_compare, read_comparison, reconcile, same_chain, with_agreeing)
 from src.load_docs import doc_map
 from src.schemas import Comparison, DocAssessment, PairComparison
 from src.vectorstore import _to_retrieved
@@ -110,3 +110,13 @@ def test_abstain_lists_the_closest_documents_with_dates():
              "closest": [{"doc_id": "D02", "date": "2025-06-15", "score": 0.541}]}
     reason = abstain(state)["result"]["reason"]
     assert "Closest documents: D02 (created 2025-06-15, score 0.541)." in reason
+
+
+def test_with_agreeing_adds_every_doc_that_gives_the_same_answer():
+    pairs = [_pair("D30", "D31", "same"), _pair("D31", "D18", "same")]
+    assert with_agreeing(["D30"], pairs, ["D30", "D31", "D18"]) == ["D30", "D31", "D18"]
+
+
+def test_with_agreeing_leaves_out_unrelated_and_not_allowed_docs():
+    pairs = [_pair("D15", "D20", "unrelated"), _pair("D15", "D14", "same")]
+    assert with_agreeing(["D15"], pairs, ["D15", "D20"]) == ["D15"]

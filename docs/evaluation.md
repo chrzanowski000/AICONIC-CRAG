@@ -27,26 +27,26 @@ threshold, a document or the model, run it twice; both runs must pass.
 | Q6 | What is the Kestrel X2 flight time? | replaced doc | `answered`; cites D10; outdated D09 → D10; contains "45" |
 | Q7 | Where is the headquarters located? | replaced doc | `answered`; cites D08; outdated D07 → D08; contains "400 Meridian" |
 | Q8 | How often do I need to change my password? | real dispute, in words not numbers | `disputed`; D11 and D12 |
-| Q9 | How much does the Kestrel X2 weigh? | docs agree | `answered`; cites D10 or D18; contains "1.2" |
-| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | `answered`; cites D10 or D18; contains "300" |
-| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; contains "adopt"; does **not** contain "16" or "12" |
-| Q12 | Is multi-factor sign-in required? | docs agree | `answered`; cites D11 or D12; contains "required" or "yes" |
-| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
-| Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 or D04; contains "full" or "100%"; does **not** contain "16" or "12" |
+| Q9 | How much does the Kestrel X2 weigh? | docs agree | `answered`; cites D10 **and** D18; contains "1.2" |
+| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | `answered`; cites D10 **and** D18; contains "300" |
+| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "adopt"; does **not** contain "16" or "12" |
+| Q12 | Is multi-factor sign-in required? | docs agree | `answered`; cites D11 **and** D12; contains "required" or "yes" |
+| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
+| Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
 | Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts | `answered`; cites D15 or D20 |
 | Q16 | Do I keep my health insurance during parental leave? | only one doc answers | `answered`; cites D04; contains "yes" or "continue" |
 | Q17 | How long must passwords be? | only one doc answers | `answered`; cites D11; contains "14" |
 | Q18 | What are the HQ office opening hours? | replaced doc with the same value | `answered`; cites D08; outdated D07 → D08; contains "7:00" |
-| Q19 | How often are company laptops replaced? | docs agree | `answered`; cites D21 or D22; contains "3" or "three" |
+| Q19 | How often are company laptops replaced? | docs agree | `answered`; cites D21 **and** D22; contains "3" or "three" |
 | Q20 | What is the yearly learning budget per employee? | real dispute, three documents | `disputed`; D23, D24 and D25, each with a date; no answer |
 | Q21 | When do I need a doctor's note for sick leave? | only one doc answers | `answered`; cites D26; contains "three" or "3" |
 | Q22 | How many days of annual leave do employees get per year? | chain of three replaced docs | `answered`; cites D29; outdated D27 → D29 and D28 → D29; contains "30" |
-| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | `answered`; cites D18, D30 or D31; contains "one year", "one-year", "12 months" or "1 year" |
+| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | `answered`; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months" or "1 year" |
 | Q24 | How often does engineering ship a release? | real dispute, in words and days | `disputed`; D32 and D33 |
 | Q25 | How long are customer support tickets kept? | real dispute | `disputed`; D34 and D35 |
 | Q26 | Does Helios Dynamics pay for public transport to work? | only one doc answers | `answered`; cites D36; contains "100%", "yes" or "full" |
 | Q27 | When is the summer party? | only one doc answers | `answered`; cites D37; contains "20 June" |
-| Q28 | How long do I have to submit an expense claim? | docs agree | `answered`; cites D38 or D39; contains "30" |
+| Q28 | How long do I have to submit an expense claim? | docs agree | `answered`; cites D38 **and** D39; contains "30" |
 | Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `abstained` |
 | Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `abstained` |
 
@@ -54,7 +54,7 @@ The questions by case (details in `corpus.md`, "The cases"):
 
 | case | questions |
 |---|---|
-| documents agree → answered | Q9, Q10, Q12, Q19, Q23, Q28 |
+| documents agree → answered, citing every agreeing document | Q9, Q10, Q12, Q19, Q23, Q28 |
 | documents disagree → disputed | Q3, Q4, Q8, Q20 (three documents), Q24, Q25 |
 | one document answers → answered | Q1, Q16, Q17, Q21, Q26, Q27 |
 | no document answers → abstained | Q5, Q29, Q30 |
@@ -109,7 +109,8 @@ The unit tests cover the plain-code rules. What the LLM says can only be checked
 
 ## Results (2026-09-30, 40 documents, LLM-only judge)
 
-`python eval.py`: **30/30 PASS** on two runs in a row, exit code 0. One run:
+`python eval.py`: **30/30 PASS** on two runs in a row, exit code 0 (last checked after "cite every
+agreeing document"; every agree question cites all its documents). An earlier run:
 
 ```
 Q1  PASS  answered  ...; cited ['D14']; contains '2'

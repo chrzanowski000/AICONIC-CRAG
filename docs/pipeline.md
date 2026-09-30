@@ -195,7 +195,11 @@ Then the answer is checked:
 
 1. **Citations (Python).** The citations are the document ids written in the answer text
    (`[D03]`, also `[D03, D04]`), found by looking for the known ids. There must be at least one,
-   and every one must be one of the allowed ids.
+   and every one must be one of the allowed ids. **When documents agree, all of them are
+   sources:** Python adds every allowed document that `compare` marked `same` as a cited one
+   (`with_agreeing`, which follows chains: D30 = D31 and D31 = D18 brings in all three). So the
+   Sources list always shows every agreeing document with its date, even if the answer text
+   names only one.
 2. **Facts (a second LLM call).** The check gets the question, the answer, the claims and the
    full text of the current documents, and lists every problem of two kinds: a fact no claim
    states, or a value (number, amount, date, name) that the full documents give differently
@@ -323,6 +327,10 @@ cutoff 0.58) is stopped at the search and costs nothing.
   which replaces it, says nothing about it, the rules still move D07 to "outdated" and answer
   from D08. The result is an answer that says the information is missing, with D07's old claim
   in the outdated note. Example: "Is the HQ office open on weekends?".
+- **A source line shows the whole claim.** D04's claim for "Do I keep my salary during
+  parental leave?" is "Employees receive 12 weeks of paid parental leave at full salary": the
+  model keeps the sentence whole. The answer leaves the weeks out, but D04's source line still
+  shows "12 weeks", one side of the weeks dispute.
 - **One model reads everything.** The LLM decides relevance and same / different. There is no
   second opinion and no probability; the eval (run twice after a change) is the guard.
 - **Tested on this corpus only.** 40 documents and 30 questions (see `evaluation.md`).

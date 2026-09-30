@@ -5,8 +5,9 @@ dispute detection and the LangSmith connection (see below). Latest: a simplifica
 branch `simplification` (less code, same results, all evals pass). Then the branch `llm-judge`
 (from `simplification`): the LLM does all judging; Jev and the regex number check are removed.
 Then the branch `document-dates` (from `llm-judge`): every document shown carries its
-creation date. Latest: the branch `more-documents` (from `document-dates`): 40 documents and 30
-questions, covering every case.
+creation date. Then the branch `more-documents` (from `document-dates`): 40 documents and 30
+questions, covering every case. Latest: the branch `cite-all-agreeing` (from `more-documents`):
+when documents agree, all of them are cited.
 
 ## Milestones
 
@@ -141,6 +142,21 @@ questions, covering every case.
       versions now says "All 3 versions:" instead of "Both versions:" (new unit test).
       Checked: retrieval for the 18 old questions still finds their documents; `pytest` 19
       passed; `eval.py` twice → 30/30 PASS both times ($0.011 and $0.0085).
+- [x] **Cite every agreeing document** (branch `cite-all-agreeing`): the sources of an answer are
+      the documents it cites plus every allowed document that `compare` marked `same` as one of
+      them (`with_agreeing` in `src/graph.py`, 2 unit tests). The eval now requires all agreeing
+      documents for Q9–Q14, Q19, Q23, Q28 (`cites` instead of `cites_any`). Two prompt changes
+      were needed, found by tracing the failures: (1) `compare` sometimes called a document that
+      says the same rule in other words "unrelated" (D12 "stays switched on for all work
+      systems" vs D11 "required for email, ..."); the prompt now says the same rule in other
+      words or for a wider or narrower scope is `same`, and a detail the question does not ask
+      about never makes a pair different. (2) With D04 now always relevant for Q14, the answer
+      often restated D04's "12 weeks"; the answer prompt now says to leave out details the
+      question does not ask about. Tried and reverted: asking the answer to cite every agreeing
+      document (made the "12 weeks" leak worse; code does it instead) and rewording the claim
+      prompt (D04's claim still keeps "12 weeks"). Checked: `pytest` 21 passed; traces of Q11
+      and Q12 3 of 3 cite all agreeing documents, Q14 4 of 4 clean; final `eval.py` twice →
+      30/30 PASS both times, no retries.
 
 ## Last verified outputs (2026-09-29)
 
@@ -203,8 +219,8 @@ questions, covering every case.
 
 ## Next step
 
-1. Review and merge the branch `more-documents` into `main` (it holds `document-dates`,
-   `llm-judge` and `simplification` too).
+1. Review and merge the branch `cite-all-agreeing` into `main` (it holds `more-documents`,
+   `document-dates`, `llm-judge` and `simplification` too).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -214,6 +230,9 @@ questions, covering every case.
 
 ## Known issues
 
+- A source line shows the document's whole claim. For Q14 (salary during parental leave) D04's
+  claim keeps "12 weeks" ("Employees receive 12 weeks of paid parental leave at full salary"),
+  so the answer is right but D04's source line shows one side of the weeks dispute.
 - If only the replaced doc answers the question and the doc that replaces it says nothing about
   it, the result is ANSWERED with a non-answer ("the information does not say ... [D08]") and the
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where
@@ -248,7 +267,7 @@ questions, covering every case.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.07722 |
-| **total** | | **0.13783** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.18335 |
+| **total** | | **0.24396** |
 
-Budget: $4.00. Left: about $3.86.
+Budget: $4.00. Left: about $3.76.

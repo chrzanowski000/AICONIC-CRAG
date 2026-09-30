@@ -198,6 +198,25 @@ def find_citations(text: str, allowed: list[str]) -> tuple[list[str], list[str]]
     return [i for i in ids if i in allowed], [i for i in ids if i not in allowed]
 
 
+def with_agreeing(cited: list[str], pairs: list[dict], allowed: list[str]) -> list[str]:
+    """The cited docs plus every allowed doc that the LLM called "same" as one of them.
+
+    When documents agree, all of them are sources, even if the answer names only one.
+    """
+    result = list(cited)
+    added = True
+    while added:  # "same" links can chain: D10 = D18 and D18 = D30
+        added = False
+        for p in pairs:
+            if p["verdict"] != "same":
+                continue
+            for a, b in ((p["doc_a"], p["doc_b"]), (p["doc_b"], p["doc_a"])):
+                if a in result and b in allowed and b not in result:
+                    result.append(b)
+                    added = True
+    return result
+
+
 def answer(state: RAGState) -> dict:
     question, claims = state["question"], state["claims"]
     by_id = {d["doc_id"]: d for d in state["retrieved"]}
@@ -230,10 +249,11 @@ def answer(state: RAGState) -> dict:
             reason="An answer was written but could not be tied to the documents, so it is not shown.",
         ))}
 
+    sources = with_agreeing(cited, state.get("pairs", []), allowed)
     result = FinalOutput(
         status="answered",
         answer=text,
-        citations=[_citation(by_id[c], claims) for c in cited],
+        citations=[_citation(by_id[c], claims) for c in sources],
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
         # still there after the retry: say so under the answer
         reason=("Note: the check on this answer found: " + " ".join(problems)) if problems else None,

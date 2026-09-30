@@ -138,7 +138,7 @@ Every run ends in one `FinalOutput`:
 |---|---|---|---|
 | `status` | `answered` | `disputed` | `abstained` |
 | `answer` | the cited answer (ids that are not allowed stay in the text but are left out of `citations`) | – | – |
-| `citations` | the cited docs: id, source, created date, claim | – | – |
+| `citations` | the cited docs, plus every doc that agrees with one of them: id, source, created date, claim | – | – |
 | `versions` | – | each side: id, source, created date, claim | – |
 | `differences` | – | "[D03] (created …) vs [D04] (created …): what differs" | – |
 | `outdated` | replaced docs: old id and date, old claim, new id and date | same | – |

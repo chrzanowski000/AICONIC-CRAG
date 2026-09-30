@@ -34,6 +34,14 @@ every round is in the git log.
   34, every output read by hand against the documents.
 - **Docs cleanup:** obsolete history removed (the original plan, Jev material, old results);
   new pipeline diagram.
+- **Review clean-up** (branch `simplify-review`): `compare` only compares documents that are not
+  replaced (fewer pairs, `same_chain` removed); the eval's dispute and no-answer checks no
+  longer repeat the flag check (`outcome_matches` owns it); `best_score` and two filters that
+  did nothing removed; the LangSmith dataset name now ends with a fingerprint of
+  `questions.json`, so a change makes a new dataset (the old one still had the "status" format
+  and would have failed every check). Checked: `pytest` 40 passed; one eval run 33/34 (Q14, see
+  Known issues), flags right for all 34, all other outputs the same as on `main`. The LangSmith
+  part was not run live.
 
 ## Next steps
 
@@ -48,6 +56,10 @@ every round is in the git log.
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" (D07
   answers, D08 replaces it and is silent). Cause: `reconcile` adds the newest document of a
   chain even when it has no claim.
+- Q14 ("Do I keep my salary during parental leave?") can still repeat D04's "12 weeks": D04's
+  claim keeps the whole sentence. The answer check catches it and asks again; if the second try
+  still has it, the answer is shown with a note and the eval fails Q14. Seen once in about 11
+  runs since the answer-prompt fix.
 - One model reads everything: there is no second opinion and no probability to tune, and it can
   answer differently from run to run. Run the eval twice after a change to a prompt, a threshold,
   a document or the model.
@@ -65,7 +77,7 @@ every round is in the git log.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.31426 |
-| **total** | | **0.37487** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32819 |
+| **total** | | **0.38880** |
 
-Budget: $4.00. Left: about $3.63.
+Budget: $4.00. Left: about $3.61.

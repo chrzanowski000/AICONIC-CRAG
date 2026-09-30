@@ -85,9 +85,9 @@ comment `n/a`. A question passes only if every check scores 1.
 |---|---|
 | `outcome_matches` | Are the output's `dispute` and `no_answer` flags the expected ones? (both false = one answer) |
 | `cites_required_docs` | Are all docs in `cites` cited, and at least one doc in `cites_any`? Each citation has a date and a source. |
-| `dispute_links_right_docs` | For an expected dispute: `dispute` is true, the linked versions are **exactly** the expected documents (Q20 has 3), each with a date and a claim, and there is **no** answer. |
+| `dispute_links_right_docs` | For an expected dispute: the linked versions are **exactly** the expected documents (Q20 has 3), each with a date and a claim, and there is **no** answer. |
 | `marks_outdated` | Is there an outdated note for each expected old → new pair, with both dates? |
-| `no_answer_is_clean` | For an expected "I don't know": `no_answer` is true, with no answer, citations or versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
+| `no_answer_is_clean` | For an expected "I don't know": no answer, citations or versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
 | `answer_contains` | Does the answer contain one of the expected strings, as a whole word or number? |
 | `answer_excludes` | Does the answer avoid all of these strings, as whole words or numbers (for example a number the documents disagree on)? |
 | `answer_is_correct` | Only for questions with one answer. **The grader**: an LLM compares the output with the question's `reference_answer` (the correct answer) and says `correct`, `partly correct` or `incorrect`, with a reason. Only `correct` passes. |
@@ -109,8 +109,8 @@ way:
 | expected | written in `questions.json` | checked by |
 |---|---|---|
 | one answer | `"dispute": false, "no_answer": false`, `cites`, and a `reference_answer` (the correct answer) | the flags; the cited documents; the grader compares the answer with the reference answer |
-| a dispute | `"dispute": true`, `versions` (the documents that disagree), no reference answer | code only: `dispute` is true, and the linked documents are exactly `versions` |
-| no answer | `"no_answer": true`, no reference answer | code only: `no_answer` is true and nothing looks like an answer |
+| a dispute | `"dispute": true`, `versions` (the documents that disagree), no reference answer | code only: `dispute` is true (`outcome_matches`), and the linked documents are exactly `versions` |
+| no answer | `"no_answer": true`, no reference answer | code only: `no_answer` is true (`outcome_matches`) and nothing looks like an answer |
 
 ```json
 {"id": "Q27", "question": "When is the summer party?",
@@ -216,6 +216,11 @@ Summary: all passed.
 LLM: 128 calls, 89724 in / 8044 out tokens. This run: $0.010989.
 ```
 
+Run after the review clean-up (same day): **33/34**, flags right for all 34. Q14 failed
+`answer_excludes`: the answer repeated D04's "12 weeks"; the answer check caught it on both tries,
+so the answer was shown with a note, and the eval failed it as it should. This had passed in
+about 10 runs before (see `STATUS.md`, Known issues).
+
 The last word of each answered line is the grader's verdict. Q15 is graded with the current
 reference answer: the run itself used an older reference that also asked for a "weekly"
 rotation, which the question does not ask about; that word was removed and the same answer was
@@ -260,8 +265,9 @@ LANGSMITH_TRACING=true python eval.py
 ```
 
 The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `question_id` and
-`llm`. The dataset is created once: after changing `questions.json`, delete the dataset in
-LangSmith (or set a new `EVAL_DATASET_NAME`) so it is created again.
+`llm`. The dataset name ends with a short fingerprint of `questions.json`
+(`rag-conflicts-demo-1a2b3c4d`), so a change to the questions or their expected results creates a
+new dataset instead of grading against old examples.
 
 ## Cost
 

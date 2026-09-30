@@ -82,7 +82,6 @@ One dictionary flows through the graph. Each step adds to it.
 class RAGState(TypedDict):
     question: str
     retrieved: list[RetrievedDoc]      # docs in context: id, title, source, date, topic, supersedes, text, score
-    best_score: float                  # best similarity score among the first hits
     closest: list[dict]                # top search hits before the cutoff: {doc_id, date, score}, for "I don't know"
     claims: dict[str, str | None]      # doc_id -> one-sentence claim, or None if the doc says nothing
     relevance: dict[str, bool]         # doc_id -> does its claim answer the question (LLM)
@@ -159,7 +158,9 @@ happens to the pets question.
 
 Otherwise one structured-output call. Input: the question, every document that has a claim (id,
 title, source, date, claim), and the list of pairs to compare: every pair of those documents
-that is **not** linked by `supersedes` (Python settles those). Output, checked by Pydantic:
+that are **not replaced** by another document. A replaced document can only end up "outdated",
+so comparing it would be wasted; and two documents that are not replaced are never in the same
+`supersedes` chain. Output, checked by Pydantic:
 
 ```json
 {"docs": [{"doc_id": "D03", "relevant": true}, {"doc_id": "D04", "relevant": true}],

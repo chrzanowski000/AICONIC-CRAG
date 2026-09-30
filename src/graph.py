@@ -40,7 +40,6 @@ class RAGInput(TypedDict):
 class RAGState(TypedDict, total=False):
     question: str
     retrieved: list[RetrievedDoc]
-    best_score: float
     closest: list[dict]  # top search hits before the cutoff: {doc_id, date, score}
     claims: dict[str, str | None]  # doc_id -> claim, or None if the doc says nothing
     relevance: dict[str, bool]  # doc_id -> does its claim answer the question (LLM)
@@ -74,10 +73,6 @@ def newest_in_chain(doc_id: str) -> str:
     return doc_id
 
 
-def same_chain(a: str, b: str) -> bool:
-    return newest_in_chain(a) == newest_in_chain(b)
-
-
 # --- steps -----------------------------------------------------------------------------------
 
 
@@ -102,8 +97,10 @@ def extract_claims(state: RAGState) -> dict:
 
 
 def pairs_to_compare(doc_ids: list[str]) -> list[tuple[str, str]]:
-    """Every pair of these docs, except pairs linked by `supersedes` (Python settles those)."""
-    return [(a, b) for a, b in itertools.combinations(doc_ids, 2) if not same_chain(a, b)]
+    """Every pair of these docs that are not replaced. A replaced doc can only be "outdated",
+    so its verdicts would never be used; two docs that are not replaced are never in the same
+    `supersedes` chain."""
+    return list(itertools.combinations([i for i in doc_ids if newest_in_chain(i) == i], 2))
 
 
 def read_comparison(out: Comparison, doc_ids: list[str],
@@ -148,8 +145,8 @@ def reconcile(state: RAGState) -> dict:
     by_id = {d["doc_id"]: d for d in state["retrieved"]}
     relevance = state.get("relevance", {})
 
-    # 1. relevant = the LLM says its claim answers the question
-    relevant = [i for i in by_id if claims.get(i) and relevance.get(i)]
+    # 1. relevant = the LLM says its claim answers the question (only docs with a claim are asked)
+    relevant = [i for i in by_id if relevance.get(i)]
 
     # 2. replaced docs move to "outdated"; the newest doc of each chain is forced in
     outdated, current = [], []
@@ -220,7 +217,7 @@ def with_agreeing(cited: list[str], pairs: list[dict], allowed: list[str]) -> li
 def answer(state: RAGState) -> dict:
     question, claims = state["question"], state["claims"]
     by_id = {d["doc_id"]: d for d in state["retrieved"]}
-    allowed = [i for i in state["relevant_ids"] if i in by_id]
+    allowed = state["relevant_ids"]
     docs = [by_id[i] for i in allowed]
     # The answer is written from the checked claims only, not from the full documents, so it can
     # only restate what was compared. A second LLM call then checks it against the claims and the
@@ -282,7 +279,9 @@ def abstain(state: RAGState) -> dict:
     closest = ", ".join(f"{c['doc_id']} (created {c['date']}, score {c['score']:.3f})"
                         for c in state.get("closest", [])[:3])
     if not state.get("retrieved"):
-        why = f"No document is close enough to the question (best score {state.get('best_score', 0):.3f}, cutoff {config.SCORE_THRESHOLD})."
+        best = state["closest"][0]["score"] if state.get("closest") else 0.0
+        why = (f"No document is close enough to the question (best score {best:.3f}, "
+               f"cutoff {config.SCORE_THRESHOLD}).")
     else:
         why = "None of the documents found says anything that answers the question."
     reason = f"The documents do not answer this question. {why}"

@@ -45,8 +45,8 @@ It is judged on one thing: it must work. Simple and working beats pretty.
   the best hit), then every doc with the same `topic` is added (a doc and the doc it
   `supersedes` always share a topic, so both ends of a link come in).
 - The LLM extracts claims: a claim holds only the part of a doc that answers the question.
-- The LLM compares: is each claim relevant, and for each pair not linked by `supersedes`, do the
-  claims give the same answer, a different one, or are they unrelated? If different, it says
+- The LLM compares: is each claim relevant, and for each pair of documents that are not
+  replaced, do the claims give the same answer, a different one, or are they unrelated? If different, it says
   what differs ("D03 says 16 weeks, D04 says 12 weeks"). It never decides who is right.
 - The answer is written from the claims; a second LLM call checks it for facts no claim states
   and for values the docs give differently (one more try, then a note).

@@ -51,7 +51,6 @@ def test_dispute_needs_the_flag_and_exactly_the_right_documents():
     assert dispute_links_right_docs(Q, {**three, "versions": three["versions"][:2]}, ref)["score"] == 0
     extra = {**three, "versions": three["versions"] + [_cite("D13")]}
     assert dispute_links_right_docs(Q, extra, ref)["score"] == 0  # a wrong document is linked
-    assert dispute_links_right_docs(Q, {**three, "dispute": False}, ref)["score"] == 0
     assert dispute_links_right_docs(Q, {**three, "answer": "€1,000"}, ref)["score"] == 0
     assert dispute_links_right_docs(Q, three, ONE)["comment"] == "n/a"
 
@@ -72,7 +71,6 @@ def test_no_answer_needs_the_flag_and_where_it_stopped():
     assert no_answer_is_clean(Q, at_search, ref)["score"] == 1
     assert no_answer_is_clean(Q, after_reading, ref)["score"] == 0
     assert no_answer_is_clean(Q, after_reading, NONE)["score"] == 1
-    assert no_answer_is_clean(Q, {"no_answer": False}, NONE)["score"] == 0
     assert no_answer_is_clean(Q, {"no_answer": True, "answer": "x"}, NONE)["score"] == 0
 
 

@@ -1,7 +1,7 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
 from src.graph import (abstain, conflict_report, find_citations, newest_in_chain,
-                       pairs_to_compare, read_comparison, reconcile, same_chain, with_agreeing)
+                       pairs_to_compare, read_comparison, reconcile, with_agreeing)
 from src.load_docs import doc_map
 from src.schemas import Comparison, DocAssessment, PairComparison
 from src.vectorstore import _to_retrieved
@@ -10,8 +10,8 @@ from src.vectorstore import _to_retrieved
 def test_replaces_chains():
     assert newest_in_chain("D01") == "D02"
     assert newest_in_chain("D02") == "D02"
-    assert same_chain("D07", "D08")
-    assert not same_chain("D03", "D04")  # a real dispute: no supersedes link
+    assert newest_in_chain("D27") == "D29"  # a chain of three
+    assert newest_in_chain("D03") == "D03"  # a real dispute: no supersedes link
 
 
 def _state(claims, relevant, pairs=()):
@@ -64,8 +64,9 @@ def test_reconcile_abstains_when_nothing_is_relevant():
     assert out["relevant_ids"] == []
 
 
-def test_pairs_to_compare_leaves_out_supersedes_links():
-    assert pairs_to_compare(["D01", "D02", "D03"]) == [("D01", "D03"), ("D02", "D03")]
+def test_pairs_to_compare_leaves_out_replaced_docs():
+    assert pairs_to_compare(["D01", "D02", "D03"]) == [("D02", "D03")]  # D02 replaces D01
+    assert pairs_to_compare(["D27", "D28", "D29", "D26"]) == [("D29", "D26")]
 
 
 def test_read_comparison_matches_pairs_in_any_order_and_fills_gaps():
@@ -106,7 +107,7 @@ def test_conflict_report_shows_both_creation_dates():
 
 
 def test_abstain_lists_the_closest_documents_with_dates():
-    state = {"question": "q", "retrieved": [], "best_score": 0.54,
+    state = {"question": "q", "retrieved": [],
              "closest": [{"doc_id": "D02", "date": "2025-06-15", "score": 0.541}]}
     reason = abstain(state)["result"]["reason"]
     assert "Closest documents: D02 (created 2025-06-15, score 0.541)." in reason

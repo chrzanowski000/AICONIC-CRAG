@@ -10,6 +10,8 @@ so the same functions work locally and as LangSmith evaluators. A check that doe
 question scores 1 with the comment "n/a".
 """
 
+import hashlib
+import json
 import sys
 from typing import Literal
 
@@ -57,8 +59,8 @@ def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) ->
 
 
 def dispute_links_right_docs(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    """For an expected dispute: `dispute` is true and the versions are exactly the expected
-    documents, each with its date and claim, and there is no answer."""
+    """For an expected dispute: the versions are exactly the expected documents, each with its
+    date and claim, and there is no answer. (The `dispute` flag is checked by outcome_matches.)"""
     key = "dispute_links_right_docs"
     if not reference_outputs["dispute"]:
         return _na(key)
@@ -66,8 +68,6 @@ def dispute_links_right_docs(inputs: dict, outputs: dict, reference_outputs: dic
     ids = {v["doc_id"] for v in versions}
     want = set(reference_outputs.get("versions", []))
     problems = []
-    if not outputs.get("dispute"):
-        problems.append("dispute is not true")
     if ids != want:
         problems.append(f"linked {sorted(ids)}, expected {sorted(want)}")
     for v in versions:
@@ -77,7 +77,7 @@ def dispute_links_right_docs(inputs: dict, outputs: dict, reference_outputs: dic
         problems.append("a single answer was given")
     if problems:
         return _result(key, False, "; ".join(problems))
-    return _result(key, True, f"dispute: true, linked {sorted(ids)}, each with date and claim")
+    return _result(key, True, f"linked {sorted(ids)}, each with date and claim")
 
 
 def marks_outdated(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
@@ -122,14 +122,12 @@ def mentions(text: str, word: str) -> bool:
 
 
 def no_answer_is_clean(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    """For an expected "I don't know": `no_answer` is true, with no answer, sources or versions.
-    With `at_search`, it must also have stopped at the search."""
+    """For an expected "I don't know": no answer, sources or versions. With `at_search`, it must
+    also have stopped at the search. (The `no_answer` flag is checked by outcome_matches.)"""
     key = "no_answer_is_clean"
     if not reference_outputs["no_answer"]:
         return _na(key)
     problems = []
-    if not outputs.get("no_answer"):
-        problems.append("no_answer is not true")
     if outputs.get("answer"):
         problems.append("an answer was given")
     if outputs.get("citations"):
@@ -142,7 +140,7 @@ def no_answer_is_clean(inputs: dict, outputs: dict, reference_outputs: dict) -> 
     if problems:
         return _result(key, False, "; ".join(problems))
     where = "at the search" if at_search else "after reading the documents"
-    return _result(key, True, f"no_answer: true, nothing that looks like an answer ({where})")
+    return _result(key, True, f"nothing that looks like an answer ({where})")
 
 
 def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
@@ -249,11 +247,13 @@ def run_langsmith(questions: list[dict]) -> None:
     from langsmith import Client
 
     client = Client()
-    name = config.EVAL_DATASET_NAME
-    try:
-        dataset = client.read_dataset(dataset_name=name)
+    # The name ends with a fingerprint of the questions, so any change to questions.json gets a
+    # new dataset instead of grading against old examples.
+    fingerprint = hashlib.sha256(json.dumps(questions, sort_keys=True).encode()).hexdigest()[:8]
+    name = f"{config.EVAL_DATASET_NAME}-{fingerprint}"
+    if client.has_dataset(dataset_name=name):
         print(f"LangSmith: using dataset '{name}'.")
-    except Exception:  # not found: create it from questions.json
+    else:
         dataset = client.create_dataset(name, description="Helios RAG demo questions")
         client.create_examples(dataset_id=dataset.id, examples=[
             {"inputs": {"question": q["question"], "id": q["id"]}, "outputs": q["expected"]}

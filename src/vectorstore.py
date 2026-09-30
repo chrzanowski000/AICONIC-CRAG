@@ -152,16 +152,15 @@ def score_floor(best_score: float) -> float:
 def retrieve(question: str) -> dict:
     """Search, drop weak hits, add the other docs on the same topics, cap the list.
 
-    Returns {"retrieved": [...], "best_score": float, "closest": [...]}. `closest` holds the top
-    search hits before the cutoff, so an "I don't know" answer can show what was looked at.
+    Returns {"retrieved": [...], "closest": [...]}. `closest` holds the top search hits before
+    the cutoff, best first, so an "I don't know" answer can show what was looked at.
     """
     hits = search(question)
-    best_score = hits[0]["score"] if hits else 0.0
+    floor = score_floor(hits[0]["score"] if hits else 0.0)
     closest = [{"doc_id": h["doc_id"], "date": h["date"], "score": h["score"]} for h in hits]
-    floor = score_floor(best_score)
     kept = [h for h in hits if h["score"] >= floor]
     if not kept:
-        return {"retrieved": [], "best_score": best_score, "closest": closest}
+        return {"retrieved": [], "closest": closest}
 
     # Add every other doc on the same topics. A doc and the doc it replaces always share a
     # topic (load_docs checks this), so this also brings in both ends of a "replaces" link.
@@ -171,4 +170,4 @@ def retrieve(question: str) -> dict:
              if doc.metadata["topic"] in topics and doc_id not in seen]
     added.sort(key=lambda d: d["date"], reverse=True)
     retrieved = (kept + added)[: config.MAX_CONTEXT_DOCS]
-    return {"retrieved": retrieved, "best_score": best_score, "closest": closest}
+    return {"retrieved": retrieved, "closest": closest}

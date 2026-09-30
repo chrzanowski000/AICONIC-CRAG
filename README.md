@@ -90,7 +90,7 @@ Colours: **blue** = an LLM call · **green** = plain Python · **grey** = local 
 - **extract_claims**: the LLM (`openai/gpt-6-luna` through OpenRouter) writes one sentence per
   document: what it says about the question, numbers copied exactly.
 - **compare**: the LLM says which claims answer the question and, for every pair of documents
-  not linked by `supersedes`, whether they give the same answer, a different one, or are
+  that are not replaced, whether they give the same answer, a different one, or are
   unrelated. If different, it says what differs: "D03 says 16 weeks, D04 says 12 weeks".
   It never says which one is right.
 - **reconcile**: plain Python. Applies `supersedes` links, keeps the disputes between current

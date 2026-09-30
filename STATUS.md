@@ -41,7 +41,12 @@ every round is in the git log.
   `questions.json`, so a change makes a new dataset (the old one still had the "status" format
   and would have failed every check). Checked: `pytest` 40 passed; one eval run 33/34 (Q14, see
   Known issues), flags right for all 34, all other outputs the same as on `main`. The LangSmith
-  part was not run live.
+  part was not run live. Merged into `main` (2026-09-30).
+- **LangSmith dataset** `rag-conflicts-demo-536567d3` (2026-09-30): all 34 questions from
+  `questions.json` with their expected results, split into `one_answer` (22), `dispute` (7) and
+  `no_answer` (5). `LANGSMITH_TRACING=true python eval.py` uses it (the name ends with the
+  fingerprint of `questions.json`). The old dataset `rag-conflicts-demo` (18 questions, old
+  format) is not used any more and can be deleted in LangSmith.
 
 ## Next steps
 

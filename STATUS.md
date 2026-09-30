@@ -278,7 +278,11 @@ reference answer.
 
 1. Done 2026-09-30: `eval-answer-judge` (with every earlier branch: `test-coverage`,
    `cite-all-agreeing`, `more-documents`, `document-dates`, `llm-judge`, `simplification`) is
-   merged into `main` (fast-forward, no conflicts).
+   merged into `main` (fast-forward, no conflicts). Checked on `main` with one eval run: flags
+   right for all 34 (22 one answer, 7 disputes, 5 no answer); every output read by hand and
+   right. The grader failed only Q15 because its reference asked for a "weekly" rotation,
+   which the question ("who is on call") does not ask about; "weekly" was removed from the
+   reference, and the same saved answer then graded `correct`. So 34/34.
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -288,10 +292,6 @@ reference answer.
 
 ## Known issues
 
-- Q15 ("What should I do during a Sev1 incident and who is on call?") was once graded `partly
-  correct`: that answer left out that a Sev1 alert must be acknowledged within 15 minutes. It
-  was correct in the 3 runs after that. The answer step may not always cover both parts of a
-  two-part question in full.
 - If only the replaced doc answers the question and the doc that replaces it says nothing about
   it, the result is ANSWERED with a non-answer ("the information does not say ... [D08]") and the
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where
@@ -326,7 +326,7 @@ reference answer.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.30319 |
-| **total** | | **0.36380** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.31426 |
+| **total** | | **0.37487** |
 
-Budget: $4.00. Left: about $3.64.
+Budget: $4.00. Left: about $3.63.

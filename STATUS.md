@@ -157,6 +157,9 @@ when documents agree, all of them are cited.
       prompt (D04's claim still keeps "12 weeks"). Checked: `pytest` 21 passed; traces of Q11
       and Q12 3 of 3 cite all agreeing documents, Q14 4 of 4 clean; final `eval.py` twice →
       30/30 PASS both times, no retries.
+      Decided 2026-09-30: the answer answers only the question; source lines show each snippet
+      as extracted, even with other information (D04's "12 weeks" on Q14), with no comment.
+      Not a known issue (`docs/decisions.md` 3b).
 
 ## Last verified outputs (2026-09-29)
 
@@ -230,9 +233,6 @@ when documents agree, all of them are cited.
 
 ## Known issues
 
-- A source line shows the document's whole claim. For Q14 (salary during parental leave) D04's
-  claim keeps "12 weeks" ("Employees receive 12 weeks of paid parental leave at full salary"),
-  so the answer is right but D04's source line shows one side of the weeks dispute.
 - If only the replaced doc answers the question and the doc that replaces it says nothing about
   it, the result is ANSWERED with a non-answer ("the information does not say ... [D08]") and the
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where

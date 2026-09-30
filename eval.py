@@ -1,15 +1,17 @@
-"""Evaluation: run every question in questions.json and check the result.
+"""Evaluation: run every question of a dataset (data/<name>/questions.json) and check it.
 
-    python eval.py                 # local PASS/FAIL table, exit code 1 on any FAIL
+    python eval.py                        # local PASS/FAIL table, exit code 1 on any FAIL
+    python eval.py --dataset brightwater  # the same for another dataset in data/
 
 When LANGSMITH_TRACING=true and LANGSMITH_API_KEY is set, the same checks also run as a
-LangSmith experiment on the dataset EVAL_DATASET_NAME.
+LangSmith experiment on the LangSmith dataset rag-conflicts-<name>-<fingerprint>.
 
 Every check has the signature (inputs, outputs, reference_outputs) -> {"key", "score", "comment"},
 so the same functions work locally and as LangSmith evaluators. A check that does not apply to a
 question scores 1 with the comment "n/a".
 """
 
+import argparse
 import hashlib
 import json
 import sys
@@ -225,7 +227,8 @@ def target(inputs: dict) -> dict:
 
 
 def run_local(questions: list[dict]) -> bool:
-    print(f"Local eval: {len(questions)} questions, model {config.LLM_MODEL}")
+    print(f"Local eval: dataset {config.DATASET}, {len(questions)} questions, "
+          f"model {config.LLM_MODEL}")
     all_ok = True
     for q in questions:
         outputs = target({"question": q["question"], "id": q["id"]})
@@ -254,7 +257,7 @@ def run_langsmith(questions: list[dict]) -> None:
     if client.has_dataset(dataset_name=name):
         print(f"LangSmith: using dataset '{name}'.")
     else:
-        dataset = client.create_dataset(name, description="Helios RAG demo questions")
+        dataset = client.create_dataset(name, description=f"RAG demo questions ({config.DATASET})")
         client.create_examples(dataset_id=dataset.id, examples=[
             {"inputs": {"question": q["question"], "id": q["id"]}, "outputs": q["expected"]}
             for q in questions])
@@ -265,18 +268,24 @@ def run_langsmith(questions: list[dict]) -> None:
         evaluators=CHECKS,
         experiment_prefix=config.EVAL_EXPERIMENT_PREFIX,
         max_concurrency=1,  # one question at a time: the cost counter is not thread safe
-        metadata={"llm": config.LLM_MODEL},
+        metadata={"llm": config.LLM_MODEL, "dataset": config.DATASET},
     )
     print(f"LangSmith experiment: {results.experiment_name}")
     if results.url:
         print(f"URL: {results.url}")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     from main import finish_run, known_errors, load_questions, setup_logging
     from src.graph import build_graph
     from src.vectorstore import ensure_index
 
+    parser = argparse.ArgumentParser(description="Run the eval questions of one dataset.")
+    parser.add_argument("--dataset", choices=config.datasets(),
+                        help=f"which data/<name>/ to use (default: {config.DATASET})")
+    args = parser.parse_args(argv)
+    if args.dataset:
+        config.use_dataset(args.dataset)
     setup_logging()
     if config.TRACING_WARNING:
         print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)

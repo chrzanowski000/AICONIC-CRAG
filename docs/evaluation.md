@@ -1,12 +1,16 @@
 # Evaluation
 
-`python eval.py` runs every question in `questions.json` through the full pipeline and checks the
-result. It needs no LangSmith account. It prints one PASS/FAIL line per question, a summary, and
+`python eval.py` runs every question of the dataset (`data/helios/questions.json` by default)
+through the full pipeline and checks the result. It needs no LangSmith account. It prints one PASS/FAIL line per question, a summary, and
 the tokens and cost. It exits with code 1 if any question fails, so it can be used in a script.
 
 ```bash
-python eval.py
+python eval.py                        # Helios, 34 questions
+python eval.py --dataset brightwater  # Brightwater Ferries, 26 questions
 ```
+
+This page describes the Helios questions. The Brightwater questions use the same format and the
+same checks; their cases are listed in [`datasets.md`](datasets.md).
 
 The LLM can answer differently from one run to the next, so after a change to a prompt, a
 threshold, a document or the model, run it twice; both runs must pass.
@@ -15,7 +19,7 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 34 questions. Q1–Q5 are the demo questions (`python main.py demo`); the rest are extra checks
 (`python main.py demo --all` runs all of them without the checks). The `note` field in
-`questions.json` says what each question tests.
+`data/helios/questions.json` says what each question tests.
 
 | id | question | tests | expected |
 |---|---|---|---|
@@ -252,21 +256,23 @@ shown by code every time.
 
 When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
 
-1. reads the dataset `EVAL_DATASET_NAME` (default `rag-conflicts-demo`), or creates it from
-   `questions.json` if it does not exist (inputs: `question`, `id`; outputs: the `expected`
+1. reads the LangSmith dataset `rag-conflicts-<name>-<fingerprint>` of the dataset in use (for
+   example `rag-conflicts-helios-536567d3`), or creates it from `data/<name>/questions.json` if
+   it does not exist (inputs: `question`, `id`; outputs: the `expected`
    block);
 2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included),
-   experiment prefix `rag-conflicts`, `max_concurrency=1` (one question at a time: the cost
+   experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time: the cost
    counter is not thread safe);
 3. prints the experiment name and URL.
 
 ```bash
 LANGSMITH_TRACING=true python eval.py
+LANGSMITH_TRACING=true python eval.py --dataset brightwater
 ```
 
-The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `question_id` and
-`llm`. The dataset name ends with a short fingerprint of `questions.json`
-(`rag-conflicts-demo-1a2b3c4d`), so a change to the questions or their expected results creates a
+The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `question_id`,
+`llm` and `dataset`. The dataset name ends with a short fingerprint of `questions.json`
+(`rag-conflicts-helios-1a2b3c4d`), so a change to the questions or their expected results creates a
 new dataset instead of grading against old examples.
 
 ## Cost

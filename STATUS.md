@@ -46,7 +46,8 @@ every round is in the git log.
   `questions.json` with their expected results, split into `one_answer` (22), `dispute` (7) and
   `no_answer` (5). `LANGSMITH_TRACING=true python eval.py` uses it (the name ends with the
   fingerprint of `questions.json`). The old dataset `rag-conflicts-demo` (18 questions, old
-  format) is not used any more and can be deleted in LangSmith.
+  format) was deleted. Checked with a 4-question LangSmith run (Q1, Q3, Q5, Q31, experiment
+  `rag-conflicts-smoke-1fb08e69`): all 8 checks scored 1 on each.
 
 ## Next steps
 
@@ -91,7 +92,7 @@ every round is in the git log.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32819 |
-| **total** | | **0.38880** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32907 |
+| **total** | | **0.38968** |
 
 Budget: $4.00. Left: about $3.61.

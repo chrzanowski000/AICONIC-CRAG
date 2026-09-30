@@ -113,8 +113,9 @@ runs a LangSmith experiment on the same checks.
 documents that agree (also in different words), documents that disagree (in numbers, in words,
 and three at once), one document that answers, no document that answers (also close to a real
 topic), replaced documents (also a chain of three), and questions where the two sides of a
-dispute agree on the point asked. An LLM grader also compares each result with a reference answer written for
-the question. A full eval costs about $0.012. The 39 unit tests
+dispute agree on the point asked. Disputes and "I don't know" are checked by the `dispute` and `no_answer` flags
+and the linked documents; for one-answer questions an LLM grader compares the answer with a
+reference answer written by hand. A full eval costs about $0.012. The 39 unit tests
 (`python -m pytest`) check the plain-code rules for free. See
 [`docs/evaluation.md`](docs/evaluation.md).
 

@@ -19,40 +19,40 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 | id | question | tests | expected |
 |---|---|---|---|
-| Q1 | How many approvals does a pull request need before it can be merged? | clean answer | `answered`; cites D14; contains "2" or "two" |
-| Q2 | How many days per week can employees work remotely? | replaced doc | `answered`; cites D02; outdated D01 → D02; contains "3" or "three" |
-| Q3 | How many weeks of paid parental leave does Helios Dynamics offer? | real dispute | `disputed`; D03 and D04, each with a date; no answer |
-| Q4 | What is the daily meal allowance for business travel? | real dispute | `disputed`; D05 and D06, each with a date; no answer |
-| Q5 | What is the policy on bringing pets to the office? | no answer | `abstained`; no answer, citations or versions |
-| Q6 | What is the Kestrel X2 flight time? | replaced doc | `answered`; cites D10; outdated D09 → D10; contains "45" |
-| Q7 | Where is the headquarters located? | replaced doc | `answered`; cites D08; outdated D07 → D08; contains "400 Meridian" |
-| Q8 | How often do I need to change my password? | real dispute, in words not numbers | `disputed`; D11 and D12 |
-| Q9 | How much does the Kestrel X2 weigh? | docs agree | `answered`; cites D10 **and** D18; contains "1.2" |
-| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | `answered`; cites D10 **and** D18; contains "300" |
-| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "adopt"; does **not** contain "16" or "12" |
-| Q12 | Is multi-factor sign-in required? | docs agree | `answered`; cites D11 **and** D12; contains "required" or "yes" |
-| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
-| Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
-| Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts (a question in two parts) | `answered`; cites D15 **and** D20 |
-| Q16 | Do I keep my health insurance during parental leave? | only one doc answers | `answered`; cites D04; contains "yes" or "continue" |
-| Q17 | How long must passwords be? | only one doc answers | `answered`; cites D11; contains "14" |
-| Q18 | What are the HQ office opening hours? | replaced doc with the same value | `answered`; cites D08; outdated D07 → D08; contains "7:00" |
-| Q19 | How often are company laptops replaced? | docs agree | `answered`; cites D21 **and** D22; contains "3" or "three" |
-| Q20 | What is the yearly learning budget per employee? | real dispute, three documents | `disputed`; D23, D24 and D25, each with a date; no answer |
-| Q21 | When do I need a doctor's note for sick leave? | only one doc answers | `answered`; cites D26; contains "three" or "3" |
-| Q22 | How many days of annual leave do employees get per year? | chain of three replaced docs | `answered`; cites D29; outdated D27 → D29 and D28 → D29; contains "30" |
-| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | `answered`; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months" or "1 year" |
-| Q24 | How often does engineering ship a release? | real dispute, in words and days | `disputed`; D32 and D33 |
-| Q25 | How long are customer support tickets kept? | real dispute | `disputed`; D34 and D35 |
-| Q26 | Does Helios Dynamics pay for public transport to work? | only one doc answers | `answered`; cites D36; contains "100%", "yes" or "full" |
-| Q27 | When is the summer party? | only one doc answers | `answered`; cites D37; contains "20 June" |
-| Q28 | How long do I have to submit an expense claim? | docs agree | `answered`; cites D38 **and** D39; contains "30" |
-| Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `abstained` |
-| Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `abstained` |
-| Q31 | What is the dress code? | no answer, stopped at the search (no model call) | `abstained` at the search |
-| Q32 | How long is maternity leave? | real dispute, question reworded | `disputed`; D03 and D04 |
-| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | `answered`; cites D14; contains "2" or "two" |
-| Q34 | Who is the CEO of Helios Dynamics? | no answer, near a real topic (the company overview is found) | `abstained` |
+| Q1 | How many approvals does a pull request need before it can be merged? | clean answer | one answer; cites D14; contains "2" or "two" |
+| Q2 | How many days per week can employees work remotely? | replaced doc | one answer; cites D02; outdated D01 → D02; contains "3" or "three" |
+| Q3 | How many weeks of paid parental leave does Helios Dynamics offer? | real dispute | `dispute: true`; D03 and D04, each with a date; no answer |
+| Q4 | What is the daily meal allowance for business travel? | real dispute | `dispute: true`; D05 and D06, each with a date; no answer |
+| Q5 | What is the policy on bringing pets to the office? | no answer | `no_answer: true`; no answer, citations or versions |
+| Q6 | What is the Kestrel X2 flight time? | replaced doc | one answer; cites D10; outdated D09 → D10; contains "45" |
+| Q7 | Where is the headquarters located? | replaced doc | one answer; cites D08; outdated D07 → D08; contains "400 Meridian" |
+| Q8 | How often do I need to change my password? | real dispute, in words not numbers | `dispute: true`; D11 and D12 |
+| Q9 | How much does the Kestrel X2 weigh? | docs agree | one answer; cites D10 **and** D18; contains "1.2" |
+| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | one answer; cites D10 **and** D18; contains "300" |
+| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "adopt"; does **not** contain "16" or "12" |
+| Q12 | Is multi-factor sign-in required? | docs agree | one answer; cites D11 **and** D12; contains "required" or "yes" |
+| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
+| Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
+| Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts (a question in two parts) | one answer; cites D15 **and** D20 |
+| Q16 | Do I keep my health insurance during parental leave? | only one doc answers | one answer; cites D04; contains "yes" or "continue" |
+| Q17 | How long must passwords be? | only one doc answers | one answer; cites D11; contains "14" |
+| Q18 | What are the HQ office opening hours? | replaced doc with the same value | one answer; cites D08; outdated D07 → D08; contains "7:00" |
+| Q19 | How often are company laptops replaced? | docs agree | one answer; cites D21 **and** D22; contains "3" or "three" |
+| Q20 | What is the yearly learning budget per employee? | real dispute, three documents | `dispute: true`; D23, D24 and D25, each with a date; no answer |
+| Q21 | When do I need a doctor's note for sick leave? | only one doc answers | one answer; cites D26; contains "three" or "3" |
+| Q22 | How many days of annual leave do employees get per year? | chain of three replaced docs | one answer; cites D29; outdated D27 → D29 and D28 → D29; contains "30" |
+| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | one answer; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months" or "1 year" |
+| Q24 | How often does engineering ship a release? | real dispute, in words and days | `dispute: true`; D32 and D33 |
+| Q25 | How long are customer support tickets kept? | real dispute | `dispute: true`; D34 and D35 |
+| Q26 | Does Helios Dynamics pay for public transport to work? | only one doc answers | one answer; cites D36; contains "100%", "yes" or "full" |
+| Q27 | When is the summer party? | only one doc answers | one answer; cites D37; contains "20 June" |
+| Q28 | How long do I have to submit an expense claim? | docs agree | one answer; cites D38 **and** D39; contains "30" |
+| Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `no_answer: true` |
+| Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `no_answer: true` |
+| Q31 | What is the dress code? | no answer, stopped at the search (no model call) | `no_answer: true`, at the search |
+| Q32 | How long is maternity leave? | real dispute, question reworded | `dispute: true`; D03 and D04 |
+| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | one answer; cites D14; contains "2" or "two" |
+| Q34 | Who is the CEO of Helios Dynamics? | no answer, near a real topic (the company overview is found) | `no_answer: true` |
 
 The questions by case (details in `corpus.md`, "The cases"):
 
@@ -83,14 +83,14 @@ comment `n/a`. A question passes only if every check scores 1.
 
 | check | what it asks |
 |---|---|
-| `status_matches` | Is the status (`answered` / `disputed` / `abstained`) the expected one? |
+| `outcome_matches` | Are the output's `dispute` and `no_answer` flags the expected ones? (both false = one answer) |
 | `cites_required_docs` | Are all docs in `cites` cited, and at least one doc in `cites_any`? Each citation has a date and a source. |
-| `disputed_shows_both_sides` | For a dispute: at least 2 different versions (Q20 has 3), the required ones among them, each with a date and a claim, and **no** single answer. |
+| `dispute_links_right_docs` | For an expected dispute: `dispute` is true, the linked versions are **exactly** the expected documents (Q20 has 3), each with a date and a claim, and there is **no** answer. |
 | `marks_outdated` | Is there an outdated note for each expected old → new pair, with both dates? |
-| `abstained_cleanly` | For "I don't know": no answer, no citations, no versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
+| `no_answer_is_clean` | For an expected "I don't know": `no_answer` is true, with no answer, citations or versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
 | `answer_contains` | Does the answer contain one of the expected strings, as a whole word or number? |
 | `answer_excludes` | Does the answer avoid all of these strings, as whole words or numbers (for example a number the documents disagree on)? |
-| `answer_is_correct` | **The grader**: an LLM compares the whole output with the question's `reference_answer` and says `correct`, `partly correct` or `incorrect`, with a reason. Only `correct` passes. |
+| `answer_is_correct` | Only for questions with one answer. **The grader**: an LLM compares the output with the question's `reference_answer` (the correct answer) and says `correct`, `partly correct` or `incorrect`, with a reason. Only `correct` passes. |
 
 Words and numbers are matched whole (`mentions()` in `eval.py`): "2" is found in "needs 2
 approvals" but not in "2025" or "[D12]", and "12" is not found in the date "2025-02-12". So
@@ -100,32 +100,42 @@ The first seven checks look at the structure of the output. A disputed question 
 the system refuses to give one answer; an unanswerable question passes only when the system says
 nothing that looks like an answer. Guessing is never rewarded.
 
-### The grader (`answer_is_correct`)
+### How each outcome is checked
 
-The structure checks cannot tell whether the answer is actually right. For that, every question
-has a **reference answer** in `questions.json` (`expected.reference_answer`), written by hand from
-the documents:
+Every run ends with two flags in the output, `dispute` and `no_answer` (both false means one
+answer). Each question says which outcome is expected, and each outcome is checked in its own
+way:
+
+| expected | written in `questions.json` | checked by |
+|---|---|---|
+| one answer | `"dispute": false, "no_answer": false`, `cites`, and a `reference_answer` (the correct answer) | the flags; the cited documents; the grader compares the answer with the reference answer |
+| a dispute | `"dispute": true`, `versions` (the documents that disagree), no reference answer | code only: `dispute` is true, and the linked documents are exactly `versions` |
+| no answer | `"no_answer": true`, no reference answer | code only: `no_answer` is true and nothing looks like an answer |
 
 ```json
 {"id": "Q27", "question": "When is the summer party?",
- "expected": {"status": "answered", "cites": ["D37"], "answer_contains": ["20 June"],
+ "expected": {"dispute": false, "no_answer": false, "cites": ["D37"], "answer_contains": ["20 June"],
               "reference_answer": "On Friday 20 June 2025 (D37). Also fine: from 16:00, at Pirita beach."}}
+{"id": "Q20", "question": "What is the yearly learning budget per employee?",
+ "expected": {"dispute": true, "no_answer": false, "versions": ["D23", "D24", "D25"]}}
+{"id": "Q31", "question": "What is the dress code?",
+ "expected": {"dispute": false, "no_answer": true, "at_search": true}}
 ```
 
-- For an answer, the reference holds the facts that answer the question. Details the question
-  does not ask about go after "Also fine:": the answer may give them or leave them out (the
-  system answers only what is asked).
-- For a dispute, the reference names every version and says there is no single answer.
-- For "I don't know", the reference says the documents do not answer.
+### The grader (`answer_is_correct`)
 
-The grader gets the question, the reference and the system's full printed output (answer, sources,
-versions, notes), and decides:
+Only questions with one answer have a reference answer, and the reference answer is always one
+answer: the facts that answer the question. Details the question does not ask about go after
+"Also fine:"; the output may give them or leave them out (the system answers only what is asked).
+
+The grader gets the question, the reference answer and the system's full printed output, and
+decides:
 
 | verdict | when |
 |---|---|
-| `correct` | same outcome as the reference (one answer / the documents disagree / "I don't know") and every key fact; nothing contradicts it; extra details that do not contradict are fine |
-| `partly correct` | same outcome, but a key fact is missing |
-| `incorrect` | a different outcome, a fact that contradicts the reference, or the answer picks one side of a disagreement |
+| `correct` | it answers and gives every key fact of the reference answer; nothing contradicts it; extra details that do not contradict are fine |
+| `partly correct` | it answers, but a key fact is missing |
+| `incorrect` | a fact contradicts the reference answer, or the output does not answer (it says it does not know, or that the documents disagree) |
 
 Source lines quote the documents and are not claims of the answer: for Q14 D04's source line
 says "12 weeks", but the answer itself does not, so it is `correct`.
@@ -134,18 +144,16 @@ Checked by hand before trusting it (2026-09-30), on outputs with a known verdict
 
 | output | grader said |
 |---|---|
-| Q3 dispute with both versions | correct |
-| Q3 answered "16 weeks [D03]" (picks a side) | incorrect |
 | Q14 answer on pay, D04's source line says 12 weeks | correct |
-| Q14 answer "full salary for 12 weeks" | incorrect |
-| Q5 invented "pets are allowed on Fridays" | incorrect |
-| Q5 "I don't know" | correct |
-| Q15 only the Sev1 part | partly correct |
+| Q14 "the documents disagree about pay" | incorrect |
+| Q27 "27 June 2025" (wrong date) | incorrect |
+| Q27 "Friday 20 June 2025" (date only, no place) | correct |
+| Q15 only the on-call rotation | partly correct |
 
 The grader model is `EVAL_JUDGE_MODEL`, by default the same model as the system
 (`openai/gpt-6-luna`). That is cheap, but a model grading output like its own can be too kind;
 set another model (for example `EVAL_JUDGE_MODEL=z-ai/glm-5.3-flash python eval.py`) for a second
-opinion. The grader adds one LLM call per question (34 per run).
+opinion. The grader adds one LLM call per question with one answer (22 per run).
 
 ## Unit tests
 

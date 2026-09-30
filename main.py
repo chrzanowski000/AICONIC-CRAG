@@ -100,7 +100,9 @@ def cmd_demo(args) -> None:
         state = run(q["question"], question_id=q["id"], tags=["demo"])
         print(show(state))
         got = state["result"]["status"]
-        summary.append(f"  {q['id']}  {got:10} (expected {q['expected']['status']})")
+        want = ("disputed" if q["expected"]["dispute"] else
+                "abstained" if q["expected"]["no_answer"] else "answered")
+        summary.append(f"  {q['id']}  {got:10} (expected {want})")
         print()
     print("Summary:")
     print("\n".join(summary))

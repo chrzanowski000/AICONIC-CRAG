@@ -27,9 +27,13 @@ def _na(key: str) -> dict:
     return {"key": key, "score": 1, "comment": "n/a"}
 
 
-def status_matches(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    want, got = reference_outputs["status"], outputs.get("status")
-    return _result("status_matches", got == want, f"expected {want}, got {got}")
+def outcome_matches(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+    """The output's `dispute` and `no_answer` flags are the expected ones (both false = one answer)."""
+    want = (reference_outputs["dispute"], reference_outputs["no_answer"])
+    got = (bool(outputs.get("dispute")), bool(outputs.get("no_answer")))
+    names = {(False, False): "one answer", (True, False): "dispute", (False, True): "no answer"}
+    return _result("outcome_matches", got == want,
+                   f"expected {names.get(want, want)}, got {names.get(got, got)}")
 
 
 def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
@@ -52,18 +56,20 @@ def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) ->
     return _result(key, True, f"cited {sorted(cited)}")
 
 
-def disputed_shows_both_sides(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    key = "disputed_shows_both_sides"
-    if reference_outputs["status"] != "disputed":
+def dispute_links_right_docs(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+    """For an expected dispute: `dispute` is true and the versions are exactly the expected
+    documents, each with its date and claim, and there is no answer."""
+    key = "dispute_links_right_docs"
+    if not reference_outputs["dispute"]:
         return _na(key)
     versions = outputs.get("versions") or []
     ids = {v["doc_id"] for v in versions}
+    want = set(reference_outputs.get("versions", []))
     problems = []
-    if len(ids) < 2:
-        problems.append(f"only {len(ids)} different versions")
-    missing = [d for d in reference_outputs.get("versions", []) if d not in ids]
-    if missing:
-        problems.append(f"missing versions {missing}")
+    if not outputs.get("dispute"):
+        problems.append("dispute is not true")
+    if ids != want:
+        problems.append(f"linked {sorted(ids)}, expected {sorted(want)}")
     for v in versions:
         if not v.get("date") or not v.get("claim"):
             problems.append(f"{v['doc_id']} has no date or claim")
@@ -71,7 +77,7 @@ def disputed_shows_both_sides(inputs: dict, outputs: dict, reference_outputs: di
         problems.append("a single answer was given")
     if problems:
         return _result(key, False, "; ".join(problems))
-    return _result(key, True, f"versions {sorted(ids)}, each with date and claim, no answer")
+    return _result(key, True, f"dispute: true, linked {sorted(ids)}, each with date and claim")
 
 
 def marks_outdated(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
@@ -115,13 +121,15 @@ def mentions(text: str, word: str) -> bool:
     return False
 
 
-def abstained_cleanly(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    key = "abstained_cleanly"
-    if reference_outputs["status"] != "abstained":
+def no_answer_is_clean(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+    """For an expected "I don't know": `no_answer` is true, with no answer, sources or versions.
+    With `at_search`, it must also have stopped at the search."""
+    key = "no_answer_is_clean"
+    if not reference_outputs["no_answer"]:
         return _na(key)
     problems = []
-    if outputs.get("status") != "abstained":
-        problems.append(f"status is {outputs.get('status')}")
+    if not outputs.get("no_answer"):
+        problems.append("no_answer is not true")
     if outputs.get("answer"):
         problems.append("an answer was given")
     if outputs.get("citations"):
@@ -134,7 +142,7 @@ def abstained_cleanly(inputs: dict, outputs: dict, reference_outputs: dict) -> d
     if problems:
         return _result(key, False, "; ".join(problems))
     where = "at the search" if at_search else "after reading the documents"
-    return _result(key, True, f"no answer, no citations, no versions ({where})")
+    return _result(key, True, f"no_answer: true, nothing that looks like an answer ({where})")
 
 
 def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
@@ -165,20 +173,17 @@ def answer_excludes(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
 # --- the grader: an LLM compares the output with the reference answer -------------------------
 
 GRADE = """\
-You grade the output of a question-answering system that works from company documents. You get
-the question, a reference answer written by a person, and the system's output. Decide:
-- correct: the output has the same outcome as the reference (one answer; the documents disagree
-  and every version is shown with no single answer; or "I don't know") and gives every key fact
-  of the reference. Nothing in it contradicts the reference. Extra details that do not contradict
-  the reference are fine.
-- partly correct: the same outcome, but a key fact of the reference is missing.
-- incorrect: a different outcome (for example one answer where the reference says the documents
-  disagree, or an answer where the reference says the documents do not say), or a fact that
-  contradicts the reference, or the answer picks one side of a disagreement.
-The key facts are the facts in the reference that answer the question. A reference may end with
-"Also fine: ...": those details are optional; the output may give them or leave them out.
+You grade an answer written by a question-answering system that works from company documents.
+You get the question, the correct answer written by a person, and the system's output. Decide:
+- correct: the output answers the question and gives every key fact of the correct answer, and
+  nothing in it contradicts the correct answer. Extra details that do not contradict it are fine.
+- partly correct: it answers, but a key fact of the correct answer is missing.
+- incorrect: a fact contradicts the correct answer, or the output does not answer (for example it
+  says it does not know, or that the documents disagree).
+The key facts are the facts in the correct answer that answer the question. The correct answer may
+end with "Also fine: ...": those details are optional; the output may give them or leave them out.
 Lines starting with "- [Dxx]" under "Sources" or "Outdated" quote the documents; details in them
-are not claims of the answer. In a disagreement, the listed versions are the output's content.
+are not claims of the answer.
 Give the reason in one short sentence. Return only the structured object."""
 
 
@@ -197,7 +202,8 @@ def grade(question: str, output_text: str, reference: str) -> Grade:
 
 
 def answer_is_correct(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    """The grader says the output matches the reference answer (only "correct" passes)."""
+    """For a question with one answer: the grader says the output matches the reference answer
+    (only "correct" passes). Disputes and "I don't know" are checked by their flags instead."""
     key = "answer_is_correct"
     reference = reference_outputs.get("reference_answer")
     if not reference:
@@ -208,8 +214,8 @@ def answer_is_correct(inputs: dict, outputs: dict, reference_outputs: dict) -> d
     return _result(key, verdict.verdict == "correct", f"{verdict.verdict}: {verdict.reason}")
 
 
-CHECKS = [status_matches, cites_required_docs, disputed_shows_both_sides, marks_outdated,
-          abstained_cleanly, answer_contains, answer_excludes, answer_is_correct]
+CHECKS = [outcome_matches, cites_required_docs, dispute_links_right_docs, marks_outdated,
+          no_answer_is_clean, answer_contains, answer_excludes, answer_is_correct]
 
 
 def target(inputs: dict) -> dict:

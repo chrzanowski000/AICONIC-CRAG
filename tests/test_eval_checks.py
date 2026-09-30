@@ -1,7 +1,8 @@
 """Tests for the checks in eval.py, so a PASS in the eval means what it says."""
 
-from eval import (abstained_cleanly, answer_contains, answer_excludes, cites_required_docs,
-                  disputed_shows_both_sides, marks_outdated, mentions, status_matches)
+from eval import (answer_contains, answer_excludes, cites_required_docs, dispute_links_right_docs,
+                  marks_outdated, mentions, no_answer_is_clean, outcome_matches)
+from src.schemas import FinalOutput
 
 Q = {"question": "q"}
 
@@ -20,9 +21,22 @@ def test_mentions_matches_whole_words_and_numbers_only():
     assert not mentions("Yes, adoption is covered.", "adopt")
 
 
-def test_status_and_citations():
-    assert status_matches(Q, {"status": "answered"}, {"status": "answered"})["score"] == 1
-    assert status_matches(Q, {"status": "disputed"}, {"status": "answered"})["score"] == 0
+def test_the_output_flags_follow_the_status():
+    assert FinalOutput(status="disputed").model_dump()["dispute"] is True
+    assert FinalOutput(status="abstained").model_dump()["no_answer"] is True
+    one = FinalOutput(status="answered").model_dump()
+    assert one["dispute"] is False and one["no_answer"] is False
+
+
+ONE = {"dispute": False, "no_answer": False}
+DISPUTE = {"dispute": True, "no_answer": False}
+NONE = {"dispute": False, "no_answer": True}
+
+
+def test_outcome_and_citations():
+    assert outcome_matches(Q, {"dispute": False, "no_answer": False}, ONE)["score"] == 1
+    assert outcome_matches(Q, {"dispute": True, "no_answer": False}, ONE)["score"] == 0
+    assert outcome_matches(Q, {"dispute": False, "no_answer": True}, NONE)["score"] == 1
     out = {"citations": [_cite("D10"), _cite("D18")]}
     assert cites_required_docs(Q, out, {"cites": ["D10", "D18"]})["score"] == 1
     assert cites_required_docs(Q, {"citations": [_cite("D10")]}, {"cites": ["D10", "D18"]})["score"] == 0
@@ -30,12 +44,16 @@ def test_status_and_citations():
     assert cites_required_docs(Q, {"citations": [_cite("D10", date="")]}, {"cites": ["D10"]})["score"] == 0
 
 
-def test_dispute_needs_every_version_with_a_date_and_no_answer():
-    ref = {"status": "disputed", "versions": ["D23", "D24", "D25"]}
-    three = {"versions": [_cite("D23"), _cite("D24"), _cite("D25")], "answer": None}
-    assert disputed_shows_both_sides(Q, three, ref)["score"] == 1
-    assert disputed_shows_both_sides(Q, {**three, "versions": three["versions"][:2]}, ref)["score"] == 0
-    assert disputed_shows_both_sides(Q, {**three, "answer": "€1,000"}, ref)["score"] == 0
+def test_dispute_needs_the_flag_and_exactly_the_right_documents():
+    ref = {**DISPUTE, "versions": ["D23", "D24", "D25"]}
+    three = {"dispute": True, "versions": [_cite("D23"), _cite("D24"), _cite("D25")], "answer": None}
+    assert dispute_links_right_docs(Q, three, ref)["score"] == 1
+    assert dispute_links_right_docs(Q, {**three, "versions": three["versions"][:2]}, ref)["score"] == 0
+    extra = {**three, "versions": three["versions"] + [_cite("D13")]}
+    assert dispute_links_right_docs(Q, extra, ref)["score"] == 0  # a wrong document is linked
+    assert dispute_links_right_docs(Q, {**three, "dispute": False}, ref)["score"] == 0
+    assert dispute_links_right_docs(Q, {**three, "answer": "€1,000"}, ref)["score"] == 0
+    assert dispute_links_right_docs(Q, three, ONE)["comment"] == "n/a"
 
 
 def test_outdated_notes_for_a_chain_of_three():
@@ -46,15 +64,16 @@ def test_outdated_notes_for_a_chain_of_three():
     assert marks_outdated(Q, {"outdated": notes[:1]}, ref)["score"] == 0
 
 
-def test_abstain_and_where_it_stopped():
-    ref = {"status": "abstained", "at_search": True}
-    at_search = {"status": "abstained", "reason": "The documents do not answer this question. "
-                                                  "No document is close enough to the question."}
-    after_reading = {"status": "abstained", "reason": "None of the documents found says anything."}
-    assert abstained_cleanly(Q, at_search, ref)["score"] == 1
-    assert abstained_cleanly(Q, after_reading, ref)["score"] == 0
-    assert abstained_cleanly(Q, after_reading, {"status": "abstained"})["score"] == 1
-    assert abstained_cleanly(Q, {"status": "abstained", "answer": "x"}, {"status": "abstained"})["score"] == 0
+def test_no_answer_needs_the_flag_and_where_it_stopped():
+    ref = {**NONE, "at_search": True}
+    at_search = {"no_answer": True, "reason": "The documents do not answer this question. "
+                                              "No document is close enough to the question."}
+    after_reading = {"no_answer": True, "reason": "None of the documents found says anything."}
+    assert no_answer_is_clean(Q, at_search, ref)["score"] == 1
+    assert no_answer_is_clean(Q, after_reading, ref)["score"] == 0
+    assert no_answer_is_clean(Q, after_reading, NONE)["score"] == 1
+    assert no_answer_is_clean(Q, {"no_answer": False}, NONE)["score"] == 0
+    assert no_answer_is_clean(Q, {"no_answer": True, "answer": "x"}, NONE)["score"] == 0
 
 
 def test_answer_contains_and_excludes():

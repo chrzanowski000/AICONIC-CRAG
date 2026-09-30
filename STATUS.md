@@ -197,6 +197,23 @@ reference answer.
       the references asked for details the questions did not ask about (pension, location,
       Finance lead, start of the warranty); those moved to "Also fine:". Last two runs: 34/34
       and 33/34 (Q15, see Known issues). `pytest` 39 passed. About $0.012 per eval run.
+- [x] **Outcome flags** (branch `eval-answer-judge`): the output has two flags, `dispute` and
+      `no_answer` (derived from the status; both false = one answer). `questions.json` says the
+      expected outcome with the same flags instead of a status. A reference answer is now given
+      only for questions with one answer, and it holds one answer (extra details after "Also
+      fine:"). Disputes are checked by code only: `dispute` is true and the linked documents are
+      exactly the expected ones (`dispute_links_right_docs`); "I don't know" by `no_answer`
+      being true with nothing that looks like an answer (`no_answer_is_clean`). The grader
+      (`answer_is_correct`) only grades the 22 one-answer questions. Spot check of the grader on
+      5 known outputs: all right. References for Q6, Q11 and Q26 still asked for details the
+      question does not ask about (payload, surrogacy, Tallinn) and moved to "Also fine:".
+      Checked (2026-09-30, one eval run as asked): 34/34 PASS; flags right for all 34 (7
+      disputes, 5 no answer, 22 one answer); every output read by hand against the documents:
+      all 22 answers right (Q33 adds "at least one approver from the team that owns the code",
+      which D14 says), all 7 disputes show exactly the right documents with dates and no answer,
+      all 5 "I don't know" have no answer (Q31 at the search). Small: Q24's "what differs"
+      names the cadence but not the days (both version lines show them). `pytest` 40 passed.
+      Only one eval run after the grader prompt change (CLAUDE.md asks for two).
 
 ## Last verified outputs (2026-09-29)
 
@@ -271,10 +288,10 @@ reference answer.
 
 ## Known issues
 
-- Q15 ("What should I do during a Sev1 incident and who is on call?") is sometimes graded
-  `partly correct`: the answer covers the rotation and incident steps but can leave out that a
-  Sev1 alert must be acknowledged within 15 minutes. The answer step does not always cover
-  both parts of a two-part question in full. Seen in 1 of the last 2 runs.
+- Q15 ("What should I do during a Sev1 incident and who is on call?") was once graded `partly
+  correct`: that answer left out that a Sev1 alert must be acknowledged within 15 minutes. It
+  was correct in the 3 runs after that. The answer step may not always cover both parts of a
+  two-part question in full.
 - If only the replaced doc answers the question and the doc that replaces it says nothing about
   it, the result is ANSWERED with a non-answer ("the information does not say ... [D08]") and the
   source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" and "Where
@@ -309,7 +326,7 @@ reference answer.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.25959 |
-| **total** | | **0.32020** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.30319 |
+| **total** | | **0.36380** |
 
-Budget: $4.00. Left: about $3.68.
+Budget: $4.00. Left: about $3.64.

@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 # --- LLM output ------------------------------------------------------------------------------
 
@@ -99,3 +99,15 @@ class FinalOutput(BaseModel):
     outdated: list[OutdatedNote] = []
     differences: list[str] = []  # disputed: what differs, in words
     reason: str | None = None
+
+    @computed_field
+    @property
+    def dispute(self) -> bool:
+        """True when the documents disagree: every version is shown and there is no answer."""
+        return self.status == "disputed"
+
+    @computed_field
+    @property
+    def no_answer(self) -> bool:
+        """True when the system says it does not know."""
+        return self.status == "abstained"

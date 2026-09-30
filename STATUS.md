@@ -276,9 +276,9 @@ reference answer.
 
 ## Next step
 
-1. Review and merge the branch `eval-answer-judge` into `main` (it holds every earlier
-   branch: `test-coverage`, `cite-all-agreeing`, `more-documents`, `document-dates`,
-   `llm-judge`, `simplification`).
+1. Done 2026-09-30: `eval-answer-judge` (with every earlier branch: `test-coverage`,
+   `cite-all-agreeing`, `more-documents`, `document-dates`, `llm-judge`, `simplification`) is
+   merged into `main` (fast-forward, no conflicts).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is

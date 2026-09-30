@@ -1,8 +1,7 @@
 # Model comparison
 
-Checked on 2026-09-29. This page explains why the pipeline uses `openai/gpt-6-luna`. It first
-used Jev (`typesafe/jev-1.13`) to make decisions; Jev has since been removed and the LLM does
-all the judging (see "The judge" below and `decisions.md` 7).
+Checked on 2026-09-29. This page explains why the pipeline uses `openai/gpt-6-luna`, the only
+model it calls.
 
 - Prices, context sizes and supported parameters come from the public OpenRouter model list
   (`https://openrouter.ai/api/v1/models`) and its per-model endpoint lists. Prices are in USD
@@ -75,85 +74,38 @@ The blue stem shows gpt-6-luna at its best setting (filled dot) and at the `low`
 (open dot). The price per token is the same for both. Only the number of reasoning tokens
 changes.
 
-## Cost of one demo run
+## Cost of one full eval
 
-This estimate was made in M-1 to choose the model, for the first design, where the LLM made at
-most 2 calls per question (claims and answer). The current design makes more calls; see the
-measured numbers below the table.
+Measured with gpt-6-luna on 2026-09-30: a full eval (34 questions, with the grader) makes about
+128 LLM calls with about **90,000 input and 8,000 output tokens**. An answered question takes 4
+calls (claims, compare, answer, check; 6 if the answer is retried), a disputed one 2, one where
+no document has a claim 1, and one stopped at the search 0; the grader adds 1 per one-answer
+question. The same token counts at each model's list price:
 
-Assumptions, stated so they can be checked:
-
-- 5 demo questions, and we count **2 LLM calls for every question = 10 calls** (the first
-  design's upper bound).
-- Each call uses about **2,500 input tokens and 400 output tokens**. Reasoning tokens are billed
-  as output, so they are inside the 400.
-- Cost of a run = 10 × (2,500 × input price + 400 × output price) / 1,000,000.
-
-| model | cost of one demo run | runs that fit in $4 |
+| model | cost of one full eval | evals that fit in $4 |
 |---|---:|---:|
-| `openai/gpt-oss-120b` | $0.0016 | about 2,490 |
-| **`openai/gpt-6-luna`** | **$0.0045** | **about 890** |
-| `xiaomi/mimo-v2.6-flash` | $0.0046 | about 870 |
-| `z-ai/glm-5.3-flash` | $0.0057 | about 700 |
-| `mistralai/mistral-small-2603` | $0.0062 | about 650 |
-| `openai/gpt-5.6-luna` | $0.0098 | about 410 |
-| `deepseek/deepseek-v4.1-flash` | $0.0123 | about 325 |
-| `xiaomi/mimo-v2.6-pro` | $0.0144 | about 280 |
-| `google/gemini-3.5-flash-lite` | $0.0175 | about 230 |
-| `google/gemini-3.8-flash` | $0.0338 | about 120 |
-| `qwen/qwen3.8-max-0902` | $0.0740 | about 54 |
-| `openai/gpt-6-sol` | $0.0900 | about 44 |
-| `moonshotai/kimi-k3` | $0.1350 | about 30 |
+| `openai/gpt-oss-120b` | $0.0047 | about 850 |
+| **`openai/gpt-6-luna`** | **$0.0130** (measured: $0.011) | **about 300** |
+| `xiaomi/mimo-v2.6-flash` | $0.0148 | about 270 |
+| `z-ai/glm-5.3-flash` | $0.0175 | about 230 |
+| `mistralai/mistral-small-2603` | $0.0183 | about 220 |
+| `openai/gpt-5.6-luna` | $0.0276 | about 145 |
+| `deepseek/deepseek-v4.1-flash` | $0.0366 | about 110 |
+| `xiaomi/mimo-v2.6-pro` | $0.0461 | about 85 |
+| `google/gemini-3.5-flash-lite` | $0.0470 | about 85 |
+| `google/gemini-3.8-flash` | $0.0975 | about 40 |
+| `qwen/qwen3.8-max-0902` | $0.2280 | about 17 |
+| `openai/gpt-6-sol` | $0.2600 | about 15 |
+| `moonshotai/kimi-k3` | $0.3900 | about 10 |
 
-**Measured, first design** (M2, 2026-09-29, `reasoning_effort=low`, with Jev as judge): the 5
-demo questions together used 7 LLM calls and 4 Jev calls and cost **$0.0007**. Real
-calls use 700 to 1,500 input tokens and 50 to 150 output tokens, because the margin in the
-retrieval step keeps only 2 or 3 documents in the context.
-
-**Measured, current design** (2026-09-30, LLM only): an answered question takes 4 LLM calls
-(claims, compare, answer, check; 6 if the answer is retried), a disputed one 2, one where no
-document has a claim 1, and one stopped at the search 0. The 5 demo questions take **13 calls and
-cost about $0.0011**; a full eval of 34 questions costs about $0.01. Even the worst case, 6 calls
-for each of the 5 questions (30 calls, 3 times the table's 10), would cost about $0.0135 with
-gpt-6-luna, and $4 would still pay for about 300 runs.
-
-## The judge: Jev vs the other options (history)
-
-This section is the comparison made in M-1. Jev was the judge until the `llm-judge` round; now
-the LLM judges (row 2 of the table below), with a prompt that asks for exact values and for
-what differs. Reasons: one model and one API instead of two, no alpha API, no fallback path and
-no thresholds to tune, and the LLM can say what differs, which Jev cannot. It passes the full
-eval on its own.
-
-The judge answers two kinds of questions: "does document D03 answer the question?" (yes/no) and
-"do the claims of D03 and D04 agree, disagree, or is one unrelated?" (pick one of three).
-
-**Jev** (`typesafe/jev-1.13`, dated `typesafe/jev-1.13-20260917`) is a decision model. It is
-called through OpenRouter's Decisions API (`POST https://openrouter.ai/api/alpha/decisions`,
-still marked alpha). It supports three question types: `choice`, `noul` (yes/no) and `score`. For
-a `choice` question it returns the chosen option, a probability for every option and a
-confidence value. For a `noul` question it returns the probability of "yes". It cannot write
-free text. Price: $0.042 per 1 million input tokens, and output tokens are free. Context: 32,000
-tokens, which is plenty for up to 10 short claims and 45 pair questions.
-
-Measured on 2026-09-29: one call with 538 input and 67 output tokens cost **$0.0000226**
-(538 × $0.042 / 1,000,000; the output was free). The probabilities in that test looked
-plausible, but we have not measured how well they are calibrated. So the thresholds (then
-`JEV_RELEVANT_P` and `JEV_DISAGREE_P`, both removed with Jev) lived in `config.py` and were set
-to 0.5 from the printed values.
-
-| option | what it returns | cost per question | used? | why |
-|---|---|---|---|---|
-| **Jev** (Decisions API) | a probability for each option | about $0.00002 | **removed** (was the default) | cannot write text, so it cannot blur a conflict; probabilities can be tuned with thresholds; one call covers every document and pair |
-| LLM as judge (gpt-6-luna, structured `Comparison`) | true/false per document, same / different / unrelated per pair, and what differs | about $0.00045 (2,500 in, 400 out), about 20× Jev | **yes, now the judge** (was the fallback) | one model for everything and it can say what differs; LLM judges have known biases (Zheng et al. 2023) and give no probabilities, so the eval is the guard |
-| NLI cross-encoder (a small local model) | entail / neutral / contradict per sentence pair | no API cost, but an extra model to download and run on CPU | **no** | does not see the question, so it cannot say "unrelated to this question"; NLI models are weak with numbers (Ravichander et al. 2019), and most of our disputes are about numbers |
-
-Either way, Python still makes the final call (see [pipeline.md](pipeline.md), `reconcile`).
+Models that always reason (GLM-5.3 Flash, Qwen, Gemini 3.8 Flash) would use more output tokens
+than gpt-6-luna at `low`, so their real cost would be higher. One `ask` costs about $0.0002 to
+$0.0004.
 
 ## Why gpt-6-luna
 
-- **Cheap.** $0.10 in and $0.50 out per million tokens. About $0.0011 per demo run (measured,
-  13 calls).
+- **Cheap.** $0.10 in and $0.50 out per million tokens. About $0.011 per full eval and $0.0011
+  per demo run (5 questions), measured.
 - **Structured output.** OpenRouter lists `response_format` and `structured_outputs`. It has 7
   endpoints (`openai`, `openai/flex`, `openai/fast`, `azure`, `azure/us`, `azure/eu`,
   `amazon-bedrock/us-east-1`). Only the Bedrock one lacks structured output, and
@@ -191,8 +143,7 @@ Switching is one setting: `LLM_MODEL` in `.env`.
 - OpenRouter endpoint lists, read 2026-09-29:
   <https://openrouter.ai/api/v1/models/openai/gpt-6-luna/endpoints>,
   <https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints>,
-  <https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.6-flash/endpoints>,
-  <https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints>
+  <https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.6-flash/endpoints>
 - Artificial Analysis, LLM leaderboard (scores, speed), read 2026-09-29:
   <https://artificialanalysis.ai/leaderboards/models>
 - Artificial Analysis, Intelligence Index method (v4.3.2, list of tests and weights):
@@ -200,12 +151,5 @@ Switching is one setting: `LLM_MODEL` in `.env`.
 - Artificial Analysis model pages: <https://artificialanalysis.ai/models/gpt-6-luna>,
   <https://artificialanalysis.ai/models/gpt-6-luna-low>,
   <https://artificialanalysis.ai/models/gpt-5-6-luna>
-- OpenRouter, Jev guide (question types, outputs, Decisions API):
-  <https://openrouter.ai/docs/guides/community/jev>; model page:
-  <https://openrouter.ai/typesafe/jev-1.13>
-- Zheng et al. (2023), Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena:
-  <https://arxiv.org/abs/2306.05685>
-- Ravichander et al. (2019), EQUATE, a benchmark for quantitative reasoning in natural language
-  inference: <https://arxiv.org/abs/1901.03735>
 
 More background on these choices: [research.md](research.md).

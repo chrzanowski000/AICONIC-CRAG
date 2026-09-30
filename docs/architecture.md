@@ -18,56 +18,83 @@ know").
 ## The parts
 
 ```mermaid
-flowchart LR
-  subgraph local[Your machine]
-    CLI[main.py / eval.py<br/>command line and eval]
-    STU[src/studio.py<br/>LangGraph Studio entry]
-    CFG[config.py<br/>every setting]
-    G[src/graph.py<br/>the pipeline and its rules]
-    VS[src/vectorstore.py<br/>index and retrieval]
-    EMB[src/embeddings.py<br/>FastEmbed, bge-small]
-    Q[(Qdrant<br/>./qdrant_data)]
-    DOCS[data/corpus/*.md<br/>40 documents]
-    LD[src/load_docs.py]
-    LLM[src/llm.py<br/>LLM client, cost]
-    R[src/render.py<br/>text output]
-  end
-  subgraph remote[Remote services]
-    OR[OpenRouter<br/>openai/gpt-6-luna]
-    LS[LangSmith<br/>optional tracing]
-  end
-  CLI --> G
-  STU --> G
-  CFG -. settings .-> CLI
-  G --> VS --> Q
-  VS --> EMB
-  DOCS --> LD --> VS
-  LD --> G
-  G --> LLM --> OR
-  G --> R
-  G -. traces .-> LS
+flowchart TB
+    CLI["<b>main.py · eval.py · LangGraph Studio</b><br/>commands, eval, Studio"]:::io
+    G["<b>src/graph.py</b><br/>the pipeline and its rules"]:::code
+    subgraph local [" On your machine "]
+        direction LR
+        VS["<b>src/vectorstore.py</b><br/>index and search"]:::local
+        EMB["<b>FastEmbed</b><br/>bge-small, CPU"]:::local
+        QD[("<b>Qdrant</b><br/>./qdrant_data")]:::local
+        DOCS[("<b>data/corpus</b><br/>40 documents")]:::local
+    end
+    LLM["<b>src/llm.py</b><br/>client · retry · cost"]:::llm
+    R["<b>src/render.py</b><br/>text the user sees"]:::code
+    subgraph remote [" Remote services "]
+        direction LR
+        OR["<b>OpenRouter</b><br/>openai/gpt-6-luna"]:::llm
+        LS["<b>LangSmith</b><br/>traces, only if switched on"]:::io
+    end
+    CLI --> G
+    G --> VS
+    G --> LLM
+    G --> R
+    DOCS --> VS
+    VS --> EMB
+    VS --> QD
+    LLM --> OR
+    G -.-> LS
+
+    classDef llm fill:#dbe8ff,stroke:#3867d6,stroke-width:1.5px,color:#0d1b3e
+    classDef code fill:#d9f2e3,stroke:#2e8b57,stroke-width:1.5px,color:#0b2e1a
+    classDef local fill:#ececec,stroke:#6b6b6b,stroke-width:1.5px,color:#1f1f1f
+    classDef io fill:#ffffff,stroke:#444444,stroke-width:1.5px,color:#111111
+    style local fill:transparent,stroke:#999999,stroke-dasharray:5 4
+    style remote fill:transparent,stroke:#999999,stroke-dasharray:5 4
 ```
+
+Colours: **blue** = the LLM (client and model) · **green** = plain Python · **grey** = local search
+and storage, no model · **white** = entry points and optional tracing.
 
 Only two things leave your machine: the LLM calls to OpenRouter, and traces to LangSmith if you
 switch tracing on. Search and embeddings run locally.
 
 ## One question, start to finish
 
+```mermaid
+flowchart TD
+    Q(["Question"]):::io
+    R["<b>1 · retrieve</b><br/>local search, score ≥ 0.58<br/>+ every doc on the same topic"]:::local
+    EC["<b>2 · extract_claims</b><br/>one short claim per document"]:::llm
+    CP["<b>3 · compare</b><br/>relevant? · same / different / unrelated<br/>+ what differs"]:::llm
+    RC{"<b>4 · reconcile</b><br/>supersedes links<br/>disputes · route"}:::code
+    AN["<b>5a · answer</b><br/>cited answer from the claims<br/>+ answer check"]:::llm
+    CR["<b>5b · conflict_report</b><br/>every version with its date<br/>+ what differs"]:::code
+    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents"]:::code
+    O1(["<b>answered</b><br/>dispute: false · no_answer: false"]):::out
+    O2(["<b>disputed</b><br/>dispute: true"]):::out
+    O3(["<b>no answer</b><br/>no_answer: true"]):::out
+
+    Q --> R
+    R -- "documents found" --> EC
+    R -- "nothing above the cutoff" --> AB
+    EC --> CP --> RC
+    RC -- "one current answer" --> AN
+    RC -- "current documents disagree" --> CR
+    RC -- "no relevant document" --> AB
+    AN --> O1
+    CR --> O2
+    AB --> O3
+
+    classDef llm fill:#dbe8ff,stroke:#3867d6,stroke-width:1.5px,color:#0d1b3e
+    classDef code fill:#d9f2e3,stroke:#2e8b57,stroke-width:1.5px,color:#0b2e1a
+    classDef local fill:#ececec,stroke:#6b6b6b,stroke-width:1.5px,color:#1f1f1f
+    classDef out fill:#ffecc7,stroke:#c7851a,stroke-width:1.5px,color:#3b2400
+    classDef io fill:#ffffff,stroke:#444444,stroke-width:1.5px,color:#111111
 ```
-question
-  │
-  ├─ retrieve         local search; weak hits dropped; every doc on the same topic added
-  │                   nothing left? ──────────────────────────────────────────► abstain
-  ├─ extract_claims   LLM: one short claim per doc (only the part that answers the question)
-  ├─ compare          LLM: which claims answer the question? for each pair: same / different /
-  │                   unrelated, and if different, what differs
-  ├─ reconcile        Python: replaced docs → "outdated"; disputes between current docs; route
-  │
-  ├─ answer           LLM writes a cited answer from the claims; Python checks the citations;
-  │                   a second LLM call checks the facts; one retry, then a note
-  ├─ conflict_report  Python: both versions with dates and what differs, no answer
-  └─ abstain          Python: "I don't know" and the closest documents
-```
+
+Colours: **blue** = an LLM call · **green** = plain Python · **grey** = local search, no model ·
+**orange** = the three outcomes (with the `dispute` and `no_answer` flags).
 
 Each step reads some fields of one shared state and writes others. The state and every step are
 described in [`pipeline.md`](pipeline.md).
@@ -184,6 +211,6 @@ The OpenRouter key is read from `LLM_API_OR`.
 - **Unit tests** (`python -m pytest`, free, no model calls): the rules in `reconcile`, reading the
   LLM's comparison, the "replaces" chains, finding citations, the dates in the output, and the
   corpus checks. They use the real corpus.
-- **Eval** (`python eval.py`, live, about $0.012): all 34 questions through the full pipeline,
+- **Eval** (`python eval.py`, live, about $0.011): all 34 questions through the full pipeline,
   checking the `dispute` and `no_answer` flags and the linked documents, and, for questions with
   one answer, an LLM grader that compares the answer with a reference answer written by hand. See [`evaluation.md`](evaluation.md).

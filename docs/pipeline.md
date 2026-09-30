@@ -28,24 +28,43 @@ Dates never decide anything. They are shown so the reader can see how old each v
 ## The graph
 
 The pipeline is a LangGraph state graph. Each box is a step that reads some fields of a shared
-state and writes others. Diamonds are decisions about where to go next.
+state and writes others. The arrows with a label are the routes; the diamond is where Python
+picks one of the three outcomes.
 
 ```mermaid
 flowchart TD
-    START([question]) --> R[retrieve<br/><i>Qdrant search + score cutoff<br/>+ add docs with the same topic</i>]
-    R --> R1{any doc above<br/>the score cutoff?}
-    R1 -- no --> AB[abstain<br/><i>Python</i>]
-    R1 -- yes --> EC[extract_claims<br/><i>LLM, structured output</i><br/>one sentence per document:<br/>what does it say about the question?]
-    EC --> CP[compare<br/><i>LLM, structured output</i><br/>per doc: relevant?<br/>per pair: same / different / unrelated,<br/>and what differs]
-    CP --> RC[reconcile<br/><i>Python rules</i><br/>apply supersedes links,<br/>keep disputes between current docs,<br/>pick the route]
-    RC --> R2{route}
-    R2 -- no relevant doc --> AB
-    R2 -- disputes left --> CR[conflict_report<br/><i>Python</i><br/>both versions with dates<br/>+ what differs]
-    R2 -- one current answer --> AN[answer<br/><i>LLM, structured output</i><br/>cited answer, checked by a<br/>second LLM call + outdated note]
-    AB --> END([FinalOutput])
-    CR --> END
-    AN --> END
+    Q(["Question"]):::io
+    R["<b>1 · retrieve</b><br/>local search, score ≥ 0.58<br/>+ every doc on the same topic"]:::local
+    EC["<b>2 · extract_claims</b><br/>one short claim per document"]:::llm
+    CP["<b>3 · compare</b><br/>relevant? · same / different / unrelated<br/>+ what differs"]:::llm
+    RC{"<b>4 · reconcile</b><br/>supersedes links<br/>disputes · route"}:::code
+    AN["<b>5a · answer</b><br/>cited answer from the claims<br/>+ answer check"]:::llm
+    CR["<b>5b · conflict_report</b><br/>every version with its date<br/>+ what differs"]:::code
+    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents"]:::code
+    O1(["<b>answered</b><br/>dispute: false · no_answer: false"]):::out
+    O2(["<b>disputed</b><br/>dispute: true"]):::out
+    O3(["<b>no answer</b><br/>no_answer: true"]):::out
+
+    Q --> R
+    R -- "documents found" --> EC
+    R -- "nothing above the cutoff" --> AB
+    EC --> CP --> RC
+    RC -- "one current answer" --> AN
+    RC -- "current documents disagree" --> CR
+    RC -- "no relevant document" --> AB
+    AN --> O1
+    CR --> O2
+    AB --> O3
+
+    classDef llm fill:#dbe8ff,stroke:#3867d6,stroke-width:1.5px,color:#0d1b3e
+    classDef code fill:#d9f2e3,stroke:#2e8b57,stroke-width:1.5px,color:#0b2e1a
+    classDef local fill:#ececec,stroke:#6b6b6b,stroke-width:1.5px,color:#1f1f1f
+    classDef out fill:#ffecc7,stroke:#c7851a,stroke-width:1.5px,color:#3b2400
+    classDef io fill:#ffffff,stroke:#444444,stroke-width:1.5px,color:#111111
 ```
+
+Colours: **blue** = an LLM call · **green** = plain Python · **grey** = local search, no model ·
+**orange** = the three outcomes (with the `dispute` and `no_answer` flags).
 
 One model is used, the LLM (`openai/gpt-6-luna` through OpenRouter), for four jobs: pull out
 claims, compare them, write the answer, and check the answer. It is never asked "which document
@@ -53,7 +72,7 @@ is right?" and it never writes the dispute report, the outdated note or "I don't
 cannot blur a contradiction into a vague middle ground.
 
 Everything that turns its output into an outcome is plain Python with fixed rules. There is no
-second model and no regex number parser (both were removed; see `decisions.md` 6, 7 and 13).
+second model and no regex number parser (see `decisions.md` 10).
 
 ## The state
 
@@ -128,7 +147,7 @@ The claim keeps **only the part that answers the question**. This matters becaus
 agree on many things (adoption is covered, pay is 100%, leave can be split) and disagree on one
 (16 vs 12 weeks). Before this rule, "Does parental leave cover adoption?" gave the claims
 "...covered by 16 weeks of fully paid parental leave" and "...employees receive 12 weeks...". The
-judge used at the time saw "16 vs 12 weeks" and reported a dispute the question was not about. Now the claims
+comparison saw "16 vs 12 weeks" and reported a dispute the question was not about. Now the claims
 are "Every employee who becomes a parent through adoption is covered by parental leave" and
 "Birth, adoption and surrogacy are treated the same way", the compare step says `same`, and the
 question is answered.
@@ -206,7 +225,7 @@ Then the answer is checked:
    extracted, even if it holds other information, and nothing comments on that. For "Do I keep
    my salary during parental leave?" the answer says only that pay is 100%, while D04's source
    line reads "Employees receive 12 weeks of paid parental leave at full salary". This is on
-   purpose (`decisions.md` 3b).
+   purpose (`decisions.md` 7).
 2. **Facts (a second LLM call).** The check gets the question, the answer, the claims and the
    full text of the current documents, and lists every problem of two kinds: a fact no claim
    states, or a value (number, amount, date, name) that the full documents give differently

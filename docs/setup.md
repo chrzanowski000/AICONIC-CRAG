@@ -18,7 +18,7 @@ cp .env.example .env         # then put your OpenRouter key in LLM_API_OR
 ```
 
 `requirements-dev.txt` holds tools you only need for development: `pytest` for the unit tests,
-`langgraph-cli[inmem]` for LangGraph Studio, and `matplotlib` for the chart in `docs/models.md`.
+and `langgraph-cli[inmem]` for LangGraph Studio.
 
 ```bash
 pip install -r requirements-dev.txt

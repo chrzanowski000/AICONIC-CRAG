@@ -51,7 +51,7 @@ It is judged on one thing: it must work. Simple and working beats pretty.
 - The answer is written from the claims; a second LLM call checks it for facts no claim states
   and for values the docs give differently (one more try, then a note).
 - Python rules apply `supersedes` links, keep the disputes between current docs, and pick the
-  route. There is no regex number check and no other model.
+  route. There is only one model, and no regex number parser.
 - The dispute report and the "outdated" note are rendered by code, not by a model.
 
 The big picture: `docs/architecture.md`. Every step with real traces: `docs/pipeline.md`.
@@ -83,7 +83,7 @@ src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, gr
                    studio (Studio entry point)
 tests/             unit tests: graph rules, citations, dates in the output, corpus checks (pytest)
 docs/              documentation of the repo (architecture, pipeline, decisions, corpus, evaluation,
-                   setup, research, models; plan.md is the original plan, kept as history)
+                   setup, research, models)
 STATUS.md          what is done, what is next, known issues, money spent
 ```
 

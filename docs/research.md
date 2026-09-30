@@ -90,8 +90,7 @@ question".
 
 - Web search on a failed retrieval. Our corpus is closed and made up; the web cannot know about
   Helios Dynamics, and a web page could not be cited as `[Dxx]`. We abstain instead.
-- Training a critic model. No training budget, and a hosted model does the job (first Jev, now
-  the LLM's `compare` step).
+- Training a critic model. No training budget, and the LLM's `compare` step does the job.
 - A query rewrite loop. One pass is easier to test; it can be added later.
 
 ## 3. Saying "I don't know"
@@ -128,10 +127,7 @@ The pipeline gives each part one narrow job:
 | LLM (`openai/gpt-6-luna`) | extract one claim per document; compare claims (relevant yes/no; same / different / unrelated per pair, and what differs); write the final answer; check the answer | yes, but only in short, fixed places |
 | Python rules | apply `supersedes` links, keep disputes between current documents, pick the route, render the dispute report, the outdated note and "I don't know" | not a model |
 
-Until the `llm-judge` round a second model, Jev (`typesafe/jev-1.13`), decided relevance and
-agree / disagree with probabilities, and a regex number check backed it up. Both were removed to
-keep one model and one path (see `decisions.md` 6, 7 and 13). The findings below are why the
-LLM's part is kept narrow.
+The findings below are why the LLM's part is kept narrow (see also `decisions.md` 8 to 10).
 
 Reasons:
 

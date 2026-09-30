@@ -49,9 +49,40 @@ that answers the question. Closest documents: D02 (created 2025-06-15, score 0.6
 
 ## How it works
 
+```mermaid
+flowchart TD
+    Q(["Question"]):::io
+    R["<b>1 · retrieve</b><br/>local search, score ≥ 0.58<br/>+ every doc on the same topic"]:::local
+    EC["<b>2 · extract_claims</b><br/>one short claim per document"]:::llm
+    CP["<b>3 · compare</b><br/>relevant? · same / different / unrelated<br/>+ what differs"]:::llm
+    RC{"<b>4 · reconcile</b><br/>supersedes links<br/>disputes · route"}:::code
+    AN["<b>5a · answer</b><br/>cited answer from the claims<br/>+ answer check"]:::llm
+    CR["<b>5b · conflict_report</b><br/>every version with its date<br/>+ what differs"]:::code
+    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents"]:::code
+    O1(["<b>answered</b><br/>dispute: false · no_answer: false"]):::out
+    O2(["<b>disputed</b><br/>dispute: true"]):::out
+    O3(["<b>no answer</b><br/>no_answer: true"]):::out
+
+    Q --> R
+    R -- "documents found" --> EC
+    R -- "nothing above the cutoff" --> AB
+    EC --> CP --> RC
+    RC -- "one current answer" --> AN
+    RC -- "current documents disagree" --> CR
+    RC -- "no relevant document" --> AB
+    AN --> O1
+    CR --> O2
+    AB --> O3
+
+    classDef llm fill:#dbe8ff,stroke:#3867d6,stroke-width:1.5px,color:#0d1b3e
+    classDef code fill:#d9f2e3,stroke:#2e8b57,stroke-width:1.5px,color:#0b2e1a
+    classDef local fill:#ececec,stroke:#6b6b6b,stroke-width:1.5px,color:#1f1f1f
+    classDef out fill:#ffecc7,stroke:#c7851a,stroke-width:1.5px,color:#3b2400
+    classDef io fill:#ffffff,stroke:#444444,stroke-width:1.5px,color:#111111
 ```
-retrieve → extract_claims (LLM) → compare (LLM) → reconcile (Python rules) → answer (LLM + LLM check) | conflict_report | abstain
-```
+
+Colours: **blue** = an LLM call · **green** = plain Python · **grey** = local search, no model ·
+**orange** = the three outcomes (with the `dispute` and `no_answer` flags).
 
 - **retrieve**: local embeddings (`BAAI/bge-small-en-v1.5`) and Qdrant. Weak hits are dropped,
   then every document with the same topic is added, so both sides of a dispute (and both ends of
@@ -109,15 +140,20 @@ runs a LangSmith experiment on the same checks.
 
 ## Results
 
-`python eval.py` passes all 34 questions (checked on two runs in a row). They cover every case:
-documents that agree (also in different words), documents that disagree (in numbers, in words,
-and three at once), one document that answers, no document that answers (also close to a real
-topic), replaced documents (also a chain of three), and questions where the two sides of a
-dispute agree on the point asked. Disputes and "I don't know" are checked by the `dispute` and `no_answer` flags
-and the linked documents; for one-answer questions an LLM grader compares the answer with a
-reference answer written by hand. A full eval costs about $0.012. The 39 unit tests
-(`python -m pytest`) check the plain-code rules for free. See
-[`docs/evaluation.md`](docs/evaluation.md).
+`python eval.py` passes all 34 questions on `main` (every output was also read by hand). They
+cover every case: documents that agree (also in different words), documents that disagree (in
+numbers, in words, and three at once), one document that answers, no document that answers (also
+close to a real topic), replaced documents (also a chain of three), and questions where the two
+sides of a dispute agree on the point asked.
+
+- Disputes and "I don't know" are checked in code, by the output's `dispute` and `no_answer`
+  flags and the linked documents.
+- One-answer questions are also checked by an LLM grader against a reference answer written by
+  hand.
+- A full eval costs about $0.011. The 40 unit tests (`python -m pytest`) check the plain-code
+  rules for free.
+
+See [`docs/evaluation.md`](docs/evaluation.md).
 
 ## Documentation
 
@@ -134,5 +170,4 @@ To understand the system, read `docs/architecture.md` first (the parts and who d
 | [`docs/setup.md`](docs/setup.md) | install, settings, server mode, problems |
 | [`docs/research.md`](docs/research.md) | published work behind the design |
 | [`docs/models.md`](docs/models.md) | why these models, prices, cost per run |
-| [`docs/plan.md`](docs/plan.md) | the original plan (history, no longer up to date) |
 | [`STATUS.md`](STATUS.md) | what is done, what is next, known issues, money spent |

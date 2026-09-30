@@ -171,60 +171,55 @@ calls, cost nothing and take about 2 seconds. They use the real corpus.
 
 The unit tests cover the plain-code rules. What the LLM says can only be checked by the eval.
 
-## Results (2026-09-30, 40 documents, 34 questions)
+## Results (2026-09-30, on `main`)
 
-With the grader (latest): one run **34/34 PASS**, one run **33/34** — Q15 was `partly correct`:
-that answer described the incident steps and the on-call rotation but left out that a Sev1 alert
-must be acknowledged within 15 minutes. That is a real gap in that answer, found only by the
-grader; the answer step does not always cover both parts of a two-part question in full. It is
-tracked in `STATUS.md`. The first grader runs also showed that some reference answers asked for
-details the question did not ask about (pension, location, the Finance lead); those were moved
-to "Also fine:". `python -m pytest`: 39 unit tests pass.
-
-Before the grader: **34/34 PASS** on two runs in a row. One of those runs:
+`python eval.py`: **34/34 PASS**. The flags were right for all 34 (22 one answer, 7 disputes, 5
+no answer), and every output was also read by hand against the documents. `python -m pytest`: 40
+unit tests pass.
 
 ```
-Q1  PASS  answered  ...; cited ['D14']; contains '2'
-Q2  PASS  answered  ...; cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'
-Q3  PASS  disputed  ...; versions ['D03', 'D04'], each with date and claim, no answer
-Q4  PASS  disputed  ...; versions ['D05', 'D06'], each with date and claim, no answer
-Q5  PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
-Q6  PASS  answered  ...; cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'
-Q7  PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'
-Q8  PASS  disputed  ...; versions ['D11', 'D12'], each with date and claim, no answer
-Q9  PASS  answered  ...; cited ['D10', 'D18']; contains '1.2'
-Q10 PASS  answered  ...; cited ['D10', 'D18']; contains '300'
-Q11 PASS  answered  ...; cited ['D03', 'D04']; contains 'adoption'; avoids ['16', '12']
-Q12 PASS  answered  ...; cited ['D11', 'D12', 'D13']; contains 'required'
-Q13 PASS  answered  ...; cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']
-Q14 PASS  answered  ...; cited ['D03', 'D04']; contains '100%'; avoids ['16', '12']
-Q15 PASS  answered  ...; cited ['D15', 'D20']
-Q16 PASS  answered  ...; cited ['D04']; contains 'yes'
-Q17 PASS  answered  ...; cited ['D11']; contains '14'
-Q18 PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'
-Q19 PASS  answered  ...; cited ['D21', 'D22']; contains '3'
-Q20 PASS  disputed  ...; versions ['D23', 'D24', 'D25'], each with date and claim, no answer
-Q21 PASS  answered  ...; cited ['D26']; contains 'three'
-Q22 PASS  answered  ...; cited ['D29']; D27(2023-01-01)->D29(2025-01-01), D28(2024-01-01)->D29(2025-01-01); contains '30'
-Q23 PASS  answered  ...; cited ['D18', 'D30', 'D31']; contains 'one year'
-Q24 PASS  disputed  ...; versions ['D32', 'D33'], each with date and claim, no answer
-Q25 PASS  disputed  ...; versions ['D34', 'D35'], each with date and claim, no answer
-Q26 PASS  answered  ...; cited ['D36']; contains 'yes'
-Q27 PASS  answered  ...; cited ['D37']; contains '20 June'
-Q28 PASS  answered  ...; cited ['D38', 'D39']; contains '30'
-Q29 PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
-Q30 PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
-Q31 PASS  abstained ...; no answer, no citations, no versions (at the search)
-Q32 PASS  disputed  ...; versions ['D03', 'D04'], each with date and claim, no answer
-Q33 PASS  answered  ...; cited ['D14']; contains 'two'
-Q34 PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
+Q1  PASS  answered  cited ['D14']; contains '2'; correct
+Q2  PASS  answered  cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'; correct
+Q3  PASS  disputed  dispute: true, linked ['D03', 'D04'], each with date and claim
+Q4  PASS  disputed  dispute: true, linked ['D05', 'D06'], each with date and claim
+Q5  PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
+Q6  PASS  answered  cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'; correct
+Q7  PASS  answered  cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'; correct
+Q8  PASS  disputed  dispute: true, linked ['D11', 'D12'], each with date and claim
+Q9  PASS  answered  cited ['D10', 'D18']; contains '1.2'; correct
+Q10 PASS  answered  cited ['D10', 'D18']; contains '300'; correct
+Q11 PASS  answered  cited ['D03', 'D04']; contains 'adoption'; avoids ['16', '12']; correct
+Q12 PASS  answered  cited ['D11', 'D12', 'D13']; contains 'required'; correct
+Q13 PASS  answered  cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']; correct
+Q14 PASS  answered  cited ['D03', 'D04']; contains '100%'; avoids ['16', '12']; correct
+Q15 PASS  answered  cited ['D15', 'D20']; correct
+Q16 PASS  answered  cited ['D04']; contains 'yes'; correct
+Q17 PASS  answered  cited ['D11']; contains '14'; correct
+Q18 PASS  answered  cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'; correct
+Q19 PASS  answered  cited ['D21', 'D22']; contains '3'; correct
+Q20 PASS  disputed  dispute: true, linked ['D23', 'D24', 'D25'], each with date and claim
+Q21 PASS  answered  cited ['D26']; contains 'three'; correct
+Q22 PASS  answered  cited ['D29']; D27(2023-01-01)->D29(2025-01-01), D28(2024-01-01)->D29(2025-01-01); contains '30'; correct
+Q23 PASS  answered  cited ['D18', 'D30', 'D31']; contains 'one year'; correct
+Q24 PASS  disputed  dispute: true, linked ['D32', 'D33'], each with date and claim
+Q25 PASS  disputed  dispute: true, linked ['D34', 'D35'], each with date and claim
+Q26 PASS  answered  cited ['D36']; contains '100%'; correct
+Q27 PASS  answered  cited ['D37']; contains '20 June'; correct
+Q28 PASS  answered  cited ['D38', 'D39']; contains '30'; correct
+Q29 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
+Q30 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
+Q31 PASS  abstained no_answer: true, nothing that looks like an answer (at the search)
+Q32 PASS  disputed  dispute: true, linked ['D03', 'D04'], each with date and claim
+Q33 PASS  answered  cited ['D14']; contains '2'; correct
+Q34 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
 Summary: all passed.
-LLM: 106 calls, 79785 in / 6911 out tokens. This run: $0.009428.
+LLM: 128 calls, 89724 in / 8044 out tokens. This run: $0.010989.
 ```
 
-The check on the answer (see `pipeline.md`, step 5a) caught an answer about parental leave that
-restated D04's "12 weeks" in one of the two runs; the second try was clean, so Q11–Q14 still
-avoid "16" and "12".
+The last word of each answered line is the grader's verdict. Q15 is graded with the current
+reference answer: the run itself used an older reference that also asked for a "weekly"
+rotation, which the question does not ask about; that word was removed and the same answer was
+graded again.
 
 ## What the questions do not cover
 
@@ -236,39 +231,17 @@ avoid "16" and "12".
   this case; the rules handle it (the outdated note is shown with the dispute), and a unit test
   checks that, but no eval question does.
 
-Earlier results (20 documents and 18 questions: Jev as judge, then the LLM as Jev's fallback,
-then the LLM alone, all 18/18) are in `STATUS.md`.
-
-## What this found, and what was fixed
-
-The first version of the extra questions (before the fix) gave two wrong results out of 13:
-"Does parental leave cover adoption?" and "Do I keep my salary during parental leave?" came out
-`disputed`, although D03 and D04 agree on both points. The claims had pulled in the week counts
-("covered by 16 weeks of fully paid parental leave"), so the judge saw a clash.
-And once the claims were narrowed, the answer to the salary question still said "for the
-full 16 weeks [D03]", because the answer step saw the full documents.
-
-Fixes: claims keep only the part that answers the question; the comparison looks only at that
-part; the answer is written from the claims, not from the full documents; and the answer is
-checked for values the documents give differently (first by a regex number check, now by a
-second LLM call). Q11, Q13 and Q14 (with
-`answer_excludes`) keep this fixed.
-
 ## Does the eval catch a broken system?
 
-Yes. Test (2026-09-29): the compare step was patched to call every pair `same`, so no dispute is
-ever found, and Q3, Q4 and Q8 were run:
-
-```
-Q3  FAIL  answered  status_matches: expected disputed, got answered; ... a single answer was given
-Q4  FAIL  answered  status_matches: expected disputed, got answered; ... a single answer was given
-Q8  FAIL  answered  status_matches: expected disputed, got answered; ... a single answer was given
-```
+Yes. Test: the compare step was patched to call every pair `same`, so no dispute is ever found,
+and Q3, Q4 and Q8 were run. All three failed: the output was one answer where a dispute was
+expected, and no versions were linked.
 
 The answer step still did not pick a side. It wrote, for example, "The claims conflict: one says
 16 weeks of fully paid parental leave [D03], while another says 12 weeks at full salary [D04]."
-But that is free text from a model, with status `answered`, so the eval fails it on purpose. With
-the normal pipeline, both versions with dates and "what differs" are shown by code every time.
+But that is free text from a model, not a dispute with every version and its date, so the eval
+fails it on purpose. With the normal pipeline, every version with its date and "what differs" is
+shown by code every time.
 
 ## LangSmith (optional)
 
@@ -277,34 +250,20 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
 1. reads the dataset `EVAL_DATASET_NAME` (default `rag-conflicts-demo`), or creates it from
    `questions.json` if it does not exist (inputs: `question`, `id`; outputs: the `expected`
    block);
-2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included), experiment prefix
-   `rag-conflicts`, `max_concurrency=1` (one question at a time: the cost counter is not
-   thread safe);
+2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included),
+   experiment prefix `rag-conflicts`, `max_concurrency=1` (one question at a time: the cost
+   counter is not thread safe);
 3. prints the experiment name and URL.
 
 ```bash
 LANGSMITH_TRACING=true python eval.py
 ```
 
-Every check should score 1 in the experiment. The graph runs are traced with
-`run_name="ask"`, the tag `eval`, and metadata `question_id` and `llm`.
-
-The dataset is created once. If you change `questions.json`, delete the dataset in LangSmith (or
-set a new `EVAL_DATASET_NAME`) so it is created again.
-
-First runs (2026-09-29, before Jev was removed):
-
-| experiment | judge | runs | errors | feedback scores |
-|---|---|---|---|---|
-| `rag-conflicts-jev-4af5fc19` | Jev | 18 | 0 | 126 of 126 are 1 (7 checks × 18 questions) |
-| `rag-conflicts-llm-07eb37b5` | LLM | 18 | 0 | 126 of 126 are 1 |
-
-The first run created the dataset `rag-conflicts-demo` (18 examples); the second one reused it.
-The local table passed 18/18 in both runs as well.
+The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `question_id` and
+`llm`. The dataset is created once: after changing `questions.json`, delete the dataset in
+LangSmith (or set a new `EVAL_DATASET_NAME`) so it is created again.
 
 ## Cost
 
-One full eval (34 questions, 40 documents) costs about $0.009 to $0.012 with the LLM-only judge.
-(With 18 questions it was $0.0056, and $0.003 with Jev, which used fewer LLM calls; the check on
-the answer adds one call per answered question.) The
-LangSmith eval runs the pipeline a second time, so it doubles that.
+One full eval (34 questions, 40 documents, with the grader) costs about $0.011. The LangSmith
+eval runs the pipeline a second time, so it doubles that.

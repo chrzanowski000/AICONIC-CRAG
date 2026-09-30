@@ -34,3 +34,16 @@ def test_duplicate_ids_are_refused(tmp_path):
     (tmp_path / "copy.md").write_text((tmp_path / "D01.md").read_text())
     with pytest.raises(CorpusError, match="Duplicate"):
         load_documents(str(tmp_path))
+
+
+def test_a_bad_date_is_refused(tmp_path):
+    (tmp_path / "D01.md").write_text(
+        "---\nid: D01\ntitle: T\nsource: S\ndate: 1 March 2025\ntopic: a\nsupersedes: null\n---\nText.\n")
+    with pytest.raises(CorpusError, match="not YYYY-MM-DD"):
+        load_documents(str(tmp_path))
+
+
+def test_a_doc_cannot_replace_itself(tmp_path):
+    _write(tmp_path, "D01", "a", supersedes="D01")
+    with pytest.raises(CorpusError, match="supersedes itself"):
+        load_documents(str(tmp_path))

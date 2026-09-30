@@ -113,7 +113,7 @@ retrieval step keeps only 2 or 3 documents in the context.
 **Measured, current design** (2026-09-30, LLM only): an answered question takes 4 LLM calls
 (claims, compare, answer, check; 6 if the answer is retried), a disputed one 2, one where no
 document has a claim 1, and one stopped at the search 0. The 5 demo questions take **13 calls and
-cost about $0.0011**; a full eval of 30 questions costs about $0.01. Even the worst case, 6 calls
+cost about $0.0011**; a full eval of 34 questions costs about $0.01. Even the worst case, 6 calls
 for each of the 5 questions (30 calls, 3 times the table's 10), would cost about $0.0135 with
 gpt-6-luna, and $4 would still pay for about 300 runs.
 

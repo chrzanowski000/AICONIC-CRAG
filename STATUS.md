@@ -6,8 +6,9 @@ branch `simplification` (less code, same results, all evals pass). Then the bran
 (from `simplification`): the LLM does all judging; Jev and the regex number check are removed.
 Then the branch `document-dates` (from `llm-judge`): every document shown carries its
 creation date. Then the branch `more-documents` (from `document-dates`): 40 documents and 30
-questions, covering every case. Latest: the branch `cite-all-agreeing` (from `more-documents`):
-when documents agree, all of them are cited.
+questions, covering every case. Then the branch `cite-all-agreeing` (from `more-documents`):
+when documents agree, all of them are cited. Latest: the branch `test-coverage` (from
+`cite-all-agreeing`): 34 questions and 35 unit tests, covering every path.
 
 ## Milestones
 
@@ -162,6 +163,19 @@ when documents agree, all of them are cited.
       Not a known issue (`docs/decisions.md` 3b).
       (The docs commit also picked up a local `.claude/worktrees/` folder by mistake; it is
       removed from git again and now ignored.)
+- [x] **Test coverage** (branch `test-coverage`): reviewed every eval question and unit test
+      against the cases the system must handle. Added 4 questions: Q31 "What is the dress code?"
+      (stopped at the search, no model call; the old example "stock price" now scores 0.583,
+      over the cutoff, with 40 documents), Q32 "How long is maternity leave?" (reworded dispute),
+      Q33 "Who needs to approve my PR?" (reworded answer), Q34 "Who is the CEO?" (company
+      overview found, no answer). Q15 now needs both D15 and D20. The eval's text checks match
+      whole words and numbers (`mentions()`: "2" no longer matches "2025" or "[D12]"), and
+      `abstained_cleanly` can require "stopped at the search". 14 new unit tests: the eval's own
+      checks (`tests/test_eval_checks.py`), the score cutoff (`tests/test_retrieval.py`), a chain
+      of three, a three-way dispute, a dispute with an outdated note, a bad date, a doc that
+      replaces itself, "I don't know" with no sources. Not covered on purpose: the "newer doc is
+      silent" case (behaviour not decided yet). Checked: `pytest` 35 passed; `eval.py` twice →
+      34/34 PASS both times ($0.012 and $0.009).
 
 ## Last verified outputs (2026-09-29)
 
@@ -224,8 +238,8 @@ when documents agree, all of them are cited.
 
 ## Next step
 
-1. Review and merge the branch `cite-all-agreeing` into `main` (it holds `more-documents`,
-   `document-dates`, `llm-judge` and `simplification` too).
+1. Review and merge the branch `test-coverage` into `main` (it holds every earlier branch:
+   `cite-all-agreeing`, `more-documents`, `document-dates`, `llm-judge`, `simplification`).
 2. Fix the "newer doc is silent" case (see Known issues) and add that question to the eval.
 3. More eval questions: near-topic questions that must get "I don't know" (for example "How many
    weeks of paid parental leave do contractors get?"), a reworded dispute ("How long is
@@ -269,7 +283,7 @@ when documents agree, all of them are cited.
 | 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
 | 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.18335 |
-| **total** | | **0.24396** |
+| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.20522 |
+| **total** | | **0.26583** |
 
-Budget: $4.00. Left: about $3.76.
+Budget: $4.00. Left: about $3.73.

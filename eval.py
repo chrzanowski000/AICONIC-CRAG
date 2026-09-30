@@ -90,6 +90,27 @@ def marks_outdated(inputs: dict, outputs: dict, reference_outputs: dict) -> dict
                                         f"({found[(o, n)]['new_date']})" for o, n in required))
 
 
+def mentions(text: str, word: str) -> bool:
+    """True if `word` is in `text` as a whole word or number, ignoring case.
+
+    "2" is found in "needs 2 approvals" but not in "2025" or "[D12]"; "12" is not found in the
+    date "2025-02-12"; "30" is found at the end of "within 30." and "100%" in "at 100% of".
+    """
+    text, word = text.lower(), word.lower()
+    start = text.find(word)
+    while start != -1:
+        end = start + len(word)
+        before, after = text[start - 1:start], text[end:end + 1]
+        before2, after2 = text[max(start - 2, 0):max(start - 1, 0)], text[end + 1:end + 2]
+        # a letter or digit next to it, or "12" in "2.12" / "02-12", joins it to a longer word
+        joined_before = before.isalnum() or (before in (".", ",", ":", "-", "/") and before2.isdigit())
+        joined_after = after.isalnum() or (after in (".", ",", ":", "-", "/") and after2.isdigit())
+        if not joined_before and not joined_after:
+            return True
+        start = text.find(word, start + 1)
+    return False
+
+
 def abstained_cleanly(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
     key = "abstained_cleanly"
     if reference_outputs["status"] != "abstained":
@@ -103,9 +124,13 @@ def abstained_cleanly(inputs: dict, outputs: dict, reference_outputs: dict) -> d
         problems.append("citations were given")
     if outputs.get("versions"):
         problems.append("versions were given")
+    at_search = "No document is close enough" in (outputs.get("reason") or "")
+    if reference_outputs.get("at_search") and not at_search:
+        problems.append("expected to stop at the search, but documents were read")
     if problems:
         return _result(key, False, "; ".join(problems))
-    return _result(key, True, "no answer, no citations, no versions")
+    where = "at the search" if at_search else "after reading the documents"
+    return _result(key, True, f"no answer, no citations, no versions ({where})")
 
 
 def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
@@ -113,8 +138,8 @@ def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
     options = reference_outputs.get("answer_contains")
     if not options:
         return _na(key)
-    answer = (outputs.get("answer") or "").lower()
-    hit = [o for o in options if o.lower() in answer]
+    answer = outputs.get("answer") or ""
+    hit = [o for o in options if mentions(answer, o)]
     if hit:
         return _result(key, True, f"contains {hit[0]!r}")
     return _result(key, False, f"none of {options} in the answer")
@@ -126,8 +151,8 @@ def answer_excludes(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
     banned = reference_outputs.get("answer_excludes")
     if not banned:
         return _na(key)
-    answer = (outputs.get("answer") or "").lower()
-    hit = [b for b in banned if b.lower() in answer]
+    answer = outputs.get("answer") or ""
+    hit = [b for b in banned if mentions(answer, b)]
     if hit:
         return _result(key, False, f"answer states {hit}")
     return _result(key, True, f"avoids {banned}")

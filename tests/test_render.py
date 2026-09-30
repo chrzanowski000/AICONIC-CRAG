@@ -36,3 +36,10 @@ def test_dispute_with_three_versions_says_all_three():
     text = render("q", {"status": "disputed", "versions": [CITE_D03, CITE_D04, d25]})
     assert "The sources disagree. All 3 versions:" in text
     assert "[D25] #learning Slack digest (created 2025-06-02): €1,500." in text
+
+
+def test_i_dont_know_has_no_sources():
+    text = render("q", {"status": "abstained", "reason": "The documents do not answer this question."})
+    assert "STATUS: ABSTAINED" in text
+    assert "I don't know. The documents do not answer this question." in text
+    assert "Sources:" not in text

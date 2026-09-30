@@ -94,7 +94,7 @@ python main.py index [--reindex] # build or refresh the Qdrant collection
 python main.py search "<q>"      # retrieval test, no model calls
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: all 30)
+python main.py demo [--all]      # run the 5 demo questions (--all: all 34)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
 python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
@@ -109,11 +109,11 @@ runs a LangSmith experiment on the same checks.
 
 ## Results
 
-`python eval.py` passes all 30 questions (checked on two runs in a row). They cover every case:
+`python eval.py` passes all 34 questions (checked on two runs in a row). They cover every case:
 documents that agree (also in different words), documents that disagree (in numbers, in words,
 and three at once), one document that answers, no document that answers (also close to a real
 topic), replaced documents (also a chain of three), and questions where the two sides of a
-dispute agree on the point asked. A full eval costs about $0.01. The 18 unit tests
+dispute agree on the point asked. A full eval costs about $0.01. The 35 unit tests
 (`python -m pytest`) check the plain-code rules for free. See
 [`docs/evaluation.md`](docs/evaluation.md).
 

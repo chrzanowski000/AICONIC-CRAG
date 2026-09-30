@@ -13,7 +13,7 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 ## The questions
 
-30 questions. Q1–Q5 are the demo questions (`python main.py demo`); the rest are extra checks
+34 questions. Q1–Q5 are the demo questions (`python main.py demo`); the rest are extra checks
 (`python main.py demo --all` runs all of them without the checks). The `note` field in
 `questions.json` says what each question tests.
 
@@ -33,7 +33,7 @@ threshold, a document or the model, run it twice; both runs must pass.
 | Q12 | Is multi-factor sign-in required? | docs agree | `answered`; cites D11 **and** D12; contains "required" or "yes" |
 | Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
 | Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | `answered`; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
-| Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts | `answered`; cites D15 or D20 |
+| Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts (a question in two parts) | `answered`; cites D15 **and** D20 |
 | Q16 | Do I keep my health insurance during parental leave? | only one doc answers | `answered`; cites D04; contains "yes" or "continue" |
 | Q17 | How long must passwords be? | only one doc answers | `answered`; cites D11; contains "14" |
 | Q18 | What are the HQ office opening hours? | replaced doc with the same value | `answered`; cites D08; outdated D07 → D08; contains "7:00" |
@@ -49,6 +49,10 @@ threshold, a document or the model, run it twice; both runs must pass.
 | Q28 | How long do I have to submit an expense claim? | docs agree | `answered`; cites D38 **and** D39; contains "30" |
 | Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `abstained` |
 | Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `abstained` |
+| Q31 | What is the dress code? | no answer, stopped at the search (no model call) | `abstained` at the search |
+| Q32 | How long is maternity leave? | real dispute, question reworded | `disputed`; D03 and D04 |
+| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | `answered`; cites D14; contains "2" or "two" |
+| Q34 | Who is the CEO of Helios Dynamics? | no answer, near a real topic (the company overview is found) | `abstained` |
 
 The questions by case (details in `corpus.md`, "The cases"):
 
@@ -57,10 +61,11 @@ The questions by case (details in `corpus.md`, "The cases"):
 | documents agree → answered, citing every agreeing document | Q9, Q10, Q12, Q19, Q23, Q28 |
 | documents disagree → disputed | Q3, Q4, Q8, Q20 (three documents), Q24, Q25 |
 | one document answers → answered | Q1, Q16, Q17, Q21, Q26, Q27 |
-| no document answers → abstained | Q5, Q29, Q30 |
+| no document answers → abstained | Q5, Q29, Q30, Q34 (after reading the documents); Q31 (stopped at the search) |
 | replaced document → answered with an outdated note | Q2, Q6, Q7, Q18, Q22 (a chain of three) |
 | disputed pair that agrees on what is asked → answered | Q11, Q13, Q14 |
 | docs add different facts → answered | Q15 |
+| question reworded | Q32 (dispute), Q33 (one document) |
 
 Why so many "answered" questions: a system that shows a dispute every time two documents mention
 different numbers would pass Q3, Q4 and Q8 easily. These questions check the other side: documents that agree,
@@ -82,13 +87,13 @@ comment `n/a`. A question passes only if every check scores 1.
 | `cites_required_docs` | Are all docs in `cites` cited, and at least one doc in `cites_any`? Each citation has a date and a source. |
 | `disputed_shows_both_sides` | For a dispute: at least 2 different versions (Q20 has 3), the required ones among them, each with a date and a claim, and **no** single answer. |
 | `marks_outdated` | Is there an outdated note for each expected old → new pair, with both dates? |
-| `abstained_cleanly` | For "I don't know": no answer, no citations, no versions. |
-| `answer_contains` | Does the answer contain one of the expected strings? |
-| `answer_excludes` | Does the answer avoid all of these strings (for example a number the documents disagree on)? |
+| `abstained_cleanly` | For "I don't know": no answer, no citations, no versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
+| `answer_contains` | Does the answer contain one of the expected strings, as a whole word or number? |
+| `answer_excludes` | Does the answer avoid all of these strings, as whole words or numbers (for example a number the documents disagree on)? |
 
-Two limits to know: `answer_contains` and `answer_excludes` match plain substrings, so "2"
-also matches "2025"; and Q15 only checks that D15 or D20 is cited, not that both parts of the
-question are answered.
+Words and numbers are matched whole (`mentions()` in `eval.py`): "2" is found in "needs 2
+approvals" but not in "2025" or "[D12]", and "12" is not found in the date "2025-02-12". So
+"contains" needs the full word ("adoption", not "adopt").
 
 The checks look at the structure of the output, not at the wording. A disputed question passes
 only when the system refuses to give one answer; an unanswerable question passes only when the
@@ -101,55 +106,71 @@ calls, cost nothing and take about 2 seconds. They use the real corpus.
 
 | file | what it checks |
 |---|---|
-| `tests/test_graph_rules.py` | the "replaces" chains; `reconcile` (replaced doc → outdated, `different` pair → dispute with the LLM's sentence, `same` → answer, a pair with a doc that is not relevant is ignored, nothing relevant → abstain); which pairs are sent to the LLM; reading the LLM's comparison (pairs in any order, a left-out pair counts as unrelated); finding citations in the answer; `conflict_report` and `abstain` show the creation dates |
-| `tests/test_render.py` | every source line, both versions of a dispute, "What differs" and the outdated note show "created YYYY-MM-DD" |
-| `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics and a duplicate id are refused |
+| `tests/test_graph_rules.py` | the "replaces" chains; `reconcile` (replaced doc → outdated, a chain of three, `different` pair → dispute with the LLM's sentence, a three-way dispute, `same` → answer, a pair with a doc that is not relevant is ignored, nothing relevant → abstain, a dispute that also has an outdated note); which pairs are sent to the LLM; reading the LLM's comparison (pairs in any order, a left-out pair counts as unrelated); citing every agreeing document; finding citations in the answer; `conflict_report` and `abstain` show the creation dates |
+| `tests/test_render.py` | every source line, every version of a dispute ("Both" or "All 3 versions"), "What differs" and the outdated note show "created YYYY-MM-DD"; "I don't know" has no sources |
+| `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics, a duplicate id, a bad date and a document that replaces itself are refused |
+| `tests/test_eval_checks.py` | the eval's own checks: whole-word matching, citations (`cites` and `cites_any`), every version of a three-way dispute, outdated notes for a chain of three, "I don't know" at the search or after reading, contains / excludes |
+| `tests/test_retrieval.py` | the score cutoff and the margin below the best hit |
 
 The unit tests cover the plain-code rules. What the LLM says can only be checked by the eval.
 
-## Results (2026-09-30, 40 documents, LLM-only judge)
+## Results (2026-09-30, 40 documents, 34 questions)
 
-`python eval.py`: **30/30 PASS** on two runs in a row, exit code 0 (last checked after "cite every
-agreeing document"; every agree question cites all its documents). An earlier run:
+`python eval.py`: **34/34 PASS** on two runs in a row, exit code 0. `python -m pytest`: 35 unit
+tests pass. One eval run:
 
 ```
 Q1  PASS  answered  ...; cited ['D14']; contains '2'
 Q2  PASS  answered  ...; cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'
 Q3  PASS  disputed  ...; versions ['D03', 'D04'], each with date and claim, no answer
 Q4  PASS  disputed  ...; versions ['D05', 'D06'], each with date and claim, no answer
-Q5  PASS  abstained ...; no answer, no citations, no versions
+Q5  PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
 Q6  PASS  answered  ...; cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'
 Q7  PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'
 Q8  PASS  disputed  ...; versions ['D11', 'D12'], each with date and claim, no answer
-Q9  PASS  answered  ...; cited ['D18']; contains '1.2'
+Q9  PASS  answered  ...; cited ['D10', 'D18']; contains '1.2'
 Q10 PASS  answered  ...; cited ['D10', 'D18']; contains '300'
-Q11 PASS  answered  ...; cited ['D03', 'D04']; contains 'adopt'; avoids ['16', '12']
-Q12 PASS  answered  ...; cited ['D11', 'D12']; contains 'required'
+Q11 PASS  answered  ...; cited ['D03', 'D04']; contains 'adoption'; avoids ['16', '12']
+Q12 PASS  answered  ...; cited ['D11', 'D12', 'D13']; contains 'required'
 Q13 PASS  answered  ...; cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']
-Q14 PASS  answered  ...; cited ['D03', 'D04']; contains 'full'; avoids ['16', '12']
+Q14 PASS  answered  ...; cited ['D03', 'D04']; contains '100%'; avoids ['16', '12']
 Q15 PASS  answered  ...; cited ['D15', 'D20']
 Q16 PASS  answered  ...; cited ['D04']; contains 'yes'
 Q17 PASS  answered  ...; cited ['D11']; contains '14'
 Q18 PASS  answered  ...; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'
-Q19 PASS  answered  ...; cited ['D22']; contains '3'
+Q19 PASS  answered  ...; cited ['D21', 'D22']; contains '3'
 Q20 PASS  disputed  ...; versions ['D23', 'D24', 'D25'], each with date and claim, no answer
 Q21 PASS  answered  ...; cited ['D26']; contains 'three'
 Q22 PASS  answered  ...; cited ['D29']; D27(2023-01-01)->D29(2025-01-01), D28(2024-01-01)->D29(2025-01-01); contains '30'
-Q23 PASS  answered  ...; cited ['D30']; contains 'one year'
+Q23 PASS  answered  ...; cited ['D18', 'D30', 'D31']; contains 'one year'
 Q24 PASS  disputed  ...; versions ['D32', 'D33'], each with date and claim, no answer
 Q25 PASS  disputed  ...; versions ['D34', 'D35'], each with date and claim, no answer
-Q26 PASS  answered  ...; cited ['D36']; contains '100%'
+Q26 PASS  answered  ...; cited ['D36']; contains 'yes'
 Q27 PASS  answered  ...; cited ['D37']; contains '20 June'
-Q28 PASS  answered  ...; cited ['D38']; contains '30'
-Q29 PASS  abstained ...; no answer, no citations, no versions
-Q30 PASS  abstained ...; no answer, no citations, no versions
+Q28 PASS  answered  ...; cited ['D38', 'D39']; contains '30'
+Q29 PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
+Q30 PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
+Q31 PASS  abstained ...; no answer, no citations, no versions (at the search)
+Q32 PASS  disputed  ...; versions ['D03', 'D04'], each with date and claim, no answer
+Q33 PASS  answered  ...; cited ['D14']; contains 'two'
+Q34 PASS  abstained ...; no answer, no citations, no versions (after reading the documents)
 Summary: all passed.
-LLM: 101 calls, 70658 in / 6970 out tokens. This run: $0.010918.
+LLM: 106 calls, 79785 in / 6911 out tokens. This run: $0.009428.
 ```
 
 The check on the answer (see `pipeline.md`, step 5a) caught an answer about parental leave that
-restated D04's "12 weeks" once in each run; the second try was clean, so Q11–Q14 still avoid "16"
-and "12".
+restated D04's "12 weeks" in one of the two runs; the second try was clean, so Q11–Q14 still
+avoid "16" and "12".
+
+## What the questions do not cover
+
+- **A replaced document that is the only one to answer.** "Is the HQ office open on weekends?":
+  D07 answers, D08 replaces it and says nothing about weekends. Today the result is an answer
+  that says the information is missing, with D07 in the outdated note. The right result is not
+  decided yet (see `STATUS.md`), so there is no question for it.
+- **A replaced document and a dispute in the same question.** No documents in the corpus make
+  this case; the rules handle it (the outdated note is shown with the dispute), and a unit test
+  checks that, but no eval question does.
 
 Earlier results (20 documents and 18 questions: Jev as judge, then the LLM as Jev's fallback,
 then the LLM alone, all 18/18) are in `STATUS.md`.
@@ -219,7 +240,7 @@ The local table passed 18/18 in both runs as well.
 
 ## Cost
 
-One full eval (30 questions, 40 documents) costs about $0.009 to $0.011 with the LLM-only judge.
+One full eval (34 questions, 40 documents) costs about $0.009 to $0.012 with the LLM-only judge.
 (With 18 questions it was $0.0056, and $0.003 with Jev, which used fewer LLM calls; the check on
 the answer adds one call per answered question.) The
 LangSmith eval runs the pipeline a second time, so it doubles that.

@@ -101,7 +101,8 @@ How the two numbers were chosen (`python main.py search "<q>"` prints the scores
 model gives even unrelated documents a cosine score of about 0.50 to 0.65, so no single cutoff
 separates good from bad documents. The best hit of every answerable test question (including
 paraphrases like "Who needs to approve my PR?") scored 0.62 or more; clearly unanswerable
-questions (stock price, salary, dental cover) topped out at about 0.54. So the cutoff is 0.58.
+questions (stock price, salary, dental cover) topped out at about 0.54 with the first 20
+documents. So the cutoff is 0.58.
 It only throws out questions that are clearly off. The margin keeps the context small: for the
 demo questions it leaves just the documents about the question (2 or 3), not ten loosely related
 ones. The LLM's relevance check, not the score, is the real gate.
@@ -311,8 +312,8 @@ reconcile      relevant (current): -  outdated: -  route: abstain
 The search cannot tell "remote work policy" from "pets policy" well (both are office rules), so
 two documents pass the score gate. The claim step finds nothing about pets in either (`None`), so
 there is nothing to compare (`relevant: -`), and Python routes to "I don't know". A question that
-is clearly off (for example "What is the company's stock price?", best score 0.541, under the
-cutoff 0.58) is stopped at the search and costs nothing.
+is clearly off (for example "What is the dress code?", best score 0.571, under the cutoff 0.58;
+eval question Q31) is stopped at the search and costs nothing.
 
 ## Why it "admits it doesn't know"
 
@@ -335,7 +336,7 @@ cutoff 0.58) is stopped at the search and costs nothing.
   in the outdated note. Example: "Is the HQ office open on weekends?".
 - **One model reads everything.** The LLM decides relevance and same / different. There is no
   second opinion and no probability; the eval (run twice after a change) is the guard.
-- **Tested on this corpus only.** 40 documents and 30 questions (see `evaluation.md`).
+- **Tested on this corpus only.** 40 documents and 34 questions (see `evaluation.md`).
 
 The open items are tracked in `STATUS.md`.
 

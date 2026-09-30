@@ -120,3 +120,35 @@ def test_with_agreeing_adds_every_doc_that_gives_the_same_answer():
 def test_with_agreeing_leaves_out_unrelated_and_not_allowed_docs():
     pairs = [_pair("D15", "D20", "unrelated"), _pair("D15", "D14", "same")]
     assert with_agreeing(["D15"], pairs, ["D15", "D20"]) == ["D15"]
+
+
+def test_reconcile_chain_of_three_answers_from_the_newest_and_marks_both_older_ones():
+    claims = {"D27": "25 days.", "D28": "28 days.", "D29": "30 days."}
+    out = reconcile(_state(claims, {"D27", "D28", "D29"}))
+    assert out["route"] == "answer"
+    assert out["relevant_ids"] == ["D29"]
+    assert sorted((o["old_id"], o["new_id"]) for o in out["outdated"]) == [("D27", "D29"), ("D28", "D29")]
+
+
+def test_reconcile_three_way_dispute_keeps_every_pair():
+    pairs = [_pair("D23", "D24", "different", "1,000 vs 1,200"),
+             _pair("D23", "D25", "different", "1,000 vs 1,500"),
+             _pair("D24", "D25", "different", "1,200 vs 1,500")]
+    claims = {"D23": "€1,000.", "D24": "€1,200.", "D25": "€1,500."}
+    out = reconcile(_state(claims, set(claims), pairs))
+    assert out["route"] == "conflict"
+    assert len(out["disputes"]) == 3
+    versions = conflict_report({**_state(claims, set(claims)), **out})["result"]["versions"]
+    assert [v["doc_id"] for v in versions] == ["D23", "D24", "D25"]
+
+
+def test_a_dispute_still_shows_the_outdated_note():
+    # D01 is replaced by D02; D02 and D03 give different answers (a made-up pair, rules only)
+    claims = {"D01": "Two days.", "D02": "Three days.", "D03": "Four days."}
+    pair = _pair("D02", "D03", "different", "D02 says three days, D03 says four days.")
+    state = _state(claims, set(claims), [pair])
+    out = reconcile(state)
+    assert out["route"] == "conflict"
+    result = conflict_report({**state, **out})["result"]
+    assert [v["doc_id"] for v in result["versions"]] == ["D02", "D03"]
+    assert [(o["old_id"], o["new_id"]) for o in result["outdated"]] == [("D01", "D02")]

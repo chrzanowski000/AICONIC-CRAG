@@ -64,7 +64,7 @@ def cmd_llm_test(args) -> None:
     # the first dispute question of the dataset, with the documents that disagree
     q = next(q for q in load_questions() if q["expected"].get("versions"))
     question = q["question"]
-    docs = [_to_retrieved(doc_map()[i], None) for i in q["expected"]["versions"]]
+    docs = [_to_retrieved(doc_map()[v["doc_id"]], None) for v in q["expected"]["versions"]]
     print(f"Model: {config.LLM_MODEL}  reasoning_effort: {config.LLM_REASONING_EFFORT or '-'}")
     print(f"Question: {question}")
     started = time.time()
@@ -101,9 +101,7 @@ def cmd_demo(args) -> None:
         print(f"=== {q['id']} " + "=" * 90)
         state = run(q["question"], question_id=q["id"], tags=["demo"])
         print(show(state))
-        got = state["result"]["status"]
-        want = ("disputed" if q["expected"]["dispute"] else
-                "abstained" if q["expected"]["no_answer"] else "answered")
+        got, want = state["result"]["status"], q["expected"]["status"]
         summary.append(f"  {q['id']}  {got:10} (expected {want})")
         print()
     print("Summary:")

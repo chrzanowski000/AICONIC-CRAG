@@ -109,7 +109,8 @@ on the server. More in [`setup.md`](setup.md#qdrant-server-mode-optional).
 1. Make `data/<name>/corpus/` with one markdown file per document, in the same format as the
    others (`id, title, source, date, topic, supersedes`, see [`corpus.md`](corpus.md)). A
    document and the document it replaces must share a `topic`.
-2. Write `data/<name>/questions.json` in the same format (see [`evaluation.md`](evaluation.md)).
+2. Write `data/<name>/questions.json` in the same format: the `expected` block has the shape of
+   the output (see [`evaluation.md`](evaluation.md#the-expected-block-has-the-shape-of-the-output)).
    Mark a few questions `"demo": true` for `main.py demo`.
 3. Run `python -m pytest`: one test loads every dataset and checks that its questions only name
    documents that exist.

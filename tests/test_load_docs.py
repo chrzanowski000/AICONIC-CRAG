@@ -6,6 +6,7 @@ import pytest
 
 import config
 from src.load_docs import CorpusError, load_documents
+from src.schemas import FinalOutput
 
 
 def _write(folder, doc_id, topic, supersedes="null"):
@@ -60,7 +61,23 @@ def test_every_dataset_loads_and_its_questions_name_real_docs(name):
     assert len({q["id"] for q in questions}) == len(questions)
     for q in questions:
         want = q["expected"]
-        assert {"dispute", "no_answer"} <= want.keys(), q["id"]
-        named = set(want.get("cites", []) + want.get("cites_any", []) + want.get("versions", []))
-        named |= {i for pair in want.get("outdated", []) for i in pair}
+        named = {c["doc_id"] for key in ("citations", "versions") for c in want.get(key, [])}
+        named |= {o[k] for o in want.get("outdated", []) for k in ("old_id", "new_id")}
         assert named <= ids, f"{name} {q['id']} names unknown docs {named - ids}"
+
+
+@pytest.mark.parametrize("name", config.datasets())
+def test_every_expected_block_has_the_shape_of_the_output(name):
+    """The expected block uses the output's field names, so the two can be compared side by side
+    (for example in LangSmith). Only `checks` holds rules that are not part of the output."""
+    questions = json.loads((config.DATA_DIR / name / "questions.json").read_text())
+    fields = set(FinalOutput.model_fields) | set(FinalOutput.model_computed_fields)
+    for q in questions:
+        want = q["expected"]
+        assert set(want) - {"checks"} <= fields, f"{name} {q['id']}: {set(want) - fields}"
+        expected_flags = FinalOutput(status=want["status"]).model_dump()
+        assert (want["dispute"], want["no_answer"]) == (
+            expected_flags["dispute"], expected_flags["no_answer"]), f"{name} {q['id']}"
+        assert (want["answer"] is not None) == (want["status"] == "answered"), f"{name} {q['id']}"
+        assert set(want.get("checks", {})) <= {"answer_contains", "answer_excludes", "at_search",
+                                               "also_fine"}, f"{name} {q['id']}"

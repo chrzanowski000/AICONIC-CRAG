@@ -75,7 +75,7 @@ every round is in the git log.
   `qdrant_data/.lock` (the lock goes away when the program stops). `.env.example` shows
   `DATASET`. Checked: `pytest` 42 passed; `config` shows the right names; both indexes reused;
   the new error text shown with a second process holding the folder. No model calls.
-- **Third dataset** (2026-10-01, branch `third-dataset`): `data/larkfield/`, Larkfield Motors, a
+- **Third dataset** (2026-10-01): `data/larkfield/`, Larkfield Motors, a
   factory that builds e-bike motors; the system advises people on the production line. 28
   documents and 20 questions, split 11 `one_answer`, 5 `dispute`, 4 `no_answer`. Every case is
   covered: agree (also three documents in different words), disagree (numbers, in words about a
@@ -86,7 +86,8 @@ every round is in the git log.
   all 20 questions; eval run twice, 20/20 both times (the second with LangSmith: dataset
   `rag-conflicts-larkfield-69cc59e5` created with the split, experiment
   `rag-conflicts-larkfield-b7ad4fdf`, all 8 checks scored 1 on all 20); outputs read by hand.
-  One earlier try stopped at Q2 on an OpenRouter rate limit; `LLM_MAX_RETRIES=5` got through.
+  One earlier try stopped at Q2 on an OpenRouter rate limit; `LLM_MAX_RETRIES=5` got through. Merged
+  into `main` (2026-10-01); `pytest` 43 passed there.
 
 ## Next steps
 

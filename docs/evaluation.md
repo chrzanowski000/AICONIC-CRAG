@@ -7,10 +7,11 @@ the tokens and cost. It exits with code 1 if any question fails, so it can be us
 ```bash
 python eval.py                        # Helios, 34 questions
 python eval.py --dataset brightwater  # Brightwater Ferries, 26 questions
+python eval.py --dataset larkfield    # Larkfield Motors, 20 questions
 ```
 
-This page describes the Helios questions. The Brightwater questions use the same format and the
-same checks; their cases are listed in [`datasets.md`](datasets.md).
+This page describes the Helios questions. The Brightwater and Larkfield questions use the same
+format and the same checks; their cases are listed in [`datasets.md`](datasets.md).
 
 The LLM can answer differently from one run to the next, so after a change to a prompt, a
 threshold, a document or the model, run it twice; both runs must pass.

@@ -1,8 +1,9 @@
 # Status
 
 Last update: 2026-10-01. The system works end to end on `main`: 40 documents, 34 eval questions,
-34/34 PASS, and a second, separate dataset (Brightwater Ferries: 30 documents, 26 questions,
-26/26 PASS) with a switch between them (`--dataset` or `DATASET`). 42 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
+34/34 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
+26/26 PASS) and Larkfield Motors (a factory: 28 documents, 20 questions, 20/20 PASS), with a
+switch between them (`--dataset` or `DATASET`). 43 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
 every round is in the git log.
 
 ## What is done
@@ -74,6 +75,18 @@ every round is in the git log.
   `qdrant_data/.lock` (the lock goes away when the program stops). `.env.example` shows
   `DATASET`. Checked: `pytest` 42 passed; `config` shows the right names; both indexes reused;
   the new error text shown with a second process holding the folder. No model calls.
+- **Third dataset** (2026-10-01, branch `third-dataset`): `data/larkfield/`, Larkfield Motors, a
+  factory that builds e-bike motors; the system advises people on the production line. 28
+  documents and 20 questions, split 11 `one_answer`, 5 `dispute`, 4 `no_answer`. Every case is
+  covered: agree (also three documents in different words), disagree (numbers, in words about a
+  safety rule, three documents), one document answers, no answer (near real topics, and stopped
+  at the search), a replaced document (also with the same value), a chain of three, a disputed
+  pair that agrees on the point asked, reworded questions. No code change. Docs:
+  `docs/datasets.md`. Checked: `pytest` 43 passed; `search` finds every expected document for
+  all 20 questions; eval run twice, 20/20 both times (the second with LangSmith: dataset
+  `rag-conflicts-larkfield-69cc59e5` created with the split, experiment
+  `rag-conflicts-larkfield-b7ad4fdf`, all 8 checks scored 1 on all 20); outputs read by hand.
+  One earlier try stopped at Q2 on an OpenRouter rate limit; `LLM_MAX_RETRIES=5` got through.
 
 ## Next steps
 
@@ -106,8 +119,8 @@ every round is in the git log.
   a document or the model.
 - The score cutoff cannot separate every off-topic question from an answerable one (off-topic
   questions reach 0.70). The LLM's relevance check is the real gate.
-- Tested on these two datasets and their questions only. The score cutoff and margin were chosen
-  on Helios and worked unchanged on Brightwater.
+- Tested on these three datasets and their questions only. The score cutoff and margin were
+  chosen on Helios and worked unchanged on Brightwater and Larkfield.
 - OpenRouter rate limits (an error inside an HTTP 200 reply) were frequent on 2026-09-30: two
   Brightwater eval runs stopped after the 2, 4, 8 s retries, and one run logged 111 retries.
   `LLM_MAX_RETRIES=5` (waits up to 32 s) got a full run through; one question still failed in its
@@ -125,6 +138,7 @@ every round is in the git log.
 | 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
 | 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32907 |
 | 2026-09-30 | second dataset: Brightwater evals (4 runs, 2 stopped early), Helios demo, llm-test (from `.spend.json`) | 0.02705 |
-| **total** | | **0.41673** |
+| 2026-10-01 | third dataset: Larkfield evals (3 runs, 1 stopped early; one with LangSmith) (from `.spend.json`) | 0.01919 |
+| **total** | | **0.43592** |
 
-Budget: $4.00. Left: about $3.58.
+Budget: $4.00. Left: about $3.56.

@@ -1,127 +1,86 @@
-# Helios RAG: answers that admit what they don't know
+# RAG over conflicting documents
 
-A small question-answering demo over made-up company documents. Some documents disagree. Some
-are old and replaced by newer ones. There are three separate datasets: Larkfield Motors, a
-factory where the system advises people on the production line (28 documents, the default),
-Helios Dynamics, a drone maker (40 documents), and Brightwater Ferries, a ferry company (30
-documents).
+A question-answering system over made-up company documents, where some documents disagree and
+some are old and replaced by newer ones. It runs on three separate datasets: **Larkfield Motors**,
+a factory where the system advises people on the production line (28 documents, the default),
+**Helios Dynamics**, a drone maker (40), and **Brightwater Ferries**, a ferry company (30).
 
-The system:
+## What it does
 
-- answers with citations when the documents give one current answer,
-- shows **both** versions with dates when two documents disagree, and does not pick one,
-- prefers the newer document only when the older one is marked as replaced, and still mentions
-  the old one,
-- says "I don't know" when no document answers the question.
+- **One current answer** → answers, citing every document that gives it.
+- **Documents disagree** → shows **every** version with its creation date and what differs. It
+  never picks one.
+- **An old document is replaced** → answers from the newer one and still shows the old one as
+  "outdated".
+- **Nothing answers** → says "I don't know" and lists the closest documents.
 
 The main rule: only an explicit `supersedes` link in the document metadata can make one source
 win. A newer date never does.
 
-## What it looks like
-
-These examples use the Helios dataset (`--dataset helios`).
-
-```
-$ python main.py --dataset helios ask "How many weeks of paid parental leave does Helios Dynamics offer?"
-STATUS: DISPUTED
-Question: How many weeks of paid parental leave does Helios Dynamics offer?
-The sources disagree. Both versions:
-  - [D03] HR Handbook (created 2025-01-10): Helios Dynamics offers 16 weeks of fully paid parental leave.
-  - [D04] People Ops wiki (created 2025-02-20): Employees receive 12 weeks of paid parental leave at full salary.
-What differs:
-  - [D03] (created 2025-01-10) vs [D04] (created 2025-02-20): D03 says 16 weeks, D04 says 12 weeks.
-Neither document is marked as replacing the other; a newer date alone does not settle it.
-
-$ python main.py --dataset helios ask "How many days per week can employees work remotely?"
-STATUS: ANSWERED
-Question: How many days per week can employees work remotely?
-Employees may work remotely up to three days per week. [D02]
-Sources:
-  - [D02] HR Handbook (created 2025-06-15): Employees may work remotely up to three days per week.
-Outdated:
-  - [D01] (created 2024-03-01) said: "Employees may work remotely up to two days per week." It is
-    replaced by [D02] (created 2025-06-15).
-
-$ python main.py --dataset helios ask "What is the policy on bringing pets to the office?"
-STATUS: ABSTAINED
-Question: What is the policy on bringing pets to the office?
-I don't know. The documents do not answer this question. None of the documents found says anything
-that answers the question. Closest documents: D02 (created 2025-06-15, score 0.636), D01 (created
-2024-03-01, score 0.587), D07 (created 2024-09-01, score 0.566).
-```
-
-(With `SHOW_SCORES=true`, the default, a short trace of every step follows each answer.)
-
 ## How it works
 
-```mermaid
-flowchart TD
-    Q(["Question"]):::io
-    R["<b>1 · retrieve</b><br/>local search, score ≥ 0.58<br/>+ every doc on the same topic"]:::local
-    EC["<b>2 · extract_claims</b><br/>one short claim per document"]:::llm
-    CP["<b>3 · compare</b><br/>relevant? · same / different / unrelated<br/>+ what differs"]:::llm
-    RC{"<b>4 · reconcile</b><br/>supersedes links<br/>disputes · route"}:::code
-    AN["<b>5a · answer</b><br/>cited answer from the claims<br/>+ answer check"]:::llm
-    CR["<b>5b · conflict_report</b><br/>every version with its date<br/>+ what differs"]:::code
-    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents"]:::code
-    O1(["<b>answered</b><br/>dispute: false · no_answer: false"]):::out
-    O2(["<b>disputed</b><br/>dispute: true"]):::out
-    O3(["<b>no answer</b><br/>no_answer: true"]):::out
+![The pipeline](docs/graph.png)
 
-    Q --> R
-    R -- "documents found" --> EC
-    R -- "nothing above the cutoff" --> AB
-    EC --> CP --> RC
-    RC -- "one current answer" --> AN
-    RC -- "current documents disagree" --> CR
-    RC -- "no relevant document" --> AB
-    AN --> O1
-    CR --> O2
-    AB --> O3
+A LangGraph state graph. Blue = an LLM call, green = plain Python, grey = local search (no model).
 
-    classDef llm fill:#dbe8ff,stroke:#3867d6,stroke-width:1.5px,color:#0d1b3e
-    classDef code fill:#d9f2e3,stroke:#2e8b57,stroke-width:1.5px,color:#0b2e1a
-    classDef local fill:#ececec,stroke:#6b6b6b,stroke-width:1.5px,color:#1f1f1f
-    classDef out fill:#ffecc7,stroke:#c7851a,stroke-width:1.5px,color:#3b2400
-    classDef io fill:#ffffff,stroke:#444444,stroke-width:1.5px,color:#111111
+| node | what it does | done by |
+|---|---|---|
+| `retrieve` | vector search (score ≥ 0.58, at most 0.10 below the best hit), then every document with the same topic, so both sides of a dispute are always seen | local embeddings + Qdrant |
+| `extract_claims` | one short claim per document: only the part that answers the question | LLM |
+| `compare` | which claims answer the question; for each pair of current documents: same, different or unrelated, and what differs | LLM |
+| `reconcile` | applies `supersedes` links, keeps the disputes between current documents, picks the route | Python |
+| `answer` | a cited answer written from the claims; a second LLM call checks it | LLM |
+| `conflict_report` | every version with its creation date, and what differs | Python |
+| `abstain` | "I don't know", with the closest documents | Python |
+
+The LLM never decides which document is right. The dispute report, the outdated note and
+"I don't know" are built by code, so no model can blur "30 vs 45 minutes" into "30 to 45
+minutes". Every step with real traces: [`docs/pipeline.md`](docs/pipeline.md).
+
+## Examples
+
+The 5 questions of the Larkfield LangSmith dataset `larkfield_small_reformated`. The reference is
+the expected output from `data/larkfield/questions.json`; the output is from a real run
+(2026-10-01), shortened. All five passed every check.
+
+| question | reference (expected) | output |
+|---|---|---|
+| Who do I call when a machine on my line breaks down? | **answered**: Call maintenance on extension 4400 [D23]. | **ANSWERED**: Call maintenance on extension 4400. [D23] |
+| What torque should I use for the M6 motor housing bolts? | **answered**: 10 Nm [D02].<br>outdated: D01 → D02 | **ANSWERED**: Tighten the M6 motor housing bolts to 10 Nm. [D02]<br>Outdated: [D01] (created 2024-03-04) said 9 Nm; replaced by [D02] (created 2025-02-10). |
+| How long is the meal break on an 8-hour shift? | **disputed**: D09, D10 | **DISPUTED**: [D10] Works Council wiki (created 2025-04-02): 45 minutes · [D09] HR Handbook (created 2025-01-15): 30 minutes |
+| Do I have to wear safety glasses everywhere on the shop floor? | **disputed**: D16, D17 | **DISPUTED**: [D16] EHS Manual (created 2025-02-01): at all times, at every station · [D17] Line 1 team brief (created 2025-05-12): only at the press and grinding stations, optional at the assembly benches |
+| Does the plant have a gym for employees? | **abstained** (no answer) | **ABSTAINED**: I don't know. Closest documents: D28, D09, D22 |
+
+The full output of the meal-break question, as printed (the step trace after it is left out):
+
+```
+$ python main.py ask "How long is the meal break on an 8-hour shift?"
+STATUS: DISPUTED
+Question: How long is the meal break on an 8-hour shift?
+The sources disagree. Both versions:
+  - [D10] Works Council wiki (created 2025-04-02): On an 8-hour shift the meal break is 45 minutes.
+  - [D09] HR Handbook (created 2025-01-15): On an 8-hour shift you get a 30-minute meal break.
+What differs:
+  - [D10] (created 2025-04-02) vs [D09] (created 2025-01-15): D10 says 45 minutes, while D09 says 30
+    minutes.
+Neither document is marked as replacing the other; a newer date alone does not settle it.
 ```
 
-Colours: **blue** = an LLM call · **green** = plain Python · **grey** = local search, no model ·
-**orange** = the three outcomes (with the `dispute` and `no_answer` flags).
+## Quick start
 
-- **retrieve**: local embeddings (`BAAI/bge-small-en-v1.5`) and Qdrant. Weak hits are dropped,
-  then every document with the same topic is added, so both sides of a dispute (and both ends of
-  a `supersedes` link) are always seen.
-- **extract_claims**: the LLM (`openai/gpt-6-luna` through OpenRouter) writes one sentence per
-  document: what it says about the question, numbers copied exactly.
-- **compare**: the LLM says which claims answer the question and, for every pair of documents
-  that are not replaced, whether they give the same answer, a different one, or are
-  unrelated. If different, it says what differs: "D03 says 16 weeks, D04 says 12 weeks".
-  It never says which one is right.
-- **reconcile**: plain Python. Applies `supersedes` links, keeps the disputes between current
-  documents, and picks the route.
-- **answer / conflict_report / abstain**: only the answer is written by the LLM, from the
-  claims. Code checks its citations, and a second LLM call checks it for facts no claim states
-  and for values the documents give differently (one more try, then a note). The dispute report,
-  the outdated note and "I don't know" are built by code, so no model can blur "16 weeks vs
-  12 weeks" into "about 12 to 16 weeks".
-
-Full walkthrough with real traces: [`docs/pipeline.md`](docs/pipeline.md).
-
-## Install
-
-Python 3.12, CPU only.
+Python 3.12, CPU only, and an OpenRouter key.
 
 ```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env          # put your OpenRouter key in LLM_API_OR
-python main.py index          # downloads the embedding model once (65 MB), builds the index
+python main.py ask "What torque should I use for the M6 motor housing bolts?"
+python main.py --dataset helios ask "How many days per week can employees work remotely?"
 ```
 
-Details and troubleshooting: [`docs/setup.md`](docs/setup.md). To switch to another dataset,
-see [`docs/datasets.md`](docs/datasets.md#switching).
+The first run downloads the embedding model once (65 MB) and builds the index. Setup and
+problems: [`docs/setup.md`](docs/setup.md). Switching datasets:
+[`docs/datasets.md`](docs/datasets.md#switching).
 
 ## Commands
 
@@ -134,53 +93,34 @@ python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: every question)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
 python main.py --dataset helios ask "<q>"        # any command on another dataset (or brightwater)
-python eval.py --dataset helios                  # (or set DATASET=helios in .env)
+LANGSMITH_TRACING=true python eval.py --langsmith-dataset <name>   # experiment on a LangSmith dataset
 python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
 ```
 
-Every setting lives in `config.py` and can be changed in `.env` or the shell, for example
-`LLM_MODEL=... python eval.py`. Token use and cost are printed after every run.
+Every setting lives in `config.py` and can be changed in `.env` or the shell. Token use and cost
+are printed after every run. LangSmith tracing is optional and off by default
+(`LANGSMITH_TRACING=true` with `LANGSMITH_API_KEY` in `.env`).
 
-LangSmith tracing is off by default. With `LANGSMITH_API_KEY` in `.env`, add
-`LANGSMITH_TRACING=true` to a command to trace it; `LANGSMITH_TRACING=true python eval.py` also
-runs a LangSmith experiment on the same checks. Each dataset has its own Qdrant collection and
-its own LangSmith dataset; see [`docs/datasets.md`](docs/datasets.md).
+## Evaluation
 
-## Results
-
-`python eval.py --dataset helios` passes all 34 questions on `main` (every output was also read by
-hand). They
-cover every case: documents that agree (also in different words), documents that disagree (in
-numbers, in words, and three at once), one document that answers, no document that answers (also
-close to a real topic), replaced documents (also a chain of three), and questions where the two
-sides of a dispute agree on the point asked.
-
-- Disputes and "I don't know" are checked in code, by the output's `dispute` and `no_answer`
-  flags and the linked documents.
-- One-answer questions are also checked by an LLM grader against a reference answer written by
-  hand.
-- A full eval costs about $0.011. The unit tests (`python -m pytest`) check the plain-code rules
-  for free.
-- The other datasets pass the same checks: Brightwater 26/26 and Larkfield 20/20, both two runs
-  in a row.
-
-See [`docs/evaluation.md`](docs/evaluation.md).
+`python eval.py` runs every question of a dataset through the pipeline and checks it: Larkfield
+20/20, Helios 34/34, Brightwater 26/26. Disputes and "I don't know" are checked in code (the
+`dispute` and `no_answer` flags and the linked documents); answers also by an LLM grader against
+the reference answer. The reference has the same shape as the output, so in LangSmith the two
+line up side by side, and each LangSmith dataset is split by outcome (`one_answer`, `dispute`,
+`no_answer`). A full eval costs about $0.01. Details: [`docs/evaluation.md`](docs/evaluation.md).
 
 ## Documentation
 
-To understand the system, read `docs/architecture.md` first (the parts and who does what), then
-`docs/pipeline.md` (every step, with real traces).
-
 | file | what |
 |---|---|
-| [`docs/architecture.md`](docs/architecture.md) | the big picture: parts, one question start to finish, who does what, modules, output, settings, failure handling |
-| [`docs/pipeline.md`](docs/pipeline.md) | how the cases are told apart, the state, every step in detail, real traces, known limits |
+| [`docs/architecture.md`](docs/architecture.md) | the big picture: parts, modules, output, settings, failure handling (read first) |
+| [`docs/pipeline.md`](docs/pipeline.md) | every step in detail, with real traces |
 | [`docs/decisions.md`](docs/decisions.md) | every design decision with its reason |
-| [`docs/corpus.md`](docs/corpus.md) | the 40 Helios documents, which case each one tests, and the rules they follow |
-| [`docs/datasets.md`](docs/datasets.md) | the three datasets, how to switch (CLI, `.env`, LangSmith, Studio), how to add one, the 30 Brightwater and 28 Larkfield documents |
+| [`docs/datasets.md`](docs/datasets.md) | the three datasets, switching, adding one, the Larkfield and Brightwater documents |
+| [`docs/corpus.md`](docs/corpus.md) | the 40 Helios documents and the rules all documents follow |
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
-| [`docs/setup.md`](docs/setup.md) | install, first run, choosing the dataset, settings, LangSmith, Studio, server mode, problems |
-| [`docs/research.md`](docs/research.md) | published work behind the design |
-| [`docs/models.md`](docs/models.md) | why these models, prices, cost per run |
+| [`docs/setup.md`](docs/setup.md) | install, settings, LangSmith, Studio, server mode, problems |
+| [`docs/research.md`](docs/research.md), [`docs/models.md`](docs/models.md) | published work behind the design; model choice and cost |
 | [`STATUS.md`](STATUS.md) | what is done, what is next, known issues, money spent |

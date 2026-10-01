@@ -3,7 +3,7 @@
 Last update: 2026-10-01. The system works end to end on `main`: 40 documents, 34 eval questions,
 34/34 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
 26/26 PASS) and Larkfield Motors (a factory: 28 documents, 20 questions, 20/20 PASS), with a
-switch between them (`--dataset` or `DATASET`). 43 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
+switch between them (`--dataset` or `DATASET`; default `larkfield`). 46 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
 every round is in the git log.
 
 ## What is done
@@ -94,6 +94,26 @@ every round is in the git log.
   example command now has `--dataset helios`. CLAUDE.md: the "run the eval twice" rule now says
   on each dataset a change touches. Checked: `config` shows `larkfield`; `index` and `search` use
   `larkfield_docs`; `--dataset helios index` still works; `pytest` 43 passed. No model calls.
+- **Expected outputs in the output's shape** (2026-10-01, branch `output-format`): the
+  `expected` block of every question (80, all three datasets) now uses the output's field names:
+  `status`, `answer` (short, `[Dxx]` after each fact, like the system writes), `citations` /
+  `versions` (`doc_id` only), `outdated` (`old_id`, `new_id`), `dispute`, `no_answer`, plus
+  `checks` for the test-only rules (`answer_contains`, `answer_excludes`, `at_search`,
+  `also_fine`). So reference and output line up in LangSmith. The pipeline did not change. The
+  eval checks read the new keys; `cites_any` (unused) is gone; a unit test keeps the shape in line
+  with `FinalOutput`. New: `eval.py --langsmith-dataset <name>` runs only an experiment on an
+  existing LangSmith dataset. LangSmith: the old datasets are kept; new copies
+  `rag-conflicts-{helios-536567d3,brightwater-3aaded38,larkfield-69cc59e5}_reformated` and a
+  small `larkfield_small_reformated` (Q1–Q5: 2 answers, 2 disputes, 1 no answer) were created;
+  `rag-conflicts-helios-3da97895` was made by a stopped run. Checked: `pytest` 46 passed; the new
+  checks pass on the 20 saved Larkfield outputs; eval on the new format: Helios 34/34 twice
+  (the second with LangSmith), Brightwater 26/26 and Larkfield 20/20 once each (the second run
+  was stopped). Not run yet: experiments on the `_reformated` and small datasets.
+- **Short README** (2026-10-01, branch `output-format`): 126 lines instead of 186. The pipeline as
+  an image (`docs/graph.png`, made from the diagram in `docs/pipeline.md`), a table of the 7 nodes,
+  and the 5 `larkfield_small_reformated` questions as question vs reference vs real output (the
+  2026-10-01 run). The Helios examples and long results moved out; they are in `docs/pipeline.md`
+  and `docs/evaluation.md`.
 
 ## Next steps
 
@@ -146,6 +166,7 @@ every round is in the git log.
 | 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32907 |
 | 2026-09-30 | second dataset: Brightwater evals (4 runs, 2 stopped early), Helios demo, llm-test (from `.spend.json`) | 0.02705 |
 | 2026-10-01 | third dataset: Larkfield evals (3 runs, 1 stopped early; one with LangSmith) (from `.spend.json`) | 0.01919 |
-| **total** | | **0.43592** |
+| 2026-10-01 | expected-output format: evals on all three datasets, one Helios run with LangSmith, one stopped run (from `.spend.json`) | 0.05122 |
+| **total** | | **0.48714** |
 
-Budget: $4.00. Left: about $3.56.
+Budget: $4.00. Left: about $3.51.

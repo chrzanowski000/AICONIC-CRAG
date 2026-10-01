@@ -83,19 +83,19 @@ answer must not quietly state one side's number of weeks.
 All checks live in `eval.py`. Each one has the signature
 `(inputs, outputs, reference_outputs) -> {"key", "score", "comment"}`, so the same functions are
 used locally and as LangSmith evaluators. `reference_outputs` is the `expected` block of the
-question in `questions.json`. A check that does not apply to a question scores 1 with the
-comment `n/a`. A question passes only if every check scores 1.
+question in `questions.json` (its format is below). A check that does not apply to a question
+scores 1 with the comment `n/a`. A question passes only if every check scores 1.
 
 | check | what it asks |
 |---|---|
 | `outcome_matches` | Are the output's `dispute` and `no_answer` flags the expected ones? (both false = one answer) |
-| `cites_required_docs` | Are all docs in `cites` cited, and at least one doc in `cites_any`? Each citation has a date and a source. |
-| `dispute_links_right_docs` | For an expected dispute: the linked versions are **exactly** the expected documents (Q20 has 3), each with a date and a claim, and there is **no** answer. |
-| `marks_outdated` | Is there an outdated note for each expected old → new pair, with both dates? |
-| `no_answer_is_clean` | For an expected "I don't know": no answer, citations or versions. With `at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
-| `answer_contains` | Does the answer contain one of the expected strings, as a whole word or number? |
-| `answer_excludes` | Does the answer avoid all of these strings, as whole words or numbers (for example a number the documents disagree on)? |
-| `answer_is_correct` | Only for questions with one answer. **The grader**: an LLM compares the output with the question's `reference_answer` (the correct answer) and says `correct`, `partly correct` or `incorrect`, with a reason. Only `correct` passes. |
+| `cites_required_docs` | Is every document in the expected `citations` cited? More are fine (agreeing documents are added). Each citation has a date and a source. |
+| `dispute_links_right_docs` | For an expected dispute: the linked versions are **exactly** the expected `versions` (Q20 has 3), each with a date and a claim, and there is **no** answer. |
+| `marks_outdated` | Is there an outdated note for each expected `outdated` pair (`old_id` → `new_id`), with both dates? |
+| `no_answer_is_clean` | For an expected "I don't know": no answer, citations or versions. With `checks.at_search`, it must also have stopped at the search (no document above the cutoff). The comment says where it stopped. |
+| `answer_contains` | Does the answer contain one of the strings in `checks.answer_contains`, as a whole word or number? |
+| `answer_excludes` | Does the answer avoid all the strings in `checks.answer_excludes`, as whole words or numbers (for example a number the documents disagree on)? |
+| `answer_is_correct` | Only for questions with one answer. **The grader**: an LLM compares the output with the expected `answer` (the correct answer) and says `correct`, `partly correct` or `incorrect`, with a reason. Only `correct` passes. |
 
 Words and numbers are matched whole (`mentions()` in `eval.py`): "2" is found in "needs 2
 approvals" but not in "2025" or "[D12]", and "12" is not found in the date "2025-02-12". So
@@ -105,36 +105,62 @@ The first seven checks look at the structure of the output. A disputed question 
 the system refuses to give one answer; an unanswerable question passes only when the system says
 nothing that looks like an answer. Guessing is never rewarded.
 
-### How each outcome is checked
+### The expected block has the shape of the output
 
-Every run ends with two flags in the output, `dispute` and `no_answer` (both false means one
-answer). Each question says which outcome is expected, and each outcome is checked in its own
-way:
+The `expected` block of a question uses the same field names as the system's output, so the two
+can be read side by side (in LangSmith they line up in the compare view):
 
-| expected | written in `questions.json` | checked by |
+| field | in the output | in `expected` |
 |---|---|---|
-| one answer | `"dispute": false, "no_answer": false`, `cites`, and a `reference_answer` (the correct answer) | the flags; the cited documents; the grader compares the answer with the reference answer |
-| a dispute | `"dispute": true`, `versions` (the documents that disagree), no reference answer | code only: `dispute` is true (`outcome_matches`), and the linked documents are exactly `versions` |
-| no answer | `"no_answer": true`, no reference answer | code only: `no_answer` is true (`outcome_matches`) and nothing looks like an answer |
+| `status` | `answered`, `disputed` or `abstained` | the same |
+| `dispute`, `no_answer` | the two flags (both false = one answer) | the same |
+| `answer` | the answer, with `[Dxx]` after each fact; `null` for a dispute or "I don't know" | the correct answer, short, in the same style; `null` for a dispute or "I don't know" |
+| `citations`, `versions` | each document with `doc_id`, `date`, `source` and `claim` | `doc_id` only |
+| `outdated` | `old_id`, `old_date`, `old_claim`, `new_id`, `new_date` | `old_id` and `new_id` only |
+| `differences`, `reason` | written by the model or by code | left out |
+
+`expected` leaves out what cannot be known before the run: the claims, "what differs" and the
+reason are written by the model. Dates and sources come from the document metadata, and the
+checks make sure every document shown has them. Empty lists are left out.
+
+Rules that are not part of the output go in `checks`: `answer_contains`, `answer_excludes`,
+`at_search` and `also_fine` (details the answer may give or leave out; see the grader below).
 
 ```json
 {"id": "Q27", "question": "When is the summer party?",
- "expected": {"dispute": false, "no_answer": false, "cites": ["D37"], "answer_contains": ["20 June"],
-              "reference_answer": "On Friday 20 June 2025 (D37). Also fine: from 16:00, at Pirita beach."}}
+ "expected": {"status": "answered", "answer": "On Friday 20 June 2025 [D37].",
+              "citations": [{"doc_id": "D37"}], "dispute": false, "no_answer": false,
+              "checks": {"answer_contains": ["20 June"], "also_fine": "from 16:00, at Pirita beach."}}}
 {"id": "Q20", "question": "What is the yearly learning budget per employee?",
- "expected": {"dispute": true, "no_answer": false, "versions": ["D23", "D24", "D25"]}}
+ "expected": {"status": "disputed", "answer": null,
+              "versions": [{"doc_id": "D23"}, {"doc_id": "D24"}, {"doc_id": "D25"}],
+              "dispute": true, "no_answer": false}}
 {"id": "Q31", "question": "What is the dress code?",
- "expected": {"dispute": false, "no_answer": true, "at_search": true}}
+ "expected": {"status": "abstained", "answer": null, "dispute": false, "no_answer": true,
+              "checks": {"at_search": true}}}
 ```
+
+A unit test (`tests/test_load_docs.py`) makes sure every `expected` block keeps this shape: only
+output field names plus `checks`, a `status` that agrees with the flags, and an `answer` only for
+`answered`.
+
+### How each outcome is checked
+
+| expected | checked by |
+|---|---|
+| one answer | the flags; the cited documents; the grader compares the answer with the expected `answer` |
+| a dispute | code only: `dispute` is true (`outcome_matches`), and the linked documents are exactly `versions` |
+| no answer | code only: `no_answer` is true (`outcome_matches`) and nothing looks like an answer |
 
 ### The grader (`answer_is_correct`)
 
-Only questions with one answer have a reference answer, and the reference answer is always one
-answer: the facts that answer the question. Details the question does not ask about go after
-"Also fine:"; the output may give them or leave them out (the system answers only what is asked).
+Only questions with one answer have an expected `answer`, and it is always one short answer: the
+facts that answer the question, with `[Dxx]` after each fact as the system writes it. Details the
+question does not ask about go in `checks.also_fine`; the output may give them or leave them out
+(the system answers only what is asked).
 
-The grader gets the question, the reference answer and the system's full printed output, and
-decides:
+The grader gets the question, the reference answer (the expected `answer`, then "Also fine: ..."
+with `checks.also_fine` if there is one) and the system's full printed output, and decides:
 
 | verdict | when |
 |---|---|
@@ -169,8 +195,8 @@ calls, cost nothing and take about 2 seconds. They use the real corpus.
 |---|---|
 | `tests/test_graph_rules.py` | the "replaces" chains; `reconcile` (replaced doc → outdated, a chain of three, `different` pair → dispute with the LLM's sentence, a three-way dispute, `same` → answer, a pair with a doc that is not relevant is ignored, nothing relevant → abstain, a dispute that also has an outdated note); which pairs are sent to the LLM; reading the LLM's comparison (pairs in any order, a left-out pair counts as unrelated); citing every agreeing document; finding citations in the answer; `conflict_report` and `abstain` show the creation dates |
 | `tests/test_render.py` | every source line, every version of a dispute ("Both" or "All 3 versions"), "What differs" and the outdated note show "created YYYY-MM-DD"; "I don't know" has no sources |
-| `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics, a duplicate id, a bad date and a document that replaces itself are refused |
-| `tests/test_eval_checks.py` | the eval's own checks: whole-word matching, citations (`cites` and `cites_any`), every version of a three-way dispute, outdated notes for a chain of three, "I don't know" at the search or after reading, contains / excludes |
+| `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics, a duplicate id, a bad date and a document that replaces itself are refused; every dataset's questions name real documents, and every `expected` block has the shape of the output |
+| `tests/test_eval_checks.py` | the eval's own checks: whole-word matching, citations (more are fine, each with a date), every version of a three-way dispute, outdated notes for a chain of three, "I don't know" at the search or after reading, contains / excludes |
 | `tests/test_retrieval.py` | the score cutoff and the margin below the best hit |
 | `tests/test_llm.py` | a reply that holds an error instead of an answer is retried, then stops with a clear error; other errors are not hidden |
 
@@ -260,11 +286,21 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
 1. reads the LangSmith dataset `rag-conflicts-<name>-<fingerprint>` of the dataset in use (for
    example `rag-conflicts-helios-536567d3`), or creates it from `data/<name>/questions.json` if
    it does not exist (inputs: `question`, `id`; outputs: the `expected`
-   block; split: `one_answer`, `dispute` or `no_answer`, to filter by outcome in the UI);
+   block, which has the shape of the output, so reference and output line up in the compare view;
+   split: `one_answer`, `dispute` or `no_answer`, to filter by outcome in the UI);
 2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included),
    experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time: the cost
    counter is not thread safe);
-3. prints the experiment name and URL.
+3. prints the experiment name and URL, and how many examples passed every check.
+
+To run only an experiment on a LangSmith dataset that already exists (no local run, nothing
+created), name it with `--langsmith-dataset`. Its questions must belong to `--dataset`, or the
+run stops before any model call:
+
+```bash
+LANGSMITH_TRACING=true python eval.py --langsmith-dataset larkfield_small_reformated
+LANGSMITH_TRACING=true python eval.py --dataset helios --langsmith-dataset rag-conflicts-helios-536567d3_reformated
+```
 
 ```bash
 LANGSMITH_TRACING=true python eval.py
@@ -274,7 +310,8 @@ LANGSMITH_TRACING=true python eval.py --dataset brightwater
 The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `question_id`,
 `llm` and `dataset`. The dataset name ends with a short fingerprint of `questions.json`
 (`rag-conflicts-helios-1a2b3c4d`), so a change to the questions or their expected results creates a
-new dataset instead of grading against old examples.
+new dataset instead of grading against old examples. The old dataset is not deleted: it stays in
+LangSmith as a copy, with its experiments.
 
 ## Cost
 

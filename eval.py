@@ -2,6 +2,8 @@
 
     python eval.py                        # local PASS/FAIL table, exit code 1 on any FAIL
     python eval.py --dataset brightwater  # the same for another dataset in data/
+    LANGSMITH_TRACING=true python eval.py --langsmith-dataset larkfield_small_reformated
+                                          # only a LangSmith experiment on an existing dataset
 
 When LANGSMITH_TRACING=true and LANGSMITH_API_KEY is set, the same checks also run as a
 LangSmith experiment on the LangSmith dataset rag-conflicts-<name>-<fingerprint>.
@@ -9,6 +11,11 @@ LangSmith experiment on the LangSmith dataset rag-conflicts-<name>-<fingerprint>
 Every check has the signature (inputs, outputs, reference_outputs) -> {"key", "score", "comment"},
 so the same functions work locally and as LangSmith evaluators. A check that does not apply to a
 question scores 1 with the comment "n/a".
+
+`reference_outputs` is the `expected` block of a question. It has the same shape as the output
+(status, answer, citations, versions, outdated, dispute, no_answer), with documents named by
+`doc_id` only, plus `checks`: rules that are not part of the output (answer_contains,
+answer_excludes, at_search, also_fine).
 """
 
 import argparse
@@ -40,12 +47,19 @@ def outcome_matches(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
                    f"expected {names.get(want, want)}, got {names.get(got, got)}")
 
 
+def _ids(items: list[dict]) -> list[str]:
+    return [i["doc_id"] for i in items or []]
+
+
+def _checks(reference_outputs: dict) -> dict:
+    return reference_outputs.get("checks") or {}
+
+
 def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    """`cites`: every one of these must be cited. `cites_any`: at least one of these."""
+    """Every expected citation is cited (more are fine: agreeing documents are added)."""
     key = "cites_required_docs"
-    required = reference_outputs.get("cites") or []
-    any_of = reference_outputs.get("cites_any") or []
-    if not required and not any_of:
+    required = _ids(reference_outputs.get("citations"))
+    if not required:
         return _na(key)
     citations = outputs.get("citations") or []
     cited = {c["doc_id"] for c in citations}
@@ -53,8 +67,6 @@ def cites_required_docs(inputs: dict, outputs: dict, reference_outputs: dict) ->
     undated = [c["doc_id"] for c in citations if not c.get("date") or not c.get("source")]
     if missing:
         return _result(key, False, f"missing citations {missing}; cited {sorted(cited)}")
-    if any_of and not cited & set(any_of):
-        return _result(key, False, f"cites none of {any_of}; cited {sorted(cited)}")
     if undated:
         return _result(key, False, f"citations without date or source: {undated}")
     return _result(key, True, f"cited {sorted(cited)}")
@@ -68,7 +80,7 @@ def dispute_links_right_docs(inputs: dict, outputs: dict, reference_outputs: dic
         return _na(key)
     versions = outputs.get("versions") or []
     ids = {v["doc_id"] for v in versions}
-    want = set(reference_outputs.get("versions", []))
+    want = set(_ids(reference_outputs.get("versions")))
     problems = []
     if ids != want:
         problems.append(f"linked {sorted(ids)}, expected {sorted(want)}")
@@ -84,7 +96,7 @@ def dispute_links_right_docs(inputs: dict, outputs: dict, reference_outputs: dic
 
 def marks_outdated(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
     key = "marks_outdated"
-    required = reference_outputs.get("outdated")
+    required = [(o["old_id"], o["new_id"]) for o in reference_outputs.get("outdated") or []]
     if not required:
         return _na(key)
     notes = outputs.get("outdated") or []
@@ -137,7 +149,7 @@ def no_answer_is_clean(inputs: dict, outputs: dict, reference_outputs: dict) -> 
     if outputs.get("versions"):
         problems.append("versions were given")
     at_search = "No document is close enough" in (outputs.get("reason") or "")
-    if reference_outputs.get("at_search") and not at_search:
+    if _checks(reference_outputs).get("at_search") and not at_search:
         problems.append("expected to stop at the search, but documents were read")
     if problems:
         return _result(key, False, "; ".join(problems))
@@ -147,7 +159,7 @@ def no_answer_is_clean(inputs: dict, outputs: dict, reference_outputs: dict) -> 
 
 def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
     key = "answer_contains"
-    options = reference_outputs.get("answer_contains")
+    options = _checks(reference_outputs).get("answer_contains")
     if not options:
         return _na(key)
     answer = outputs.get("answer") or ""
@@ -160,7 +172,7 @@ def answer_contains(inputs: dict, outputs: dict, reference_outputs: dict) -> dic
 def answer_excludes(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
     """The answer must not state these (for example a number the documents disagree on)."""
     key = "answer_excludes"
-    banned = reference_outputs.get("answer_excludes")
+    banned = _checks(reference_outputs).get("answer_excludes")
     if not banned:
         return _na(key)
     answer = outputs.get("answer") or ""
@@ -202,12 +214,15 @@ def grade(question: str, output_text: str, reference: str) -> Grade:
 
 
 def answer_is_correct(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
-    """For a question with one answer: the grader says the output matches the reference answer
+    """For a question with one answer: the grader says the output matches the expected answer
     (only "correct" passes). Disputes and "I don't know" are checked by their flags instead."""
     key = "answer_is_correct"
-    reference = reference_outputs.get("reference_answer")
+    reference = reference_outputs.get("answer")
     if not reference:
         return _na(key)
+    also_fine = _checks(reference_outputs).get("also_fine")
+    if also_fine:
+        reference += f" Also fine: {also_fine}"
     from src.render import render
 
     verdict = grade(inputs["question"], render(inputs["question"], outputs), reference)
@@ -268,11 +283,23 @@ def langsmith_dataset(client, questions: list[dict]) -> str:
     return name
 
 
-def run_langsmith(questions: list[dict]) -> None:
-    from langsmith import Client
+def check_named_dataset(client, name: str, questions: list[dict]) -> None:
+    """Stop unless the LangSmith dataset `name` exists and holds questions of the dataset in use
+    (its questions are answered from this dataset's documents)."""
+    if not client.has_dataset(dataset_name=name):
+        raise SystemExit(f"No LangSmith dataset '{name}'.")
+    ours = {q["question"] for q in questions}
+    foreign = [e.inputs["question"] for e in client.list_examples(dataset_name=name)
+               if e.inputs["question"] not in ours]
+    if foreign:
+        raise SystemExit(f"LangSmith dataset '{name}' has questions that are not in "
+                         f"{config.QUESTIONS_FILE}, for example: {foreign[0]!r}. "
+                         "Pick the matching --dataset.")
 
-    client = Client()
-    name = langsmith_dataset(client, questions)
+
+def run_langsmith(client, name: str) -> bool:
+    """Run the checks as a LangSmith experiment on the LangSmith dataset `name`. Prints how many
+    examples passed every check; True if all did."""
     results = client.evaluate(
         target,
         data=name,
@@ -281,9 +308,17 @@ def run_langsmith(questions: list[dict]) -> None:
         max_concurrency=1,  # one question at a time: the cost counter is not thread safe
         metadata={"llm": config.LLM_MODEL, "dataset": config.DATASET},
     )
-    print(f"LangSmith experiment: {results.experiment_name}")
+    print(f"LangSmith experiment: {results.experiment_name} (LangSmith dataset '{name}')")
     if results.url:
         print(f"URL: {results.url}")
+    rows = list(results)
+    failed = [f"{row['example'].inputs.get('id')}: "
+              + ", ".join(r.key for r in row["evaluation_results"]["results"] if r.score != 1)
+              for row in rows if any(r.score != 1 for r in row["evaluation_results"]["results"])]
+    print(f"LangSmith: {len(rows) - len(failed)}/{len(rows)} examples passed every check.")
+    for line in failed:
+        print(f"  FAIL {line}")
+    return not failed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -294,23 +329,41 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the eval questions of one dataset.")
     parser.add_argument("--dataset", choices=config.datasets(),
                         help=f"which data/<name>/ to use (default: {config.DATASET})")
+    parser.add_argument("--langsmith-dataset", metavar="NAME",
+                        help="skip the local run; run only a LangSmith experiment on this existing "
+                             "LangSmith dataset, whose questions must belong to --dataset "
+                             "(needs LANGSMITH_TRACING=true)")
     args = parser.parse_args(argv)
     if args.dataset:
         config.use_dataset(args.dataset)
     setup_logging()
     if config.TRACING_WARNING:
         print(f"WARNING: {config.TRACING_WARNING}", file=sys.stderr)
+    if args.langsmith_dataset and not config.TRACING_ON:
+        print("ERROR: --langsmith-dataset needs LANGSMITH_TRACING=true and LANGSMITH_API_KEY.",
+              file=sys.stderr)
+        return 1
     ok = False
     try:
         ensure_index()
         build_graph()
         questions = load_questions()
-        ok = run_local(questions)
-        if config.TRACING_ON:
-            run_langsmith(questions)
+        if args.langsmith_dataset:
+            from langsmith import Client
+
+            client = Client()
+            check_named_dataset(client, args.langsmith_dataset, questions)
+            ok = run_langsmith(client, args.langsmith_dataset)
         else:
-            print("LangSmith eval skipped (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY "
-                  "to run it).")
+            ok = run_local(questions)
+            if config.TRACING_ON:
+                from langsmith import Client
+
+                client = Client()
+                run_langsmith(client, langsmith_dataset(client, questions))
+            else:
+                print("LangSmith eval skipped (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY "
+                      "to run it).")
     except known_errors() as err:
         print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
     finally:

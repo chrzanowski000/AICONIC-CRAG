@@ -66,6 +66,11 @@ flowchart TD
 Colours: **blue** = an LLM call · **green** = plain Python · **grey** = local search, no model ·
 **orange** = the three outcomes (with the `dispute` and `no_answer` flags).
 
+The same diagram as an image is `docs/graph.png` (used in the README). After changing the diagram,
+make it again with `draw_mermaid_png(mermaid_syntax=<the block above>,
+output_file_path="docs/graph.png")` from `langchain_core.runnables.graph_mermaid` (it draws
+through the mermaid.ink web service).
+
 One model is used, the LLM (`openai/gpt-6-luna` through OpenRouter), for four jobs: pull out
 claims, compare them, write the answer, and check the answer. It is never asked "which document
 is right?" and it never writes the dispute report, the outdated note or "I don't know". So it

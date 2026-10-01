@@ -1,6 +1,6 @@
 # Status
 
-Last update: 2026-09-30. The system works end to end on `main`: 40 documents, 34 eval questions,
+Last update: 2026-10-01. The system works end to end on `main`: 40 documents, 34 eval questions,
 34/34 PASS, and a second, separate dataset (Brightwater Ferries: 30 documents, 26 questions,
 26/26 PASS) with a switch between them (`--dataset` or `DATASET`). 42 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
 every round is in the git log.
@@ -66,6 +66,14 @@ every round is in the git log.
   outcome, made by code (`eval.langsmith_dataset`): `rag-conflicts-helios-536567d3` (34: 22
   `one_answer`, 7 `dispute`, 5 `no_answer`) and `rag-conflicts-brightwater-3aaded38` (26: 16, 5,
   5). No experiments yet.
+- **Running docs** (2026-10-01): a step-by-step guide to switching datasets in
+  `docs/datasets.md` (stop what uses `qdrant_data/`, pick the dataset, check which one is
+  active, what happens by itself, Studio and the CLI at once). `docs/setup.md` has a short
+  "Choosing the dataset" section, the Studio dataset note and more on server mode. The lock
+  advice is fixed in the docs and in the `LockedStorageError` text: don't delete
+  `qdrant_data/.lock` (the lock goes away when the program stops). `.env.example` shows
+  `DATASET`. Checked: `pytest` 42 passed; `config` shows the right names; both indexes reused;
+  the new error text shown with a second process holding the folder. No model calls.
 
 ## Next steps
 

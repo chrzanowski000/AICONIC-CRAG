@@ -42,6 +42,24 @@ python main.py ask "How many weeks of paid parental leave does Helios Dynamics o
 time, and `Reused ...` after that. It rebuilds by itself when a document changes. Use
 `python main.py index --reindex` to force a rebuild.
 
+## Choosing the dataset
+
+There are two datasets: `helios` (the default) and `brightwater`. Pick one for one command with
+the flag (in `main.py` it goes before the command), or for every command in `.env`:
+
+```bash
+python main.py --dataset brightwater ask "Can I bring my dog on the ferry?"
+python eval.py --dataset brightwater
+```
+
+```
+DATASET=brightwater
+```
+
+If both are set, the flag wins over `.env`. Only one program can use `qdrant_data/` at a time, so stop `langgraph dev` or a running eval
+before you start another command. The full steps (stop, pick, check) are in
+[`datasets.md`](datasets.md#switching).
+
 ## Where things are stored
 
 | folder / file | what | safe to delete? |
@@ -99,8 +117,11 @@ part of a nested object.
 
 - `langgraph.json` tells the server where the graph is (`src/studio.py:graph`) and loads `.env`.
   `src/studio.py` builds the index if needed, then builds the graph.
-- While the server runs it holds `qdrant_data/`, so `main.py` and `eval.py` stop with the "in use
-  by another process" message. Stop the server (Ctrl+C) first, or use `QDRANT_MODE=server` for
+- The dataset is fixed when the server starts. To use Brightwater, start it with
+  `DATASET=brightwater langgraph dev` (or set `DATASET` in `.env`); to switch, stop it and start
+  it again.
+- While the server runs it holds `qdrant_data/`, so `main.py` and `eval.py` stop with
+  `ERROR (LockedStorageError)`. Stop the server (Ctrl+C) first, or use `QDRANT_MODE=server` for
   both.
 - WSL: the Windows browser reaches `127.0.0.1:2024` in WSL (tested). Brave and Safari block a
   secure page from calling plain `http://` on localhost; use `langgraph dev --tunnel` there.
@@ -112,12 +133,24 @@ part of a nested object.
 
 ## Qdrant server mode (optional)
 
+Embedded mode lets only one program use `qdrant_data/` at a time. A Qdrant server allows many at
+once, for example Studio and the CLI together.
+
 ```bash
 docker pull qdrant/qdrant:latest
 docker run -p 6333:6333 qdrant/qdrant:latest
+```
+
+Then set `QDRANT_MODE=server` in `.env` (the server is at `QDRANT_URL`, default
+`http://localhost:6333`), or set it for one command:
+
+```bash
 QDRANT_MODE=server python main.py index
 QDRANT_MODE=server python main.py demo
 ```
+
+The first command on each dataset builds its collection on the server. The hash files that tell
+when a rebuild is needed stay in `qdrant_data/`.
 
 Use a recent server. The client is `qdrant-client` 1.19.1; an old server (tested: 1.16.3) still
 works but prints a version warning. `latest` was 1.19.1 on 2026-09-29 and gave the same demo
@@ -125,9 +158,17 @@ results as embedded mode.
 
 ## Problems
 
-**"The Qdrant folder ... is in use by another process."** Embedded Qdrant allows only one process
-at a time. Close the other `main.py` or `eval.py` run. If none is running, delete
-`qdrant_data/.lock`. Or use server mode.
+**A command stops with `ERROR (LockedStorageError)`: "The Qdrant folder ... is in use by another
+process."** Embedded Qdrant allows only one program at a time, and another one is still running:
+`langgraph dev`, `eval.py` or another `main.py`. Find it and stop it (Ctrl+C in its terminal):
+
+```bash
+ps aux | grep -E "langgraph dev|eval.py|main.py" | grep -v grep
+```
+
+Don't delete `qdrant_data/.lock`. The lock goes away by itself when the program stops; deleting
+the file only lets two programs write to the same folder at once. To run several programs at
+once, use server mode.
 
 **The embedding model does not download.** FastEmbed needs to reach Hugging Face once. After
 that the model is read from `./models`.

@@ -207,7 +207,7 @@ The OpenRouter key is read from `LLM_API_OR`.
 | OpenRouter answers HTTP 200 with an error inside instead of a reply (e.g. a short upstream rate limit) | wait and try again (2, 4, 8 s); then as below |
 | the LLM reply cannot be parsed, or the LLM call fails | the run stops with a one-line `ERROR (...)` message (exit code 2 from `main.py`, 1 from `eval.py`); the cost so far is still recorded |
 | a document has bad frontmatter | `ERROR (CorpusError)` naming the file |
-| the Qdrant folder is locked by another process | `ERROR (LockedStorageError)` with three ways out |
+| the Qdrant folder is locked by another process | `ERROR (LockedStorageError)` with two ways out |
 
 ## Tests
 

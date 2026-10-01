@@ -25,37 +25,83 @@ the code knows about a company.
 
 ## Switching
 
-**On the command line**, add `--dataset <name>` (it goes before the command in `main.py`):
+Switching can't mix the two datasets up: each one has its own documents, questions, Qdrant
+collection and LangSmith dataset. The one thing to watch is that only one program can use
+`qdrant_data/` at a time.
+
+### 1. Stop anything that uses `qdrant_data/`
+
+That means `langgraph dev`, `eval.py`, or another `main.py` command. Press Ctrl+C in its
+terminal. To check that nothing is left:
 
 ```
-python main.py --dataset brightwater index
+ps aux | grep -E "langgraph dev|eval.py|main.py" | grep -v grep
+```
+
+No output means nothing is running. If a command still stops with `ERROR (LockedStorageError)`,
+something is still running: find it with the line above and stop it. Don't delete
+`qdrant_data/.lock`. The lock goes away by itself when the program stops; deleting the file only
+lets two programs write to the same folder at once.
+
+### 2. Pick the dataset
+
+**For one command**, add the flag. In `main.py` it goes before the command:
+
+```
 python main.py --dataset brightwater ask "Can I bring my dog on the ferry?"
-python main.py --dataset brightwater demo --all
+python main.py --dataset brightwater demo
 python eval.py --dataset brightwater
 ```
 
-**For every command at once**, set `DATASET=brightwater` in `.env` (or the shell). `--dataset`
-wins over `DATASET`. `python main.py config` shows the dataset in use and the paths and names it
-leads to.
-
-**In LangSmith**, each dataset is its own LangSmith dataset:
+**For every command, until you change it back**, set it in `.env`:
 
 ```
-LANGSMITH_TRACING=true python eval.py --dataset brightwater
+DATASET=brightwater
 ```
 
-The first run creates `rag-conflicts-brightwater-<fingerprint>` from
-`data/brightwater/questions.json`; later runs reuse it until the questions change. In the
-LangSmith UI, pick the dataset to see its experiments and compare them. Every trace also carries
-`dataset` in its metadata, so traces of `ask` and `demo` can be filtered by dataset in the
-project `rag-conflicts`.
+If both are set, the flag wins over `.env`.
 
-**In LangGraph Studio**, the dataset is chosen when the server starts:
-`DATASET=brightwater langgraph dev`. Stop it and start it again to switch.
+**For LangGraph Studio**, the dataset is fixed when the server starts. Stop it and start it again
+to switch:
 
-Each dataset gets its own index the first time it is used; after that it is reused until one of
-its documents changes, as before. Only one process can use the embedded Qdrant folder at a time,
-so stop `langgraph dev` before running a command on another dataset (or use server mode).
+```
+DATASET=brightwater langgraph dev
+```
+
+### 3. Check which one is active
+
+```
+python main.py --dataset brightwater config | grep -E "DATASET|CORPUS|COLLECTION|EVAL_DATASET"
+```
+
+This shows the dataset (`DATASET`), the folder (`CORPUS_DIR`), the Qdrant collection
+(`QDRANT_COLLECTION`, here `brightwater_docs`) and the LangSmith dataset name
+(`EVAL_DATASET_NAME`). Leave out `--dataset` to see what `.env` picks. The eval also prints
+`Local eval: dataset brightwater, ...` at the start.
+
+### What happens by itself
+
+- **Index.** The first time you use a dataset, its index is built (by `index`, `search`, `ask`,
+  `demo`, `eval.py` or Studio, whichever runs first). It takes a few seconds and costs nothing. After that it is reused, and it is rebuilt only if one of that
+  dataset's documents changes. Switching never rebuilds or touches the other dataset.
+- **LangSmith.** `LANGSMITH_TRACING=true python eval.py --dataset brightwater` uses
+  `rag-conflicts-brightwater-<fingerprint>`; without the flag it uses
+  `rag-conflicts-helios-<fingerprint>`. The first run creates the LangSmith dataset from
+  `data/<name>/questions.json`; later runs reuse it until the questions change. In the LangSmith
+  UI, pick the dataset to see its experiments and compare them. Every trace carries `dataset` in
+  its metadata, so traces of `ask` and `demo` can be filtered by dataset in the project
+  `rag-conflicts`.
+
+### Studio and the CLI at the same time
+
+Run Qdrant as a server, which allows many programs at once:
+
+```
+docker run -p 6333:6333 qdrant/qdrant
+```
+
+Then set `QDRANT_MODE=server` in `.env`. The first command on each dataset builds its collection
+on the server. More in [`setup.md`](setup.md#qdrant-server-mode-optional).
 
 ## Adding a dataset
 

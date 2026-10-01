@@ -116,7 +116,8 @@ cp .env.example .env          # put your OpenRouter key in LLM_API_OR
 python main.py index          # downloads the embedding model once (65 MB), builds the index
 ```
 
-Details and troubleshooting: [`docs/setup.md`](docs/setup.md).
+Details and troubleshooting: [`docs/setup.md`](docs/setup.md). To switch to the Brightwater
+dataset, see [`docs/datasets.md`](docs/datasets.md#switching).
 
 ## Commands
 
@@ -172,7 +173,7 @@ To understand the system, read `docs/architecture.md` first (the parts and who d
 | [`docs/corpus.md`](docs/corpus.md) | the 40 Helios documents, which case each one tests, and the rules they follow |
 | [`docs/datasets.md`](docs/datasets.md) | the two datasets, how to switch (CLI, `.env`, LangSmith, Studio), how to add one, the 30 Brightwater documents |
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
-| [`docs/setup.md`](docs/setup.md) | install, settings, server mode, problems |
+| [`docs/setup.md`](docs/setup.md) | install, first run, choosing the dataset, settings, LangSmith, Studio, server mode, problems |
 | [`docs/research.md`](docs/research.md) | published work behind the design |
 | [`docs/models.md`](docs/models.md) | why these models, prices, cost per run |
 | [`STATUS.md`](STATUS.md) | what is done, what is next, known issues, money spent |

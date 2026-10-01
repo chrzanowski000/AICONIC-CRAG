@@ -123,7 +123,7 @@ def use_dataset(name: str) -> None:
     EVAL_EXPERIMENT_PREFIX = f"rag-conflicts-{name}"
 
 
-use_dataset(env("DATASET", "helios"))
+use_dataset(env("DATASET", "larkfield"))
 
 SECRET_NAMES = {"LLM_API_KEY", "QDRANT_API_KEY", "LANGSMITH_API_KEY"}
 

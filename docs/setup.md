@@ -30,21 +30,21 @@ python -m pytest                     # unit tests, no model calls, free
 ```bash
 python main.py config                    # check the settings; the key is shown masked
 python main.py index                     # downloads the embedding model once, builds the index
-python main.py search "parental leave"   # retrieval test, no model calls, costs nothing
+python main.py search "housing torque"   # retrieval test, no model calls, costs nothing
 python main.py llm-test                  # one LLM call through OpenRouter, checks the key
-python main.py ask "How many weeks of paid parental leave does Helios Dynamics offer?"
+python main.py ask "What torque should I use for the M6 motor housing bolts?"
 ```
 
 `ask` prints the result, then a short trace of every step (switch it off with
 `SHOW_SCORES=false`), then the tokens, the cost of this run and the running total.
 
-`index` prints `Rebuilt collection 'helios_docs' (embedded mode): 40 points. Reason: ...` the first
+`index` prints `Rebuilt collection 'larkfield_docs' (embedded mode): 28 points. Reason: ...` the first
 time, and `Reused ...` after that. It rebuilds by itself when a document changes. Use
 `python main.py index --reindex` to force a rebuild.
 
 ## Choosing the dataset
 
-There are three datasets: `helios` (the default), `brightwater` and `larkfield`. Pick one for one
+There are three datasets: `larkfield` (the default), `helios` and `brightwater`. Pick one for one
 command with the flag (in `main.py` it goes before the command), or for every command in `.env`:
 
 ```bash
@@ -83,7 +83,7 @@ Tracing is **off** by default. To use it:
    (`LANG_SMITH_API_KEY` or other spellings are not read).
 2. Switch tracing on, for one command or for good:
    ```bash
-   LANGSMITH_TRACING=true python main.py ask "How many weeks of paid parental leave does Helios Dynamics offer?"
+   LANGSMITH_TRACING=true python main.py ask "What torque should I use for the M6 motor housing bolts?"
    LANGSMITH_TRACING=true python eval.py      # also creates the dataset and runs an experiment
    ```
    or add `LANGSMITH_TRACING=true` to `.env`.
@@ -117,7 +117,8 @@ part of a nested object.
 
 - `langgraph.json` tells the server where the graph is (`src/studio.py:graph`) and loads `.env`.
   `src/studio.py` builds the index if needed, then builds the graph.
-- The dataset is fixed when the server starts. To use Brightwater, start it with
+- The dataset is fixed when the server starts: Larkfield unless you say otherwise. To use
+  Brightwater, start it with
   `DATASET=brightwater langgraph dev` (or set `DATASET` in `.env`); to switch, stop it and start
   it again.
 - While the server runs it holds `qdrant_data/`, so `main.py` and `eval.py` stop with

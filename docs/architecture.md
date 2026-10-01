@@ -146,13 +146,13 @@ the cost.
 
 ## Data
 
-- **Datasets:** `data/<name>/` holds `corpus/` and `questions.json`. `helios` (default) and
-  `brightwater`; pick one with `--dataset <name>` or `DATASET`. See [`datasets.md`](datasets.md).
+- **Datasets:** `data/<name>/` holds `corpus/` and `questions.json`. `larkfield` (default),
+  `helios` and `brightwater`; pick one with `--dataset <name>` or `DATASET`. See [`datasets.md`](datasets.md).
 - **Documents:** `data/<name>/corpus/Dxx_name.md`, markdown with frontmatter
   `id, title, source, date, topic, supersedes`. `date` is the day the document was created and is
   shown next to the document everywhere. `supersedes` names the document this one replaces. See
   [`corpus.md`](corpus.md).
-- **Qdrant collection** `<name>_docs` (`helios_docs`, `brightwater_docs`): one point per document. Vector: 384 numbers, cosine.
+- **Qdrant collection** `<name>_docs` (`larkfield_docs`, `helios_docs`, `brightwater_docs`): one point per document. Vector: 384 numbers, cosine.
   Payload: the text and the frontmatter. Qdrant is only used for the search; the related
   documents are taken from the corpus in memory.
 - **`qdrant_data/<name>_docs.sha256`:** hash of the dataset's corpus files at the last index build. If a
@@ -214,6 +214,6 @@ The OpenRouter key is read from `LLM_API_OR`.
 - **Unit tests** (`python -m pytest`, free, no model calls): the rules in `reconcile`, reading the
   LLM's comparison, the "replaces" chains, finding citations, the dates in the output, and the
   corpus checks. They use the real corpus.
-- **Eval** (`python eval.py`, live, about $0.011): all 34 questions through the full pipeline,
+- **Eval** (`python eval.py --dataset helios`, live, about $0.011): all 34 questions through the full pipeline,
   checking the `dispute` and `no_answer` flags and the linked documents, and, for questions with
   one answer, an LLM grader that compares the answer with a reference answer written by hand. See [`evaluation.md`](evaluation.md).

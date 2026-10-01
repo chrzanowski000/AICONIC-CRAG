@@ -88,6 +88,12 @@ every round is in the git log.
   `rag-conflicts-larkfield-b7ad4fdf`, all 8 checks scored 1 on all 20); outputs read by hand.
   One earlier try stopped at Q2 on an OpenRouter rate limit; `LLM_MAX_RETRIES=5` got through. Merged
   into `main` (2026-10-01); `pytest` 43 passed there.
+- **Larkfield is the default dataset** (2026-10-01): `DATASET` now defaults to `larkfield`
+  (`config.py`). Helios needs `--dataset helios` (or `DATASET=helios`). The unit tests still use
+  Helios (`tests/conftest.py`). Docs updated: every place that named the default, and every Helios
+  example command now has `--dataset helios`. CLAUDE.md: the "run the eval twice" rule now says
+  on each dataset a change touches. Checked: `config` shows `larkfield`; `index` and `search` use
+  `larkfield_docs`; `--dataset helios index` still works; `pytest` 43 passed. No model calls.
 
 ## Next steps
 

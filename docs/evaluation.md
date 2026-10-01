@@ -1,13 +1,13 @@
 # Evaluation
 
-`python eval.py` runs every question of the dataset (`data/helios/questions.json` by default)
+`python eval.py` runs every question of the dataset (`data/larkfield/questions.json` by default)
 through the full pipeline and checks the result. It needs no LangSmith account. It prints one PASS/FAIL line per question, a summary, and
 the tokens and cost. It exits with code 1 if any question fails, so it can be used in a script.
 
 ```bash
-python eval.py                        # Helios, 34 questions
+python eval.py                        # Larkfield Motors, 20 questions (the default)
+python eval.py --dataset helios       # Helios Dynamics, 34 questions
 python eval.py --dataset brightwater  # Brightwater Ferries, 26 questions
-python eval.py --dataset larkfield    # Larkfield Motors, 20 questions
 ```
 
 This page describes the Helios questions. The Brightwater and Larkfield questions use the same
@@ -18,8 +18,8 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 ## The questions
 
-34 questions. Q1–Q5 are the demo questions (`python main.py demo`); the rest are extra checks
-(`python main.py demo --all` runs all of them without the checks). The `note` field in
+34 questions. Q1–Q5 are the demo questions (`python main.py --dataset helios demo`); the rest are
+extra checks (`python main.py --dataset helios demo --all` runs all of them without the checks). The `note` field in
 `data/helios/questions.json` says what each question tests.
 
 | id | question | tests | expected |
@@ -178,7 +178,7 @@ The unit tests cover the plain-code rules. What the LLM says can only be checked
 
 ## Results (2026-09-30, on `main`)
 
-`python eval.py`: **34/34 PASS**. The flags were right for all 34 (22 one answer, 7 disputes, 5
+`python eval.py --dataset helios`: **34/34 PASS**. The flags were right for all 34 (22 one answer, 7 disputes, 5
 no answer), and every output was also read by hand against the documents. `python -m pytest`: 40
 unit tests pass.
 

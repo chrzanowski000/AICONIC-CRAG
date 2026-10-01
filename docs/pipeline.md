@@ -260,7 +260,7 @@ creation dates and scores, so a badly tuned cutoff is easy to spot.
 
 ## Three worked examples
 
-These are real outputs of `python main.py ask` (2026-09-30), copied as printed: first the result,
+These are real outputs of `python main.py --dataset helios ask` (2026-09-30), copied as printed: first the result,
 then the trace of every step (shown while `SHOW_SCORES=true`).
 
 ### "How many days per week can employees work remotely?" → answered, with outdated note

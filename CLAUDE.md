@@ -14,9 +14,9 @@
 
 ## What this project is
 
-A small RAG system over made-up company documents. There are three separate datasets: Helios
-Dynamics (40 documents, the default), Brightwater Ferries (30 documents) and Larkfield Motors (28
-documents, a factory: advice for people on the production line). Some documents contradict each
+A small RAG system over made-up company documents. There are three separate datasets: Larkfield
+Motors (28 documents, the default; a factory: advice for people on the production line), Helios
+Dynamics (40 documents) and Brightwater Ferries (30 documents). Some documents contradict each
 other. Some are old and replaced by newer ones.
 
 The system must:
@@ -66,7 +66,7 @@ python main.py index [--reindex] # build or refresh the Qdrant collection
 python main.py search "<q>"      # retrieval smoke test, no LLM
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: all 34)
+python main.py demo [--all]      # run the 5 demo questions (--all: every question)
 python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmith eval if tracing is on
 python main.py --dataset brightwater ask "<q>"   # any command on another dataset (or DATASET= in .env)
 python eval.py --dataset brightwater
@@ -104,9 +104,10 @@ STATUS.md          what is done, what is next, known issues, money spent
 - Keep the budget in mind: about $4 of OpenRouter credit. Print token use and cost per run.
   The running total is kept in `.spend.json` (not committed); copy it into `STATUS.md`.
 - After changing a document, a prompt, a threshold or the model: run `python eval.py` twice
+  on each dataset it touches (`--dataset <name>`; a prompt, threshold or model touches all three)
   (the LLM can answer differently from run to run); both runs must pass.
 - Documents: `data/<name>/corpus/Dxx_name.md` with frontmatter `id, title, source, date, topic, supersedes`.
-- A dataset is chosen with `--dataset <name>` or `DATASET` (default `helios`). Each dataset has its
+- A dataset is chosen with `--dataset <name>` or `DATASET` (default `larkfield`). Each dataset has its
   own Qdrant collection (`<name>_docs`) and LangSmith dataset (`rag-conflicts-<name>-<fingerprint>`).
   Nothing in `src/` may know about a company. See `docs/datasets.md`.
 

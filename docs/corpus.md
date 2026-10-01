@@ -1,7 +1,7 @@
 # The documents
 
 40 short made-up documents about Helios Dynamics, a small drone maker in Tallinn: the `helios`
-dataset, the default. They live in `data/helios/corpus/`, one markdown file each, 137 to 167
+dataset. They live in `data/helios/corpus/`, one markdown file each, 137 to 167
 words. The other datasets, Brightwater Ferries and Larkfield Motors, are described in
 [`datasets.md`](datasets.md).
 
@@ -118,7 +118,8 @@ on adoption, splitting and pay (Q11, Q13, Q14) and disagree on the number of wee
 
 ## Editing the documents
 
-Change a file, then run `index`, `search`, `ask`, `demo` or `eval.py`. The corpus hash in
+Change a file, then run `index`, `search`, `ask`, `demo` or `eval.py` with `--dataset helios`. The
+corpus hash in
 `qdrant_data/helios_docs.sha256` no longer matches, so the index is rebuilt first. Keep the rules
 above, or the questions in `data/helios/questions.json` may no longer give the expected results. Run
-`python eval.py` twice after any change to a document.
+`python eval.py --dataset helios` twice after any change to a document.

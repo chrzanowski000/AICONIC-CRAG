@@ -5,9 +5,9 @@ in `data/` with its own documents and its own questions. There are three:
 
 | name | company | documents | questions | list of documents and cases |
 |---|---|---:|---:|---|
-| `helios` (default) | Helios Dynamics, a drone maker in Tallinn | 40 | 34 | [`corpus.md`](corpus.md) |
+| `helios` | Helios Dynamics, a drone maker in Tallinn | 40 | 34 | [`corpus.md`](corpus.md) |
 | `brightwater` | Brightwater Ferries, a ferry company in Port Alder | 30 | 26 | below |
-| `larkfield` | Larkfield Motors, a factory in Brennmoor that builds e-bike motors | 28 | 20 | below |
+| `larkfield` (default) | Larkfield Motors, a factory in Brennmoor that builds e-bike motors | 28 | 20 | below |
 
 They never mix. Each dataset has its own folder, its own Qdrant collection and its own
 LangSmith dataset:
@@ -87,7 +87,7 @@ This shows the dataset (`DATASET`), the folder (`CORPUS_DIR`), the Qdrant collec
   dataset's documents changes. Switching never rebuilds or touches the other dataset.
 - **LangSmith.** `LANGSMITH_TRACING=true python eval.py --dataset brightwater` uses
   `rag-conflicts-brightwater-<fingerprint>`; without the flag it uses
-  `rag-conflicts-helios-<fingerprint>`. The first run creates the LangSmith dataset from
+  `rag-conflicts-larkfield-<fingerprint>`. The first run creates the LangSmith dataset from
   `data/<name>/questions.json`; later runs reuse it until the questions change. In the LangSmith
   UI, pick the dataset to see its experiments and compare them. Every trace carries `dataset` in
   its metadata, so traces of `ask` and `demo` can be filtered by dataset in the project

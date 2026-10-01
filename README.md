@@ -1,9 +1,9 @@
 # Helios RAG: answers that admit what they don't know
 
 A small question-answering demo over made-up company documents. Some documents disagree. Some
-are old and replaced by newer ones. There are three separate datasets: Helios Dynamics, a drone
-maker (40 documents, the default), Brightwater Ferries, a ferry company (30 documents), and
-Larkfield Motors, a factory where the system advises people on the production line (28
+are old and replaced by newer ones. There are three separate datasets: Larkfield Motors, a
+factory where the system advises people on the production line (28 documents, the default),
+Helios Dynamics, a drone maker (40 documents), and Brightwater Ferries, a ferry company (30
 documents).
 
 The system:
@@ -19,8 +19,10 @@ win. A newer date never does.
 
 ## What it looks like
 
+These examples use the Helios dataset (`--dataset helios`).
+
 ```
-$ python main.py ask "How many weeks of paid parental leave does Helios Dynamics offer?"
+$ python main.py --dataset helios ask "How many weeks of paid parental leave does Helios Dynamics offer?"
 STATUS: DISPUTED
 Question: How many weeks of paid parental leave does Helios Dynamics offer?
 The sources disagree. Both versions:
@@ -30,7 +32,7 @@ What differs:
   - [D03] (created 2025-01-10) vs [D04] (created 2025-02-20): D03 says 16 weeks, D04 says 12 weeks.
 Neither document is marked as replacing the other; a newer date alone does not settle it.
 
-$ python main.py ask "How many days per week can employees work remotely?"
+$ python main.py --dataset helios ask "How many days per week can employees work remotely?"
 STATUS: ANSWERED
 Question: How many days per week can employees work remotely?
 Employees may work remotely up to three days per week. [D02]
@@ -40,7 +42,7 @@ Outdated:
   - [D01] (created 2024-03-01) said: "Employees may work remotely up to two days per week." It is
     replaced by [D02] (created 2025-06-15).
 
-$ python main.py ask "What is the policy on bringing pets to the office?"
+$ python main.py --dataset helios ask "What is the policy on bringing pets to the office?"
 STATUS: ABSTAINED
 Question: What is the policy on bringing pets to the office?
 I don't know. The documents do not answer this question. None of the documents found says anything
@@ -129,10 +131,10 @@ python main.py index [--reindex] # build or refresh the Qdrant collection
 python main.py search "<q>"      # retrieval test, no model calls
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
-python main.py demo [--all]      # run the 5 demo questions (--all: all 34)
+python main.py demo [--all]      # run the 5 demo questions (--all: every question)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
-python main.py --dataset brightwater ask "<q>"   # any command on another dataset (or larkfield)
-python eval.py --dataset brightwater             # (or set DATASET=brightwater in .env)
+python main.py --dataset helios ask "<q>"        # any command on another dataset (or brightwater)
+python eval.py --dataset helios                  # (or set DATASET=helios in .env)
 python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
 ```
@@ -147,7 +149,8 @@ its own LangSmith dataset; see [`docs/datasets.md`](docs/datasets.md).
 
 ## Results
 
-`python eval.py` passes all 34 questions on `main` (every output was also read by hand). They
+`python eval.py --dataset helios` passes all 34 questions on `main` (every output was also read by
+hand). They
 cover every case: documents that agree (also in different words), documents that disagree (in
 numbers, in words, and three at once), one document that answers, no document that answers (also
 close to a real topic), replaced documents (also a chain of three), and questions where the two

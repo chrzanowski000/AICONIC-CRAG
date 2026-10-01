@@ -14,9 +14,10 @@
 
 ## What this project is
 
-A small RAG system over made-up company documents. There are two separate datasets: Helios
-Dynamics (40 documents, the default) and Brightwater Ferries (30 documents). Some documents
-contradict each other. Some are old and replaced by newer ones.
+A small RAG system over made-up company documents. There are three separate datasets: Helios
+Dynamics (40 documents, the default), Brightwater Ferries (30 documents) and Larkfield Motors (28
+documents, a factory: advice for people on the production line). Some documents contradict each
+other. Some are old and replaced by newer ones.
 
 The system must:
 - answer with citations when there is one current answer,
@@ -82,7 +83,8 @@ eval.py            evaluation
 langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
 data/<name>/       one dataset: corpus/ (the documents) and questions.json (Q1-Q5 are the demo);
                    helios (40 docs, 34 questions, docs/corpus.md), brightwater (30 docs, 26
-                   questions, docs/datasets.md)
+                   questions, docs/datasets.md), larkfield (28 docs, 20 questions,
+                   docs/datasets.md)
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,
                    studio (Studio entry point)
 tests/             unit tests: graph rules, citations, dates in the output, corpus checks (pytest)

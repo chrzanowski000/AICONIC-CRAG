@@ -1,8 +1,10 @@
 # Helios RAG: answers that admit what they don't know
 
 A small question-answering demo over made-up company documents. Some documents disagree. Some
-are old and replaced by newer ones. There are two separate datasets: Helios Dynamics, a drone
-maker (40 documents, the default), and Brightwater Ferries, a ferry company (30 documents).
+are old and replaced by newer ones. There are three separate datasets: Helios Dynamics, a drone
+maker (40 documents, the default), Brightwater Ferries, a ferry company (30 documents), and
+Larkfield Motors, a factory where the system advises people on the production line (28
+documents).
 
 The system:
 
@@ -116,8 +118,8 @@ cp .env.example .env          # put your OpenRouter key in LLM_API_OR
 python main.py index          # downloads the embedding model once (65 MB), builds the index
 ```
 
-Details and troubleshooting: [`docs/setup.md`](docs/setup.md). To switch to the Brightwater
-dataset, see [`docs/datasets.md`](docs/datasets.md#switching).
+Details and troubleshooting: [`docs/setup.md`](docs/setup.md). To switch to another dataset,
+see [`docs/datasets.md`](docs/datasets.md#switching).
 
 ## Commands
 
@@ -129,7 +131,7 @@ python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: all 34)
 python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
-python main.py --dataset brightwater ask "<q>"   # any command on the other dataset
+python main.py --dataset brightwater ask "<q>"   # any command on another dataset (or larkfield)
 python eval.py --dataset brightwater             # (or set DATASET=brightwater in .env)
 python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
@@ -155,8 +157,10 @@ sides of a dispute agree on the point asked.
   flags and the linked documents.
 - One-answer questions are also checked by an LLM grader against a reference answer written by
   hand.
-- A full eval costs about $0.011. The 40 unit tests (`python -m pytest`) check the plain-code
-  rules for free.
+- A full eval costs about $0.011. The unit tests (`python -m pytest`) check the plain-code rules
+  for free.
+- The other datasets pass the same checks: Brightwater 26/26 and Larkfield 20/20, both two runs
+  in a row.
 
 See [`docs/evaluation.md`](docs/evaluation.md).
 
@@ -171,7 +175,7 @@ To understand the system, read `docs/architecture.md` first (the parts and who d
 | [`docs/pipeline.md`](docs/pipeline.md) | how the cases are told apart, the state, every step in detail, real traces, known limits |
 | [`docs/decisions.md`](docs/decisions.md) | every design decision with its reason |
 | [`docs/corpus.md`](docs/corpus.md) | the 40 Helios documents, which case each one tests, and the rules they follow |
-| [`docs/datasets.md`](docs/datasets.md) | the two datasets, how to switch (CLI, `.env`, LangSmith, Studio), how to add one, the 30 Brightwater documents |
+| [`docs/datasets.md`](docs/datasets.md) | the three datasets, how to switch (CLI, `.env`, LangSmith, Studio), how to add one, the 30 Brightwater and 28 Larkfield documents |
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
 | [`docs/setup.md`](docs/setup.md) | install, first run, choosing the dataset, settings, LangSmith, Studio, server mode, problems |
 | [`docs/research.md`](docs/research.md) | published work behind the design |

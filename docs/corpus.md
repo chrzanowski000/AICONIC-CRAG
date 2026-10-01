@@ -2,7 +2,8 @@
 
 40 short made-up documents about Helios Dynamics, a small drone maker in Tallinn: the `helios`
 dataset, the default. They live in `data/helios/corpus/`, one markdown file each, 137 to 167
-words. The second dataset, Brightwater Ferries, is described in [`datasets.md`](datasets.md).
+words. The other datasets, Brightwater Ferries and Larkfield Motors, are described in
+[`datasets.md`](datasets.md).
 
 ## Format
 

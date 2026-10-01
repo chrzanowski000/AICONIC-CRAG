@@ -44,8 +44,8 @@ time, and `Reused ...` after that. It rebuilds by itself when a document changes
 
 ## Choosing the dataset
 
-There are two datasets: `helios` (the default) and `brightwater`. Pick one for one command with
-the flag (in `main.py` it goes before the command), or for every command in `.env`:
+There are three datasets: `helios` (the default), `brightwater` and `larkfield`. Pick one for one
+command with the flag (in `main.py` it goes before the command), or for every command in `.env`:
 
 ```bash
 python main.py --dataset brightwater ask "Can I bring my dog on the ferry?"

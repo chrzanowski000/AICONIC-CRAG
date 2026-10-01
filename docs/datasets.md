@@ -1,31 +1,32 @@
 # Datasets
 
 The same pipeline can run over different sets of documents. Each set is a **dataset**: one folder
-in `data/` with its own documents and its own questions. There are two:
+in `data/` with its own documents and its own questions. There are three:
 
 | name | company | documents | questions | list of documents and cases |
 |---|---|---:|---:|---|
 | `helios` (default) | Helios Dynamics, a drone maker in Tallinn | 40 | 34 | [`corpus.md`](corpus.md) |
 | `brightwater` | Brightwater Ferries, a ferry company in Port Alder | 30 | 26 | below |
+| `larkfield` | Larkfield Motors, a factory in Brennmoor that builds e-bike motors | 28 | 20 | below |
 
-The two never mix. Each dataset has its own folder, its own Qdrant collection and its own
+They never mix. Each dataset has its own folder, its own Qdrant collection and its own
 LangSmith dataset:
 
-| | `helios` | `brightwater` |
-|---|---|---|
-| documents | `data/helios/corpus/` | `data/brightwater/corpus/` |
-| questions | `data/helios/questions.json` | `data/brightwater/questions.json` |
-| Qdrant collection | `helios_docs` | `brightwater_docs` |
-| index hash | `qdrant_data/helios_docs.sha256` | `qdrant_data/brightwater_docs.sha256` |
-| LangSmith dataset | `rag-conflicts-helios-<fingerprint>` | `rag-conflicts-brightwater-<fingerprint>` |
-| LangSmith experiments | `rag-conflicts-helios-...` | `rag-conflicts-brightwater-...` |
+| | `helios` | `brightwater` | `larkfield` |
+|---|---|---|---|
+| documents | `data/helios/corpus/` | `data/brightwater/corpus/` | `data/larkfield/corpus/` |
+| questions | `data/helios/questions.json` | `data/brightwater/questions.json` | `data/larkfield/questions.json` |
+| Qdrant collection | `helios_docs` | `brightwater_docs` | `larkfield_docs` |
+| index hash | `qdrant_data/helios_docs.sha256` | `qdrant_data/brightwater_docs.sha256` | `qdrant_data/larkfield_docs.sha256` |
+| LangSmith dataset | `rag-conflicts-helios-<fingerprint>` | `rag-conflicts-brightwater-<fingerprint>` | `rag-conflicts-larkfield-<fingerprint>` |
+| LangSmith experiments | `rag-conflicts-helios-...` | `rag-conflicts-brightwater-...` | `rag-conflicts-larkfield-...` |
 
 The prompts, the rules, the thresholds and the model are the same for every dataset. Nothing in
 the code knows about a company.
 
 ## Switching
 
-Switching can't mix the two datasets up: each one has its own documents, questions, Qdrant
+Switching can't mix the datasets up: each one has its own documents, questions, Qdrant
 collection and LangSmith dataset. The one thing to watch is that only one program can use
 `qdrant_data/` at a time.
 
@@ -116,7 +117,7 @@ on the server. More in [`setup.md`](setup.md#qdrant-server-mode-optional).
    `python eval.py --dataset <name>` twice.
 
 The score cutoff (0.58) and margin (0.10) were chosen on Helios. They worked unchanged for
-Brightwater; a new dataset may need a check with `search`.
+Brightwater and Larkfield; a new dataset may need a check with `search`.
 
 ## The Brightwater Ferries documents
 
@@ -174,3 +175,63 @@ overtime rate (Q4) and agree that the shift captain approves overtime (Q13); D11
 on the refund deadline (Q3, Q20) and agree that refunds go back to the card (Q12). In disputes A
 and B the newer document is on purpose not the "official" one (a council FAQ against the HR
 Handbook, a desk wiki against the Passenger Terms).
+
+## The Larkfield Motors documents
+
+28 made-up documents about Larkfield Motors, a factory in Brennmoor that builds electric motors
+for e-bikes. Here the system advises people on the production line: torque values, oven settings,
+breaks, quality tests, forklifts, safety rules and what to do when a machine stops. 83 to 169
+words each. They follow the same rules as the other datasets: the documents of a dispute never
+mention each other and have no `supersedes` link, a replaced document is named in the text and in
+`supersedes`, and apart from the planned disputes no two documents give different values for the
+same thing.
+
+| id | title | source | date | topic | supersedes | key fact | role |
+|---|---|---|---|---|---|---|---|
+| D01 | Torque Settings for the Motor Housing (v1) | Engineering Work Instructions | 2024-03-04 | housing-torque | – | M6 housing bolts 9 Nm | old |
+| D02 | Torque Settings for the Motor Housing (v2) | Engineering Work Instructions | 2025-02-10 | housing-torque | D01 | M6 housing bolts 10 Nm | replaces D01 |
+| D03 | Line 2 Output Targets (2023) | Production Planning | 2023-01-09 | line2-output | – | 40 motors per hour | old (chain) |
+| D04 | Line 2 Output Targets (2024) | Production Planning | 2024-01-08 | line2-output | D03 | 45 motors per hour | replaces D03, replaced by D05 |
+| D05 | Line 2 Output Targets (2025) | Production Planning | 2025-01-06 | line2-output | D04 | 48 motors per hour | newest of the chain |
+| D06 | Curing Oven Settings (v1) | Engineering Work Instructions | 2024-05-06 | curing-oven | – | 160 °C, 30 minutes | old |
+| D07 | Curing Oven Settings (v2) | Engineering Work Instructions | 2025-04-14 | curing-oven | D06 | 160 °C, 25 minutes | replaces D06 |
+| D08 | Curing Oven Quick Card | Line notice board | 2025-05-02 | curing-oven | – | 160 °C, 25 minutes | agree (with D07) |
+| D09 | Shift Rules | HR Handbook | 2025-01-15 | breaks | – | 30-minute meal break; the team leader sets the break rota | dispute A |
+| D10 | Works Council FAQ: Breaks | Works Council wiki | 2025-04-02 | breaks | – | 45-minute meal break; the team leader sets the break rota | dispute A |
+| D11 | Quality Plan: Final Test | Quality Manual | 2025-02-03 | final-test | – | full test on 1 motor in 50; a failed motor gets a red tag and goes to the quarantine cage | dispute B |
+| D12 | Test Bench Wiki: Full Test | Test team wiki | 2025-06-20 | final-test | – | full test on 1 motor in 100; red tag, quarantine cage | dispute B |
+| D13 | Site Traffic Rules | EHS Manual | 2025-01-10 | forklifts | – | forklifts at most 10 km/h in the hall | dispute C (three docs) |
+| D14 | Forklift Driver Card | Logistics | 2025-03-05 | forklifts | – | 8 km/h | dispute C (three docs) |
+| D15 | Logistics Channel Digest | #logistics Slack digest | 2025-06-30 | forklifts | – | 6 km/h | dispute C (three docs) |
+| D16 | PPE Rules | EHS Manual | 2025-02-01 | safety-glasses | – | safety glasses at all times, at every station | dispute D (in words) |
+| D17 | Line 1 Team Brief, May 2025 | Line 1 team brief | 2025-05-12 | safety-glasses | – | glasses only at the press and grinding stations; optional at the assembly benches | dispute D (in words) |
+| D18 | Lockout Procedure | EHS Manual | 2025-01-20 | lockout | – | emergency stop, own red padlock on the main switch, test that it does not start | agree |
+| D19 | Press Station Work Instruction | Engineering Work Instructions | 2025-03-03 | lockout | – | the same steps before clearing a jam in the press | agree |
+| D20 | Noise Map 2025 | EHS | 2025-02-20 | hearing | – | Hall B, the stamping hall: hearing protection required | agree (three docs, different words) |
+| D21 | Safety Card for New Starters | EHS | 2025-03-10 | hearing | – | ear protection in the stamping hall | agree (three docs, different words) |
+| D22 | Induction Checklist | HR Onboarding | 2024-11-18 | hearing | – | Hall B (stamping): ear protection is a must | agree (three docs, different words) |
+| D23 | Reporting a Machine Breakdown | Maintenance | 2025-01-08 | breakdowns | – | andon button, call maintenance on 4400 | one answer |
+| D24 | Fire Alarm and Muster Point | EHS | 2024-10-01 | fire | – | muster point in Car Park C | one answer |
+| D25 | Scrap Reporting | Quality Manual | 2025-03-20 | scrap | – | scrap log, coloured bins; nothing about a bonus | near a "no answer" question |
+| D26 | Calling in Sick | HR Handbook | 2025-01-15 | sickness | – | call the supervisor 1 h before; no number of sick days | near a "no answer" question |
+| D27 | Company Overview | Comms | 2024-06-01 | company | – | founded 2006, about 350 people | filler |
+| D28 | Canteen and Lockers | Facilities | 2025-02-25 | facilities | – | canteen, lockers, showers; no gym | near a "no answer" question |
+
+### The cases
+
+| case | documents | questions | expected outcome |
+|---|---|---|---|
+| documents agree | D07 + D08 (time in the oven); D18 + D19 (lockout); D20 + D21 + D22 (hearing protection, in different words); D09 + D10 (who sets the breaks); D11 + D12 (what happens to a failed motor) | Q7, Q11, Q12, Q13, Q14 | answered, citing every agreeing document |
+| documents disagree | D09 vs D10; D11 vs D12; D13 vs D14 vs D15 (three documents); D16 vs D17 (in words, a safety rule) | Q3, Q4, Q9, Q10, Q17 (reworded) | disputed: every version with its date, what differs, no answer |
+| one document answers | D23, D24 | Q1, Q15, Q16 (reworded) | answered from that document |
+| no document answers | nothing about a gym, a number of paid sick days, a scrap bonus, or football | Q5, Q18, Q19, Q20 | abstained; Q20 is stopped at the search |
+| a document replaced by a newer one | D01 → D02; D06 → D07 (also with the same value, Q8); D03 → D04 → D05 (a chain of three) | Q2, Q6, Q7, Q8 | answered from the newest, with an "outdated" note for each older one |
+
+The split by outcome (the LangSmith split): 11 `one_answer`, 5 `dispute`, 4 `no_answer`.
+
+As in the other datasets, the two sides of a dispute agree on other points: D09 and D10 disagree
+on the length of the meal break (Q3) and agree that the team leader sets the break rota (Q11);
+D11 and D12 disagree on how often a motor gets the full test (Q9) and agree on what happens to a
+motor that fails it (Q12). In disputes A and B the newer document is on purpose not the
+"official" one (a works council FAQ against the HR Handbook, a team wiki against the Quality
+Manual). Dispute D is about a safety rule, where picking one side quietly would be most harmful.

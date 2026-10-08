@@ -5,7 +5,7 @@ in `data/` with its own documents and its own questions. There are three:
 
 | name | company | documents | questions | list of documents and cases |
 |---|---|---:|---:|---|
-| `helios` | Helios Dynamics, a drone maker in Tallinn | 40 | 34 | [`corpus.md`](corpus.md) |
+| `helios` | Helios Dynamics, a drone maker in Tallinn | 40 | 35 | [`corpus.md`](corpus.md) |
 | `brightwater` | Brightwater Ferries, a ferry company in Port Alder | 30 | 26 | below |
 | `larkfield` (default) | Larkfield Motors, a factory in Brennmoor that builds e-bike motors | 28 | 20 | below |
 

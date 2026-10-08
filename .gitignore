@@ -11,8 +11,6 @@ models/
 # Secrets
 .env
 
-# Running total of money spent
-
 # Local state of `langgraph dev`
 .langgraph_api/
 

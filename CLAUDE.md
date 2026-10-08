@@ -45,15 +45,19 @@ It is judged on one thing: it must work. Simple and working beats pretty.
 
 - Retrieval: vector search (cutoff `SCORE_THRESHOLD` 0.58, and at most `SCORE_MARGIN` 0.10 below
   the best hit), then every doc with the same `topic` is added (a doc and the doc it
-  `supersedes` always share a topic, so both ends of a link come in).
+  `supersedes` always share a topic, so both ends of a link come in). Topics go in whole, best
+  hit first, up to `MAX_CONTEXT_DOCS` (10); a topic that would go over is left out with its hits,
+  so a topic is never split.
 - The LLM extracts claims: a claim holds only the part of a doc that answers the question.
 - The LLM compares: is each claim relevant, and for each pair of documents that are not
   replaced, do the claims give the same answer, a different one, or are they unrelated? If different, it says
   what differs ("D03 says 16 weeks, D04 says 12 weeks"). It never decides who is right.
 - The answer is written from the claims; a second LLM call checks it for facts no claim states
-  and for values the docs give differently (one more try, then a note).
+  and for values the docs give differently (one more try, then a note; if the answer cites no
+  allowed doc, the result is "I don't know" with the closest docs).
 - Python rules apply `supersedes` links, keep the disputes between current docs, and pick the
-  route. There is only one model, and no regex number parser.
+  route. A newer doc answers only if the LLM found it relevant; if only a replaced doc answers,
+  the result is "I don't know" with the outdated note. There is only one model, and no regex number parser.
 - The dispute report and the "outdated" note are rendered by code, not by a model.
 
 The big picture: `docs/architecture.md`. Every step with real traces: `docs/pipeline.md`.
@@ -67,12 +71,15 @@ python main.py search "<q>"      # retrieval smoke test, no LLM
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: every question)
-python eval.py                   # local PASS/FAIL, exit 1 on FAIL; also LangSmith eval if tracing is on
+python eval.py                   # local PASS/FAIL, exit 1 on FAIL or error; also LangSmith eval if tracing is on
 python main.py --dataset brightwater ask "<q>"   # any command on another dataset (or DATASET= in .env)
 python eval.py --dataset brightwater
 python -m pytest                 # unit tests, no model calls (needs requirements-dev.txt)
 langgraph dev                    # LangGraph Studio server on 127.0.0.1:2024 (needs requirements-dev.txt)
 ```
+
+`main.py` prints a one-line `ERROR (...)` and exits 2 on a known error (a locked Qdrant
+folder, a bad corpus, an OpenRouter error, an LLM reply that cannot be read).
 
 ## Layout
 
@@ -87,10 +94,11 @@ data/<name>/       one dataset: corpus/ (the documents) and questions.json (Q1-Q
                    docs/datasets.md)
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,
                    studio (Studio entry point)
-tests/             unit tests: graph rules, citations, dates in the output, corpus checks (pytest)
+tests/             unit tests (pytest, no model calls): graph rules, citations, dates in the output,
+                   retrieval cutoff and cap, eval checks, LLM retry, corpus checks (they use Helios)
 docs/              documentation of the repo (architecture, pipeline, decisions, corpus, datasets,
                    evaluation, setup, research, models)
-STATUS.md          what is done, what is next, known issues, money spent
+STATUS.md          what is done, what is next, known issues
 ```
 
 ## Conventions

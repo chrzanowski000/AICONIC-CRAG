@@ -10,8 +10,9 @@ a factory where the system advises people on the production line (28 documents, 
 - **One current answer** → answers, citing every document that gives it.
 - **Documents disagree** → shows **every** version with its creation date and what differs. It
   never picks one.
-- **An old document is replaced** → answers from the newer one and still shows the old one as
-  "outdated".
+- **An old document is replaced** → answers from the newer one and shows the old one as
+  "outdated". If only the old one answers, it says "I don't know" and still shows the outdated
+  note.
 - **Nothing answers** → says "I don't know" and lists the closest documents.
 
 The main rule: only an explicit `supersedes` link in the document metadata can make one source
@@ -25,11 +26,11 @@ A LangGraph state graph. Blue = an LLM call, green = plain Python, grey = local 
 
 | node | what it does | done by |
 |---|---|---|
-| `retrieve` | vector search (score ≥ 0.58, at most 0.10 below the best hit), then every document with the same topic, so both sides of a dispute are always seen | local embeddings + Qdrant |
+| `retrieve` | vector search (score ≥ 0.58, at most 0.10 below the best hit), then every document with the same topic, so both sides of a dispute are seen. Topics go in whole, best hit first, up to 10 documents; a topic is never split | local embeddings + Qdrant |
 | `extract_claims` | one short claim per document: only the part that answers the question | LLM |
 | `compare` | which claims answer the question; for each pair of current documents: same, different or unrelated, and what differs | LLM |
 | `reconcile` | applies `supersedes` links, keeps the disputes between current documents, picks the route | Python |
-| `answer` | a cited answer written from the claims; a second LLM call checks it | LLM |
+| `answer` | a cited answer written from the claims; a second LLM call checks it (one retry; if it still cites no allowed document: "I don't know") | LLM |
 | `conflict_report` | every version with its creation date, and what differs | Python |
 | `abstain` | "I don't know", with the closest documents | Python |
 
@@ -46,7 +47,7 @@ the expected output from `data/larkfield/questions.json`; the output is from a r
 | question | reference (expected) | output |
 |---|---|---|
 | Who do I call when a machine on my line breaks down? | **answered**: Call maintenance on extension 4400 [D23]. | **ANSWERED**: Call maintenance on extension 4400. [D23] |
-| What torque should I use for the M6 motor housing bolts? | **answered**: 10 Nm [D02].<br>outdated: D01 → D02 | **ANSWERED**: Tighten the M6 motor housing bolts to 10 Nm. [D02]<br>Outdated: [D01] (created 2024-03-04) said 9 Nm; replaced by [D02] (created 2025-02-10). |
+| What torque should I use for the M6 motor housing bolts? | **answered**: 10 Nm [D02].<br>outdated: D01 → D02 | **ANSWERED**: Tighten the M6 motor housing bolts to 10 Nm. [D02]<br>Outdated: [D01] (created 2024-03-04) said: "… 9 Nm …" It is replaced by [D02] (created 2025-02-10). |
 | How long is the meal break on an 8-hour shift? | **disputed**: D09, D10 | **DISPUTED**: [D10] Works Council wiki (created 2025-04-02): 45 minutes · [D09] HR Handbook (created 2025-01-15): 30 minutes |
 | Do I have to wear safety glasses everywhere on the shop floor? | **disputed**: D16, D17 | **DISPUTED**: [D16] EHS Manual (created 2025-02-01): at all times, at every station · [D17] Line 1 team brief (created 2025-05-12): only at the press and grinding stations, optional at the assembly benches |
 | Does the plant have a gym for employees? | **abstained** (no answer) | **ABSTAINED**: I don't know. Closest documents: D28, D09, D22 |
@@ -91,15 +92,18 @@ python main.py search "<q>"      # retrieval test, no model calls
 python main.py llm-test          # one structured-output call through OpenRouter
 python main.py ask "<q>"         # run the full pipeline on one question
 python main.py demo [--all]      # run the 5 demo questions (--all: every question)
-python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL
+python eval.py                   # PASS/FAIL for all questions; exit code 1 on any FAIL or error
 python main.py --dataset helios ask "<q>"        # any command on another dataset (or brightwater)
 LANGSMITH_TRACING=true python eval.py --langsmith-dataset <name>   # experiment on a LangSmith dataset
 python -m pytest                 # unit tests, no model calls (pip install -r requirements-dev.txt)
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
 ```
 
-Every setting lives in `config.py` and can be changed in `.env` or the shell. LangSmith tracing is optional and off by default
-(`LANGSMITH_TRACING=true` with `LANGSMITH_API_KEY` in `.env`).
+Every setting lives in `config.py` and can be changed in `.env` or the shell, under the same name.
+Two exceptions: the OpenRouter key is read from `LLM_API_OR` (or `OPENROUTER_API_KEY`), and the
+per-dataset values (corpus folder, questions file, collection) all follow `DATASET`. LangSmith
+tracing is optional and off by default (`LANGSMITH_TRACING=true` with `LANGSMITH_API_KEY` in
+`.env`).
 
 ## Evaluation
 
@@ -122,4 +126,4 @@ line up side by side, and each LangSmith dataset is split by outcome (`one_answe
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
 | [`docs/setup.md`](docs/setup.md) | install, settings, LangSmith, Studio, server mode, problems |
 | [`docs/research.md`](docs/research.md), [`docs/models.md`](docs/models.md) | published work behind the design; model choice |
-| [`STATUS.md`](STATUS.md) | what is done, what is next, known issues, money spent |
+| [`STATUS.md`](STATUS.md) | what is done, what is next, known issues |

@@ -46,8 +46,8 @@ every round is in the git log.
   part was not run live. Merged into `main` (2026-09-30).
 - **LangSmith dataset** `rag-conflicts-demo-536567d3` (2026-09-30): all 34 questions from
   `questions.json` with their expected results, split into `one_answer` (22), `dispute` (7) and
-  `no_answer` (5). `LANGSMITH_TRACING=true python eval.py` uses it (the name ends with the
-  fingerprint of `questions.json`). The old dataset `rag-conflicts-demo` (18 questions, old
+  `no_answer` (5). `LANGSMITH_TRACING=true python eval.py` used it then (the name ends with the
+  fingerprint of `questions.json`; the questions have changed since, see below). The old dataset `rag-conflicts-demo` (18 questions, old
   format) was deleted. Checked with a 4-question LangSmith run (Q1, Q3, Q5, Q31, experiment
   `rag-conflicts-smoke-1fb08e69`): all 8 checks scored 1 on each.
 - **Second dataset** (2026-09-30): Helios moved to `data/helios/`
@@ -108,7 +108,11 @@ every round is in the git log.
   `rag-conflicts-helios-3da97895` was made by a stopped run. Checked: `pytest` 46 passed; the new
   checks pass on the 20 saved Larkfield outputs; eval on the new format: Helios 34/34 twice
   (the second with LangSmith), Brightwater 26/26 and Larkfield 20/20 once each (the second run
-  was stopped). Not run yet: experiments on the `_reformated` and small datasets.
+  was stopped). Not run yet: experiments on the `_reformated` and small datasets. Since the
+  2026-10-08 question changes these copies are stale: the Helios copy has the old Q31, so
+  `--langsmith-dataset` refuses it; the Brightwater and Larkfield copies hold the old expected
+  blocks. The next traced run creates new datasets: `rag-conflicts-helios-f24db897`,
+  `rag-conflicts-brightwater-a9c76991` and `rag-conflicts-larkfield-4cc34d10`.
 - **Short README** (2026-10-01, branch `output-format`): 126 lines instead of 186. The pipeline as
   an image (`docs/graph.png`, made from the diagram in `docs/pipeline.md`), a table of the 7 nodes,
   and the 5 `larkfield_small_reformated` questions as question vs reference vs real output (the
@@ -149,10 +153,19 @@ every round is in the git log.
   parts of `docs/models.md` are gone. Nothing else changed.
 - **Merged into `main`** (2026-10-08): `eval-questions`, `fix-pipeline-rules` and
   `remove-cost-tracking`. Checked there: `pytest` 54 passed.
+- **Docs in line with the code** (2026-10-08, branch `docs-refresh`): every doc was checked
+  against the code. The pipeline docs and diagrams (and `docs/graph.png`) now show the "I don't
+  know" from the answer step, the outdated note on "I don't know", the topic-safe cap and the id
+  cleaning. The settings table lists every setting with its default. The eval results, sample
+  output and unit-test list match the 2026-10-08 run (Helios 35/35). Q35, the counts and the
+  LangSmith dataset names are updated. Checked: `pytest` 54 passed; Helios eval 35/35; no broken
+  links.
 
 ## Next steps
 
 1. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
+2. Rebuild or delete the stale `_reformated` LangSmith copies (made before the 2026-10-08
+   question changes).
 
 ## Known issues
 

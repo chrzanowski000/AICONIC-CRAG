@@ -1,7 +1,7 @@
 # The documents
 
 40 short made-up documents about Helios Dynamics, a small drone maker in Tallinn: the `helios`
-dataset. They live in `data/helios/corpus/`, one markdown file each, 137 to 167
+dataset. They live in `data/helios/corpus/`, one markdown file each, 137 to 177
 words. The other datasets, Brightwater Ferries and Larkfield Motors, are described in
 [`datasets.md`](datasets.md).
 
@@ -90,7 +90,8 @@ Every case the system must handle is in the corpus at least twice, and each has 
 | documents agree | D11 + D12 (multi-factor sign-in); D10 + D18 (weight, payload); D21 + D22 (laptops); D38 + D39 (expense deadline); D18 + D30 + D31 (warranty, in different words: "one-year", "12 months") | Q9, Q10, Q12, Q19, Q23, Q28 | answered, citing **every** agreeing document |
 | documents disagree | D03 vs D04; D05 vs D06; D11 vs D12 (in words); D23 vs D24 vs D25 (three documents); D32 vs D33 (in words); D34 vs D35 | Q3, Q4, Q8, Q20, Q24, Q25, Q32 (reworded) | disputed: every version with its date, what differs, no answer |
 | one document answers | D14, D04, D11, D26, D36, D37 | Q1, Q16, Q17, Q21, Q26, Q27, Q33 (reworded) | answered from that document |
-| no document answers | nothing about pets, a gym, a number of paid sick days, or who the CEO is, and an off-topic football question | Q5, Q29, Q30, Q31, Q34, Q35 | abstained ("I don't know"); Q31 is stopped at the search |
+| no document answers | nothing about pets, a gym, a number of paid sick days, or who the CEO is, and an off-topic football question | Q5, Q29, Q30, Q31, Q34 | abstained ("I don't know"); Q31 is stopped at the search |
+| only a replaced document answers | D07 says the office is closed on weekends; D08 replaces it and says nothing about weekends | Q35 | abstained, with the outdated note D07 → D08 |
 | a document replaced by a newer one | D01 → D02; D07 → D08; D09 → D10; D27 → D28 → D29 (a chain of three) | Q2, Q6, Q7, Q9, Q10, Q18, Q22 | answered from the newest, with an "outdated" note for each older one |
 
 The same two documents can agree on one question and disagree on another: D11 and D12 agree that
@@ -115,7 +116,9 @@ on adoption, splitting and pay (Q11, Q13, Q14) and disagree on the number of wee
   paid sick days there are. Those are the "I don't know" questions (Q5, Q29, Q30); Q34 asks for the CEO, whom no
   document names, and Q31 is off topic. Q29 and Q30
   are close to real topics (the commuting benefit, the sick leave policy), so the search finds
-  documents, but none answers.
+  documents, but none answers. Q35 asks if the office is open on weekends: only D07 answers, and
+  D08 replaces it without saying anything about weekends, so the result is "I don't know" with
+  D07's old claim as the outdated note.
 
 ## Editing the documents
 

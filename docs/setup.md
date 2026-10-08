@@ -72,7 +72,10 @@ before you start another command. The full steps (stop, pick, check) are in
 
 Every setting of the app is in `config.py` and can be changed in `.env` or in the shell with the
 same name, for example `SHOW_SCORES=false python main.py ask "..."`. `python main.py config`
-prints them all. The main ones are listed in `architecture.md`.
+prints them all. The main ones are listed in `architecture.md`. Two exceptions to "same name":
+the OpenRouter key is read from `LLM_API_OR` (or `OPENROUTER_API_KEY`), and the corpus folder,
+questions file and Qdrant collection all follow `DATASET`. `LANGSMITH_ENDPOINT` (below) is read
+by the langsmith library itself, not by `config.py`.
 
 ## LangSmith (optional)
 
@@ -172,10 +175,14 @@ once, use server mode.
 **The embedding model does not download.** FastEmbed needs to reach Hugging Face once. After
 that the model is read from `./models`.
 
+**A command stops with `RuntimeError: No OpenRouter key.`** No key is set. Put `LLM_API_OR=...` in
+`.env` (see `.env.example`). This one shows a full traceback, not a one-line `ERROR`.
+
 **A command stops with `ERROR (StructuredOutputError)` or an OpenRouter error.** The LLM reply
 could not be read, or the call failed (bad key, no credit, unknown model id, network). The
 message says which. Check the key with `python main.py llm-test`.
 
 **A command stops with `ERROR (CorpusError)`.** A document in `data/<name>/corpus/` has missing or bad
-frontmatter, a duplicate id, a `supersedes` target that does not exist, or a `supersedes` link
-between two different topics. The message names the file.
+frontmatter, a date that is not `YYYY-MM-DD`, a duplicate id, a `supersedes` target that does not
+exist, a document that replaces itself, or a `supersedes` link between two different topics. The
+folder can also have no `.md` files at all. The message names the file.

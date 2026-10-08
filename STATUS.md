@@ -147,6 +147,8 @@ every round is in the git log.
 - **No cost tracking** (2026-10-08, branch `remove-cost-tracking`): the token and cost line after
   each run, the running total in `.spend.json`, the budget and price settings, and the price
   parts of `docs/models.md` are gone. Nothing else changed.
+- **Merged into `main`** (2026-10-08): `eval-questions`, `fix-pipeline-rules` and
+  `remove-cost-tracking`. Checked there: `pytest` 54 passed.
 
 ## Next steps
 

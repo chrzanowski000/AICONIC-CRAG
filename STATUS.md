@@ -144,6 +144,9 @@ every round is in the git log.
   - Helios Q15's reference keeps only the two key facts; the details are "also fine".
   Checked: `pytest` 54 passed; eval twice on each dataset, all passed (Larkfield 20/20, Helios
   35/35, Brightwater 26/26).
+- **No cost tracking** (2026-10-08, branch `remove-cost-tracking`): the token and cost line after
+  each run, the running total in `.spend.json`, the budget and price settings, and the price
+  parts of `docs/models.md` are gone. Nothing else changed.
 
 ## Next steps
 
@@ -178,23 +181,3 @@ every round is in the git log.
   Brightwater eval runs stopped after the 2, 4, 8 s retries, and one run logged 111 retries.
   `LLM_MAX_RETRIES=5` (waits up to 32 s) got a full run through; one question still failed in its
   LangSmith pass.
-
-## Money spent
-
-| date | what | cost (USD) |
-|---|---|---|
-| 2026-09-29 | two probe calls by hand (Jev, gpt-6-luna) | 0.00004 |
-| 2026-09-29 | all app runs, M1–M5 (from `.spend.json`, 40+ runs) | 0.01809 |
-| 2026-09-29 | dispute check round: app runs (from `.spend.json`) | 0.01392 |
-| 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
-| 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
-| 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32907 |
-| 2026-09-30 | second dataset: Brightwater evals (4 runs, 2 stopped early), Helios demo, llm-test (from `.spend.json`) | 0.02705 |
-| 2026-10-01 | third dataset: Larkfield evals (3 runs, 1 stopped early; one with LangSmith) (from `.spend.json`) | 0.01919 |
-| 2026-10-01 | expected-output format: evals on all three datasets, one Helios run with LangSmith, one stopped run (from `.spend.json`) | 0.05122 |
-| 2026-10-08 | full review: eval on all three datasets, eval-question fixes (8 more eval runs), Q10 probes, llm-test (from `.spend.json`) | 0.12147 |
-| 2026-10-08 | pipeline rules: eval twice on all three datasets, Helios Q15/Q35 runs, probes (from `.spend.json`) | 0.11595 |
-| **total** | | **0.72456** |
-
-Budget: $4.00. Left: about $3.28.

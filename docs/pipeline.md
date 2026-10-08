@@ -343,7 +343,7 @@ The search cannot tell "remote work policy" from "pets policy" well (both are of
 two documents pass the score gate. The claim step finds nothing about pets in either (`None`), so
 there is nothing to compare (`relevant: -`), and Python routes to "I don't know". A question that
 is clearly off (for example "Who won the football match last night?", best score 0.469, under the
-cutoff 0.58; eval question Q31) is stopped at the search and costs nothing.
+cutoff 0.58; eval question Q31) is stopped at the search and makes no model call.
 
 ## Why it "admits it doesn't know"
 
@@ -371,7 +371,7 @@ cutoff 0.58; eval question Q31) is stopped at the search and costs nothing.
 
 The open items are tracked in `STATUS.md`.
 
-## Tracing and cost
+## Tracing
 
 Every step and every LLM call are sent to LangSmith when `LANGSMITH_TRACING=true` (off by
 default; see `setup.md`). With tracing off, nothing is sent and nothing changes. One `ask` shows
@@ -388,7 +388,6 @@ ask
 └─ conflict_report         (or answer, with two more ChatOpenAI calls: answer and check; or abstain)
 ```
 
-A full run of the five demo questions costs about $0.0011 (measured 2026-09-29, 13 LLM calls):
-four calls per answered question (claims, compare, answer, check; six if the answer is retried),
+Model calls per question: four per answered question (claims, compare, answer, check; six if the answer is retried),
 two per disputed question, one when no document gives a claim, none for a question that is
 dropped at retrieval.

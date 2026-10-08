@@ -2,7 +2,7 @@
 
 This page lists the published work that shaped the pipeline, what we took from each idea, and
 what we left out. Every source was checked on 2026-09-29. Numbers in square brackets point to the
-list at the end. For the model choice (prices, scores, the chart) see [models.md](models.md).
+list at the end. For the model choice (scores, structured output) see [models.md](models.md).
 
 ## 1. When retrieved sources disagree
 

@@ -55,7 +55,7 @@ def cmd_search(args) -> None:
 
 
 def cmd_llm_test(args) -> None:
-    from src.llm import USAGE, structured
+    from src.llm import structured
     from src.load_docs import doc_map
     from src.prompts import extract_claims_messages
     from src.schemas import Claims
@@ -72,7 +72,6 @@ def cmd_llm_test(args) -> None:
     print(f"Time: {time.time() - started:.1f}s")
     for item in claims.claims:
         print(f"  [{item.doc_id}] {item.claim}")
-    print(f"Tokens: {USAGE.input_tokens} in / {USAGE.output_tokens} out   cost: ${USAGE.llm_cost:.6f}")
 
 
 def cmd_ask(args) -> None:
@@ -140,13 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def finish_run() -> None:
-    """Print tokens and cost, add them to the running total, and send any queued traces."""
-    from src.llm import USAGE, record_spend
-
-    if USAGE.llm_calls:
-        print()
-        print(USAGE.summary())
-        print(record_spend())
+    """Send any queued traces (only when tracing is on)."""
     flush_traces()
 
 

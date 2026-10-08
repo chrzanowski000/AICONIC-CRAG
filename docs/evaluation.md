@@ -1,8 +1,8 @@
 # Evaluation
 
 `python eval.py` runs every question of the dataset (`data/larkfield/questions.json` by default)
-through the full pipeline and checks the result. It needs no LangSmith account. It prints one PASS/FAIL line per question, a summary, and
-the tokens and cost. It exits with code 1 if any question fails, so it can be used in a script.
+through the full pipeline and checks the result. It needs no LangSmith account. It prints one PASS/FAIL line per question and a summary.
+It exits with code 1 if any question fails, so it can be used in a script.
 
 ```bash
 python eval.py                        # Larkfield Motors, 20 questions (the default)
@@ -184,14 +184,14 @@ Checked by hand before trusting it (2026-09-30), on outputs with a known verdict
 | Q15 only the on-call rotation | partly correct |
 
 The grader model is `EVAL_JUDGE_MODEL`, by default the same model as the system
-(`openai/gpt-6-luna`). That is cheap, but a model grading output like its own can be too kind;
+(`openai/gpt-6-luna`). That is simple, but a model grading output like its own can be too kind;
 set another model (for example `EVAL_JUDGE_MODEL=z-ai/glm-5.3-flash python eval.py`) for a second
 opinion. The grader adds one LLM call per question with one answer (22 per run).
 
 ## Unit tests
 
 `python -m pytest` runs the tests in `tests/` (needs `requirements-dev.txt`). They make no model
-calls, cost nothing and take about 2 seconds. They use the real corpus.
+calls and take about 2 seconds. They use the real corpus.
 
 | file | what it checks |
 |---|---|
@@ -246,7 +246,6 @@ Q32 PASS  disputed  dispute: true, linked ['D03', 'D04'], each with date and cla
 Q33 PASS  answered  cited ['D14']; contains '2'; correct
 Q34 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
 Summary: all passed.
-LLM: 128 calls, 89724 in / 8044 out tokens. This run: $0.010989.
 ```
 
 Run after the review clean-up (same day): **33/34**, flags right for all 34. Q14 failed
@@ -291,8 +290,8 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
    block, which has the shape of the output, so reference and output line up in the compare view;
    split: `one_answer`, `dispute` or `no_answer`, to filter by outcome in the UI);
 2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included),
-   experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time: the cost
-   counter is not thread safe);
+   experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time, so fewer
+   rate limits);
 3. prints the experiment name and URL, and how many examples passed every check.
 
 To run only an experiment on a LangSmith dataset that already exists (no local run, nothing
@@ -315,7 +314,5 @@ The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `q
 new dataset instead of grading against old examples. The old dataset is not deleted: it stays in
 LangSmith as a copy, with its experiments.
 
-## Cost
-
-One full eval (34 questions, 40 documents, with the grader) costs about $0.011. The LangSmith
-eval runs the pipeline a second time, so it doubles that.
+The LangSmith eval runs the pipeline a second time, so a run with tracing on makes twice as many
+model calls.

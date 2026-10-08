@@ -1,6 +1,6 @@
 # Status
 
-Last update: 2026-10-01. The system works end to end on `main`: 40 documents, 34 eval questions,
+Last update: 2026-10-08. The system works end to end on `main`: 40 documents, 34 eval questions,
 34/34 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
 26/26 PASS) and Larkfield Motors (a factory: 28 documents, 20 questions, 20/20 PASS), with a
 switch between them (`--dataset` or `DATASET`; default `larkfield`). 46 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
@@ -114,6 +114,21 @@ every round is in the git log.
   and the 5 `larkfield_small_reformated` questions as question vs reference vs real output (the
   2026-10-01 run). The Helios examples and long results moved out; they are in `docs/pipeline.md`
   and `docs/evaluation.md`.
+- **Eval questions checked by hand** (2026-10-08, branch `eval-questions`): all 80 questions
+  were checked against the full text of the documents, with search scores worked out locally.
+  No expected outcome was wrong. Fixed the checks that could fail a correct answer or miss a
+  wrong one:
+  - Helios Q9 and Q10 now expect the D09 → D10 outdated note (as Q18 does for D07 → D08).
+  - Helios Q15's reference no longer makes one detail of D15 or D20 a must.
+  - Helios Q33's reference names who approves (one from the team that owns the code).
+  - Helios Q31 is now an off-topic question (best score 0.469; "What is the dress code?" was
+    0.571, too close to the 0.58 cutoff).
+  - Brightwater Q13 no longer says "before it is worked" (D09 also allows approval after a late
+    sailing), and Q21 no longer makes "dogs and cats" a must.
+  - Wider `answer_contains` lists for common spellings: Helios Q9, Q10, Q23 and Q27, Brightwater
+    Q19, and Larkfield Q2.
+  Checked: `pytest` 46 passed; eval twice on each dataset, all passed (Larkfield 20/20, Helios
+  34/34, Brightwater 26/26). One earlier Brightwater run failed Q10 (see Known issues).
 
 ## Next steps
 
@@ -141,6 +156,9 @@ every round is in the git log.
   copied exactly as written" first, which makes this more likely. One rewording was tried (a
   colour/price example: rewrite without the extra details, copy exactly the values you keep);
   D04's claim still kept "12 weeks", so it was reverted. Not fixed yet.
+- Brightwater Q10 ("When does car check-in close?") can miss D15 in the dispute: D15 says "car
+  lanes close 20 minutes before departure", not "check-in", so the model sometimes treats it as
+  not relevant. Seen once in 9 tries on 2026-10-08.
 - One model reads everything: there is no second opinion and no probability to tune, and it can
   answer differently from run to run. Run the eval twice after a change to a prompt, a threshold,
   a document or the model.
@@ -167,6 +185,7 @@ every round is in the git log.
 | 2026-09-30 | second dataset: Brightwater evals (4 runs, 2 stopped early), Helios demo, llm-test (from `.spend.json`) | 0.02705 |
 | 2026-10-01 | third dataset: Larkfield evals (3 runs, 1 stopped early; one with LangSmith) (from `.spend.json`) | 0.01919 |
 | 2026-10-01 | expected-output format: evals on all three datasets, one Helios run with LangSmith, one stopped run (from `.spend.json`) | 0.05122 |
-| **total** | | **0.48714** |
+| 2026-10-08 | full review: eval on all three datasets, eval-question fixes (8 more eval runs), Q10 probes, llm-test (from `.spend.json`) | 0.12147 |
+| **total** | | **0.60861** |
 
-Budget: $4.00. Left: about $3.51.
+Budget: $4.00. Left: about $3.39.

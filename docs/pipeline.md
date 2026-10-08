@@ -337,8 +337,8 @@ reconcile      relevant (current): -  outdated: -  route: abstain
 The search cannot tell "remote work policy" from "pets policy" well (both are office rules), so
 two documents pass the score gate. The claim step finds nothing about pets in either (`None`), so
 there is nothing to compare (`relevant: -`), and Python routes to "I don't know". A question that
-is clearly off (for example "What is the dress code?", best score 0.571, under the cutoff 0.58;
-eval question Q31) is stopped at the search and costs nothing.
+is clearly off (for example "Who won the football match last night?", best score 0.469, under the
+cutoff 0.58; eval question Q31) is stopped at the search and costs nothing.
 
 ## Why it "admits it doesn't know"
 

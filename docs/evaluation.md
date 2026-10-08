@@ -32,9 +32,9 @@ extra checks (`python main.py --dataset helios demo --all` runs all of them with
 | Q6 | What is the Kestrel X2 flight time? | replaced doc | one answer; cites D10; outdated D09 → D10; contains "45" |
 | Q7 | Where is the headquarters located? | replaced doc | one answer; cites D08; outdated D07 → D08; contains "400 Meridian" |
 | Q8 | How often do I need to change my password? | real dispute, in words not numbers | `dispute: true`; D11 and D12 |
-| Q9 | How much does the Kestrel X2 weigh? | docs agree | one answer; cites D10 **and** D18; contains "1.2" |
-| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | one answer; cites D10 **and** D18; contains "300" |
-| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "adopt"; does **not** contain "16" or "12" |
+| Q9 | How much does the Kestrel X2 weigh? | docs agree | one answer; cites D10 **and** D18; outdated D09 → D10; contains "1.2" or "1.2kg" |
+| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | one answer; cites D10 **and** D18; outdated D09 → D10; contains "300" or "300g" |
+| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "adoption", "adopted", "adopt" or "adopting"; does **not** contain "16" or "12" |
 | Q12 | Is multi-factor sign-in required? | docs agree | one answer; cites D11 **and** D12; contains "required" or "yes" |
 | Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
 | Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
@@ -46,17 +46,17 @@ extra checks (`python main.py --dataset helios demo --all` runs all of them with
 | Q20 | What is the yearly learning budget per employee? | real dispute, three documents | `dispute: true`; D23, D24 and D25, each with a date; no answer |
 | Q21 | When do I need a doctor's note for sick leave? | only one doc answers | one answer; cites D26; contains "three" or "3" |
 | Q22 | How many days of annual leave do employees get per year? | chain of three replaced docs | one answer; cites D29; outdated D27 → D29 and D28 → D29; contains "30" |
-| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | one answer; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months" or "1 year" |
+| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | one answer; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months", "12-month", "1 year", "twelve months" or "a year" |
 | Q24 | How often does engineering ship a release? | real dispute, in words and days | `dispute: true`; D32 and D33 |
 | Q25 | How long are customer support tickets kept? | real dispute | `dispute: true`; D34 and D35 |
 | Q26 | Does Helios Dynamics pay for public transport to work? | only one doc answers | one answer; cites D36; contains "100%", "yes" or "full" |
-| Q27 | When is the summer party? | only one doc answers | one answer; cites D37; contains "20 June" |
+| Q27 | When is the summer party? | only one doc answers | one answer; cites D37; contains "20 June", "June 20", "June 20th" or "20th June" |
 | Q28 | How long do I have to submit an expense claim? | docs agree | one answer; cites D38 **and** D39; contains "30" |
 | Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `no_answer: true` |
 | Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `no_answer: true` |
-| Q31 | What is the dress code? | no answer, stopped at the search (no model call) | `no_answer: true`, at the search |
+| Q31 | Who won the football match last night? | no answer, stopped at the search (no model call) | `no_answer: true`, at the search |
 | Q32 | How long is maternity leave? | real dispute, question reworded | `dispute: true`; D03 and D04 |
-| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | one answer; cites D14; contains "2" or "two" |
+| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | one answer; cites D14; contains "2", "two", "owns" or "owning" |
 | Q34 | Who is the CEO of Helios Dynamics? | no answer, near a real topic (the company overview is found) | `no_answer: true` |
 
 The questions by case (details in `corpus.md`, "The cases"):
@@ -130,12 +130,13 @@ Rules that are not part of the output go in `checks`: `answer_contains`, `answer
 {"id": "Q27", "question": "When is the summer party?",
  "expected": {"status": "answered", "answer": "On Friday 20 June 2025 [D37].",
               "citations": [{"doc_id": "D37"}], "dispute": false, "no_answer": false,
-              "checks": {"answer_contains": ["20 June"], "also_fine": "from 16:00, at Pirita beach."}}}
+              "checks": {"answer_contains": ["20 June", "June 20", "June 20th", "20th June"],
+                         "also_fine": "from 16:00, at Pirita beach."}}}
 {"id": "Q20", "question": "What is the yearly learning budget per employee?",
  "expected": {"status": "disputed", "answer": null,
               "versions": [{"doc_id": "D23"}, {"doc_id": "D24"}, {"doc_id": "D25"}],
               "dispute": true, "no_answer": false}}
-{"id": "Q31", "question": "What is the dress code?",
+{"id": "Q31", "question": "Who won the football match last night?",
  "expected": {"status": "abstained", "answer": null, "dispute": false, "no_answer": true,
               "checks": {"at_search": true}}}
 ```

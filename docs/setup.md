@@ -3,7 +3,7 @@
 ## What you need
 
 - Python 3.12 (tested on WSL2 Ubuntu, CPU only, no GPU needed).
-- An OpenRouter key with a little credit. A full demo run costs well under one cent.
+- An OpenRouter key.
 - About 100 MB of disk: 65 MB for the embedding model, a few MB for the Qdrant data.
 - Optional: a LangSmith key, if you want traces and the LangSmith eval (see below).
 - Optional: Docker, if you want to run Qdrant as a server.
@@ -30,13 +30,13 @@ python -m pytest                     # unit tests, no model calls, free
 ```bash
 python main.py config                    # check the settings; the key is shown masked
 python main.py index                     # downloads the embedding model once, builds the index
-python main.py search "housing torque"   # retrieval test, no model calls, costs nothing
+python main.py search "housing torque"   # retrieval test, no model calls
 python main.py llm-test                  # one LLM call through OpenRouter, checks the key
 python main.py ask "What torque should I use for the M6 motor housing bolts?"
 ```
 
 `ask` prints the result, then a short trace of every step (switch it off with
-`SHOW_SCORES=false`), then the tokens, the cost of this run and the running total.
+`SHOW_SCORES=false`).
 
 `index` prints `Rebuilt collection 'larkfield_docs' (embedded mode): 28 points. Reason: ...` the first
 time, and `Reused ...` after that. It rebuilds by itself when a document changes. Use
@@ -66,7 +66,6 @@ before you start another command. The full steps (stop, pick, check) are in
 |---|---|---|
 | `models/` | the downloaded embedding model | yes, it is downloaded again |
 | `qdrant_data/` | the Qdrant data (embedded mode): one collection per dataset, and `<name>_docs.sha256` | yes, run `index` again |
-| `.spend.json` | running total of money spent by this app | yes, the total starts again at 0 |
 | `.env` | your keys | no, and never commit it |
 
 ## Settings
@@ -128,7 +127,6 @@ part of a nested object.
   secure page from calling plain `http://` on localhost; use `langgraph dev --tunnel` there.
 - Studio shows each step itself; runs are **not** sent to LangSmith unless you start the server
   with `LANGSMITH_TRACING=true langgraph dev`.
-- Runs through Studio are not added to `.spend.json` and their cost is not printed.
 - The server reloads when a `.py` file changes. Its local threads live in `.langgraph_api/`
   (not committed).
 

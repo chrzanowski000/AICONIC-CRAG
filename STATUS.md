@@ -1,9 +1,9 @@
 # Status
 
-Last update: 2026-10-01. The system works end to end on `main`: 40 documents, 34 eval questions,
-34/34 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
+Last update: 2026-10-08. The system works end to end: Helios has 40 documents and 35 eval questions,
+35/35 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
 26/26 PASS) and Larkfield Motors (a factory: 28 documents, 20 questions, 20/20 PASS), with a
-switch between them (`--dataset` or `DATASET`; default `larkfield`). 46 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
+switch between them (`--dataset` or `DATASET`; default `larkfield`). 54 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
 every round is in the git log.
 
 ## What is done
@@ -114,20 +114,46 @@ every round is in the git log.
   and the 5 `larkfield_small_reformated` questions as question vs reference vs real output (the
   2026-10-01 run). The Helios examples and long results moved out; they are in `docs/pipeline.md`
   and `docs/evaluation.md`.
+- **Eval questions checked by hand** (2026-10-08, branch `eval-questions`): all 80 questions
+  were checked against the full text of the documents, with search scores worked out locally.
+  No expected outcome was wrong. Fixed the checks that could fail a correct answer or miss a
+  wrong one:
+  - Helios Q9 and Q10 now expect the D09 → D10 outdated note (as Q18 does for D07 → D08).
+  - Helios Q15's reference no longer makes one detail of D15 or D20 a must.
+  - Helios Q33's reference names who approves (one from the team that owns the code).
+  - Helios Q31 is now an off-topic question (best score 0.469; "What is the dress code?" was
+    0.571, too close to the 0.58 cutoff).
+  - Brightwater Q13 no longer says "before it is worked" (D09 also allows approval after a late
+    sailing), and Q21 no longer makes "dogs and cats" a must.
+  - Wider `answer_contains` lists for common spellings: Helios Q9, Q10, Q23 and Q27, Brightwater
+    Q19, and Larkfield Q2.
+  Checked: `pytest` 46 passed; eval twice on each dataset, all passed (Larkfield 20/20, Helios
+  34/34, Brightwater 26/26). One earlier Brightwater run failed Q10 (see Known issues).
+
+- **Pipeline rules** (2026-10-08, branch `fix-pipeline-rules`), from a full review:
+  - Doc ids the LLM writes with brackets (`[D04]`) in the compare step are now read right.
+  - A newer document answers only if the LLM marked it relevant. If only a replaced document
+    answers, the result is "I don't know" with the outdated note (new Helios Q35, "Is the HQ
+    office open on weekends?").
+  - The retry shows the model its first answer; ids that are not allowed and still there after
+    the retry are named, with dates, in a note under the answer.
+  - When the answer step gives up, the "I don't know" shows the closest documents and the
+    outdated notes, and the route is `abstain`.
+  - The 10-document cap never splits a topic, so both ends of a link and both sides of a dispute
+    stay together.
+  - Helios Q15's reference keeps only the two key facts; the details are "also fine".
+  Checked: `pytest` 54 passed; eval twice on each dataset, all passed (Larkfield 20/20, Helios
+  35/35, Brightwater 26/26).
+- **No cost tracking** (2026-10-08, branch `remove-cost-tracking`): the token and cost line after
+  each run, the running total in `.spend.json`, the budget and price settings, and the price
+  parts of `docs/models.md` are gone. Nothing else changed.
 
 ## Next steps
 
-1. Decide and fix the "newer doc is silent" case (see Known issues), then add that question to
-   the eval.
-2. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
+1. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
 
 ## Known issues
 
-- If only a replaced document answers the question and the document that replaces it says
-  nothing about it, the result is an answer that says the information is missing, with the
-  source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" (D07
-  answers, D08 replaces it and is silent). Cause: `reconcile` adds the newest document of a
-  chain even when it has no claim.
 - Q14 ("Do I keep my salary during parental leave?") can still repeat D04's "12 weeks": D04's
   claim keeps the whole sentence. The answer check catches it and asks again; if the second try
   still has it, the answer is shown with a note and the eval fails Q14. Seen once in about 11
@@ -141,6 +167,9 @@ every round is in the git log.
   copied exactly as written" first, which makes this more likely. One rewording was tried (a
   colour/price example: rewrite without the extra details, copy exactly the values you keep);
   D04's claim still kept "12 weeks", so it was reverted. Not fixed yet.
+- Brightwater Q10 ("When does car check-in close?") can miss D15 in the dispute: D15 says "car
+  lanes close 20 minutes before departure", not "check-in", so the model sometimes treats it as
+  not relevant. Seen once in 9 tries on 2026-10-08.
 - One model reads everything: there is no second opinion and no probability to tune, and it can
   answer differently from run to run. Run the eval twice after a change to a prompt, a threshold,
   a document or the model.
@@ -152,21 +181,3 @@ every round is in the git log.
   Brightwater eval runs stopped after the 2, 4, 8 s retries, and one run logged 111 retries.
   `LLM_MAX_RETRIES=5` (waits up to 32 s) got a full run through; one question still failed in its
   LangSmith pass.
-
-## Money spent
-
-| date | what | cost (USD) |
-|---|---|---|
-| 2026-09-29 | two probe calls by hand (Jev, gpt-6-luna) | 0.00004 |
-| 2026-09-29 | all app runs, M1–M5 (from `.spend.json`, 40+ runs) | 0.01809 |
-| 2026-09-29 | dispute check round: app runs (from `.spend.json`) | 0.01392 |
-| 2026-09-29 | dispute check round: 3 test-script runs (not in `.spend.json`) | 0.00958 |
-| 2026-09-29 | fresh eval + LangSmith round (traced tests, ask, two traced evals) | 0.01814 |
-| 2026-09-29 | Studio setup: demo check + one run through the dev server | 0.00084 |
-| 2026-09-29 | review, simplification and LLM-judge rounds: evals, demos, probe questions (from `.spend.json`) | 0.32907 |
-| 2026-09-30 | second dataset: Brightwater evals (4 runs, 2 stopped early), Helios demo, llm-test (from `.spend.json`) | 0.02705 |
-| 2026-10-01 | third dataset: Larkfield evals (3 runs, 1 stopped early; one with LangSmith) (from `.spend.json`) | 0.01919 |
-| 2026-10-01 | expected-output format: evals on all three datasets, one Helios run with LangSmith, one stopped run (from `.spend.json`) | 0.05122 |
-| **total** | | **0.48714** |
-
-Budget: $4.00. Left: about $3.51.

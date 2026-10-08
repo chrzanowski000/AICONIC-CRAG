@@ -13,7 +13,7 @@ import logging
 from functools import lru_cache
 from typing import Literal, TypedDict
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import END, START, StateGraph
 
 import config
@@ -80,6 +80,11 @@ def retrieve(state: RAGState) -> dict:
     return vector_retrieve(state["question"])
 
 
+def _clean_id(value: str) -> str:
+    """A doc id as the LLM wrote it, without brackets or spaces ("[D03]" -> "D03")."""
+    return value.strip("[] ")
+
+
 def _clean_claim(value: str | None) -> str | None:
     if value is None:
         return None
@@ -92,7 +97,7 @@ def _clean_claim(value: str | None) -> str | None:
 def extract_claims(state: RAGState) -> dict:
     docs = state["retrieved"]
     out = structured(Claims, extract_claims_messages(state["question"], docs))
-    by_id = {c.doc_id.strip("[] "): _clean_claim(c.claim) for c in out.claims}
+    by_id = {_clean_id(c.doc_id): _clean_claim(c.claim) for c in out.claims}
     return {"claims": {d["doc_id"]: by_id.get(d["doc_id"]) for d in docs}}
 
 
@@ -112,9 +117,9 @@ def read_comparison(out: Comparison, doc_ids: list[str],
     """
     relevance = {i: False for i in doc_ids}
     for item in out.docs:
-        if item.doc_id in relevance:
-            relevance[item.doc_id] = item.relevant
-    given = {frozenset((p.doc_a, p.doc_b)): p for p in out.pairs}
+        if _clean_id(item.doc_id) in relevance:
+            relevance[_clean_id(item.doc_id)] = item.relevant
+    given = {frozenset((_clean_id(p.doc_a), _clean_id(p.doc_b))): p for p in out.pairs}
     result = []
     for a, b in pairs:
         p = given.get(frozenset((a, b)))
@@ -148,20 +153,13 @@ def reconcile(state: RAGState) -> dict:
     # 1. relevant = the LLM says its claim answers the question (only docs with a claim are asked)
     relevant = [i for i in by_id if relevance.get(i)]
 
-    # 2. replaced docs move to "outdated"; the newest doc of each chain is forced in
-    outdated, current = [], []
-    for doc_id in relevant:
-        newest = newest_in_chain(doc_id)
-        if newest == doc_id:
-            if doc_id not in current:
-                current.append(doc_id)
-            continue
-        new_meta = doc_map()[newest].metadata
-        outdated.append({"old_id": doc_id, "old_date": by_id[doc_id]["date"],
-                         "old_claim": claims[doc_id], "new_id": newest,
-                         "new_date": new_meta["date"]})
-        if newest in by_id and newest not in current:
-            current.append(newest)
+    # 2. replaced docs move to "outdated"; only docs that are not replaced can answer. The newer
+    #    doc answers only if the LLM found it relevant too: a newer doc that says nothing about
+    #    the question cannot answer it, so then the result is "I don't know" with the note.
+    current = [i for i in relevant if newest_in_chain(i) == i]
+    outdated = [{"old_id": i, "old_date": by_id[i]["date"], "old_claim": claims[i],
+                 "new_id": newest_in_chain(i), "new_date": doc_map()[newest_in_chain(i)].metadata["date"]}
+                for i in relevant if newest_in_chain(i) != i]
 
     # 3. disputes: the LLM says two current docs give different answers
     disputes = [{"doc_a": p["doc_a"], "doc_b": p["doc_b"], "description": p["what_differs"]}
@@ -239,21 +237,26 @@ def answer(state: RAGState) -> dict:
             if problems:
                 fix.append("Fix these problems: " + " ".join(problems) + " Leave out anything the "
                            "claims do not state or the documents give differently.")
-            messages = messages + [HumanMessage(" ".join(fix))]
+            messages = messages + [AIMessage(text), HumanMessage(" ".join(fix))]
     if not cited:
-        return {"answer_problems": problems, **_finish(state, FinalOutput(
-            status="abstained",
-            reason="An answer was written but could not be tied to the documents, so it is not shown.",
-        ))}
+        why = "An answer was written but could not be tied to the documents, so it is not shown."
+        return {"answer_problems": problems, **_abstain(state, why)}
 
+    # still there after the retry: say so under the answer
+    notes = []
+    if problems:
+        notes.append("Note: the check on this answer found: " + " ".join(problems))
+    if bad:
+        named = ", ".join(f"[{i}] (created {doc_map()[i].metadata['date']})" for i in bad)
+        notes.append(f"Note: the answer also names {named}, which "
+                     + ("is" if len(bad) == 1 else "are") + " not a current source for this question.")
     sources = with_agreeing(cited, state.get("pairs", []), allowed)
     result = FinalOutput(
         status="answered",
         answer=text,
         citations=[_citation(by_id[c], claims) for c in sources],
         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])],
-        # still there after the retry: say so under the answer
-        reason=("Note: the check on this answer found: " + " ".join(problems)) if problems else None,
+        reason=" ".join(notes) or None,
     )
     return {"answer_problems": problems, **_finish(state, result)}
 
@@ -275,19 +278,27 @@ def conflict_report(state: RAGState) -> dict:
     return _finish(state, result)
 
 
-def abstain(state: RAGState) -> dict:
+def _abstain(state: RAGState, why: str) -> dict:
+    """An "I don't know" with `why`, the closest documents and any outdated notes."""
     closest = ", ".join(f"{c['doc_id']} (created {c['date']}, score {c['score']:.3f})"
                         for c in state.get("closest", [])[:3])
+    reason = why + (f" Closest documents: {closest}." if closest else "")
+    result = FinalOutput(status="abstained", reason=reason,
+                         outdated=[OutdatedNote(**o) for o in state.get("outdated", [])])
+    return {"route": "abstain", **_finish(state, result)}
+
+
+def abstain(state: RAGState) -> dict:
     if not state.get("retrieved"):
         best = state["closest"][0]["score"] if state.get("closest") else 0.0
         why = (f"No document is close enough to the question (best score {best:.3f}, "
                f"cutoff {config.SCORE_THRESHOLD}).")
+    elif state.get("outdated"):
+        why = ("Only replaced documents say something about it; the documents that replace them "
+               "do not.")
     else:
         why = "None of the documents found says anything that answers the question."
-    reason = f"The documents do not answer this question. {why}"
-    if closest:
-        reason += f" Closest documents: {closest}."
-    return {"route": "abstain", **_finish(state, FinalOutput(status="abstained", reason=reason))}
+    return _abstain(state, f"The documents do not answer this question. {why}")
 
 
 # --- the graph -------------------------------------------------------------------------------

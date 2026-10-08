@@ -1,75 +1,16 @@
-"""The LLM client (OpenRouter through ChatOpenAI), structured output, and cost."""
+"""The LLM client (OpenRouter through ChatOpenAI) and structured output."""
 
-import json
 import logging
 import time
-from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
 
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 import config
 
 log = logging.getLogger(__name__)
-
-
-# --- tokens and cost -------------------------------------------------------------------------
-
-
-@dataclass
-class Usage:
-    """Running totals for this process. Printed at the end of every CLI run."""
-
-    llm_calls: int = 0
-    input_tokens: int = 0
-    output_tokens: int = 0
-    llm_cost: float = 0.0
-
-    def add_llm(self, message: AIMessage | None) -> None:
-        if message is None:
-            return
-        self.llm_calls += 1
-        meta = message.usage_metadata or {}
-        tokens_in = meta.get("input_tokens", 0)
-        tokens_out = meta.get("output_tokens", 0)
-        self.input_tokens += tokens_in
-        self.output_tokens += tokens_out
-        cost = (message.response_metadata.get("token_usage") or {}).get("cost")
-        if cost is None:  # not reported: work it out from the list price
-            cost = (tokens_in * config.LLM_PRICE_IN_PER_M
-                    + tokens_out * config.LLM_PRICE_OUT_PER_M) / 1e6
-        self.llm_cost += float(cost)
-
-    def summary(self) -> str:
-        return (
-            f"LLM: {self.llm_calls} calls, {self.input_tokens} in / {self.output_tokens} out "
-            f"tokens. This run: ${self.llm_cost:.6f}."
-        )
-
-
-USAGE = Usage()
-
-
-def record_spend() -> str:
-    """Add this run's cost to the running total in SPEND_FILE. Returns a line to print."""
-    path = Path(config.SPEND_FILE)
-    try:
-        data = json.loads(path.read_text()) if path.exists() else {}
-    except (OSError, ValueError):
-        data = {}
-    total = float(data.get("total_usd", 0.0)) + USAGE.llm_cost
-    data = {"total_usd": round(total, 8), "runs": int(data.get("runs", 0)) + 1}
-    try:
-        path.write_text(json.dumps(data, indent=2) + "\n")
-    except OSError as err:
-        log.warning("Could not write %s: %s", path, err)
-    line = f"Total spent by this app so far: ${total:.6f} of ${config.BUDGET_USD:.2f} budget."
-    if total > config.BUDGET_USD:
-        line += " WARNING: over budget!"
-    return line
 
 
 # --- the client ------------------------------------------------------------------------------
@@ -137,7 +78,6 @@ def structured(schema: type[BaseModel], messages: list[BaseMessage], model: str 
     runnable = get_llm(model).with_structured_output(schema, method="json_schema", strict=True,
                                                      include_raw=True)
     out = _invoke_with_retry(runnable, messages)
-    USAGE.add_llm(out.get("raw"))
     if out.get("parsed") is None:
         raise StructuredOutputError(
             f"could not parse {schema.__name__}: {out.get('parsing_error')}")

@@ -31,8 +31,8 @@ changes, change it here first.
 
 | # | decision | why |
 |---|---|---|
-| 15 | LLM: `openai/gpt-6-luna` through OpenRouter, with `ChatOpenAI(base_url=...)`. | Cheap ($0.10 / $0.50 per million tokens in / out), supports structured output. See `models.md`. |
-| 16 | Never send `temperature`; send `reasoning_effort=low`; `use_responses_api=False`. | The GPT-6 family rejects `temperature`. Low effort keeps cost and time down. |
+| 15 | LLM: `openai/gpt-6-luna` through OpenRouter, with `ChatOpenAI(base_url=...)`. | Supports structured output and scored well on the test claims. See `models.md`. |
+| 16 | Never send `temperature`; send `reasoning_effort=low`; `use_responses_api=False`. | The GPT-6 family rejects `temperature`. Low effort keeps the replies fast. |
 | 17 | `provider.require_parameters=true` on OpenRouter. | Only route to hosts that honour `response_format`. |
 | 18 | Structured output uses `json_schema` (strict) only. If the reply cannot be parsed, the run stops with a clear error. | It works in every run. A fallback that used the start of each document as the claim would bring back false disputes. |
 | 19 | When OpenRouter answers HTTP 200 with an error inside instead of a reply, wait and retry (2, 4, 8 s). | It happens about once in 20 calls (a short upstream rate limit); the OpenAI client does not retry it by itself. |
@@ -57,7 +57,6 @@ changes, change it here first.
 | 28 | `config.py` holds every setting. No other module reads `os.environ`. | One place to look, one place to change. `python main.py config` prints it all. |
 | 29 | Point id = `uuid5(NAMESPACE_URL, doc_id)`. | Writing the same doc twice updates it instead of adding a copy. |
 | 30 | The index is rebuilt when the corpus hash changes. | Editing a document can never leave a stale index behind. |
-| 31 | Token use and cost are printed after every CLI run. | The budget is about $4. Cost must stay visible. |
 | 32 | Pin every package version. | The demo must still install the same way later. |
 | 33 | The eval checks disputes and "I don't know" by the output's `dispute` and `no_answer` flags and the linked documents (code only). Questions with one answer have a hand-written reference answer, and an LLM grader compares the answer with it. | Disputes and "I don't know" are built by code, so a structure check is exact. Only a free-text answer needs a grader, and the reference answer holds only what the question asks. |
 | 34 | Each dataset is a folder `data/<name>/` (documents and questions) with its own Qdrant collection (`<name>_docs`) and LangSmith dataset (`rag-conflicts-<name>-<fingerprint>`). It is chosen with `--dataset` or `DATASET`; the prompts, rules, thresholds and model are shared. | Datasets can never mix, switching is one flag, and a second company shows that nothing in the code is tuned to the first one. |

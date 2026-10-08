@@ -98,18 +98,17 @@ python -m pytest                 # unit tests, no model calls (pip install -r re
 langgraph dev                    # LangGraph Studio on 127.0.0.1:2024 (pip install -r requirements-dev.txt)
 ```
 
-Every setting lives in `config.py` and can be changed in `.env` or the shell. Token use and cost
-are printed after every run. LangSmith tracing is optional and off by default
+Every setting lives in `config.py` and can be changed in `.env` or the shell. LangSmith tracing is optional and off by default
 (`LANGSMITH_TRACING=true` with `LANGSMITH_API_KEY` in `.env`).
 
 ## Evaluation
 
 `python eval.py` runs every question of a dataset through the pipeline and checks it: Larkfield
-20/20, Helios 34/34, Brightwater 26/26. Disputes and "I don't know" are checked in code (the
+20/20, Helios 35/35, Brightwater 26/26. Disputes and "I don't know" are checked in code (the
 `dispute` and `no_answer` flags and the linked documents); answers also by an LLM grader against
 the reference answer. The reference has the same shape as the output, so in LangSmith the two
 line up side by side, and each LangSmith dataset is split by outcome (`one_answer`, `dispute`,
-`no_answer`). A full eval costs about $0.01. Details: [`docs/evaluation.md`](docs/evaluation.md).
+`no_answer`). Details: [`docs/evaluation.md`](docs/evaluation.md).
 
 ## Documentation
 
@@ -122,5 +121,5 @@ line up side by side, and each LangSmith dataset is split by outcome (`one_answe
 | [`docs/corpus.md`](docs/corpus.md) | the 40 Helios documents and the rules all documents follow |
 | [`docs/evaluation.md`](docs/evaluation.md) | the questions, the checks, the results, LangSmith |
 | [`docs/setup.md`](docs/setup.md) | install, settings, LangSmith, Studio, server mode, problems |
-| [`docs/research.md`](docs/research.md), [`docs/models.md`](docs/models.md) | published work behind the design; model choice and cost |
+| [`docs/research.md`](docs/research.md), [`docs/models.md`](docs/models.md) | published work behind the design; model choice |
 | [`STATUS.md`](STATUS.md) | what is done, what is next, known issues, money spent |

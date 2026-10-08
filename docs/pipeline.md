@@ -112,7 +112,10 @@ class RAGState(TypedDict):
    every document with the same `topic` as a hit is added (taken from the corpus in memory, not
    found by similarity). A document and the one it `supersedes` must share a topic (the corpus
    loader stops with an error otherwise), so both ends of a `supersedes` link come in this way.
-4. Remove duplicates, keep at most 10 (hits first, then the added ones, newest first).
+4. Keep at most 10 (`MAX_CONTEXT_DOCS`) without ever splitting a topic: topics go in whole,
+   starting with the topic of the best hit, which always goes in. A topic that would go over 10
+   is left out, together with its hits, so both ends of a link and both sides of a dispute stay
+   together. Order: hits first (best first), then the added ones (newest first).
 
 Why add related docs: the two documents of a dispute (say "16 weeks" vs "12 weeks" of parental
 leave) look almost the same to the search, so it usually finds both. But "usually" is not good
@@ -194,8 +197,9 @@ This is where "outdated" and "disputed" are told apart. On purpose, this is not 
 1. `relevant` = documents whose claim the LLM marked as relevant.
 2. Build the "replaces" chains from metadata (`D02 supersedes D01`, and so on down a chain).
    Any relevant document that is replaced by another document in the corpus moves to
-   `outdated`. The newest document in its chain is forced into `relevant` (the retrieve step
-   already fetched it).
+   `outdated`. Only documents that are not replaced can answer. The newest document of the
+   chain answers only if the LLM marked it relevant too; if it says nothing about the question,
+   nothing current answers, and the result is "I don't know" with the outdated note.
 3. `disputes` = pairs with verdict `different` where both documents are relevant and current.
    The description of the dispute is the LLM's `what_differs` sentence.
 4. Route: no relevant document → `abstain`; any dispute → `conflict`; otherwise `answer`.
@@ -239,10 +243,11 @@ Then the answer is checked:
    question did not ask about. Words that name no value ("the whole period", "full pay") are
    not a problem.
 3. If either check fails, the model is asked once more, told what to fix ("Fix these problems:
-   States 12 weeks; D03 says 16 weeks, D04 says 12 weeks..."). After that try: if no allowed id
-   is cited, the system abstains; ids that are not allowed are left out of the sources (they
-   stay in the answer text). If a problem is still there, the answer is kept with a note that
-   lists it.
+   States 12 weeks; D03 says 16 weeks, D04 says 12 weeks..."), with its first answer shown
+   above that message. After that try: if no allowed id is cited, the system says "I don't
+   know" (with the closest documents and any outdated note); ids that are not allowed are left
+   out of the sources (they stay in the answer text) and a note under the answer names them with
+   their dates. If a problem is still there, the answer is kept with a note that lists it.
 
 In `demo --all` the check caught one "12 weeks" leak in an answer about parental leave; the
 second try was clean, and no good answer got a note.
@@ -337,8 +342,8 @@ reconcile      relevant (current): -  outdated: -  route: abstain
 The search cannot tell "remote work policy" from "pets policy" well (both are office rules), so
 two documents pass the score gate. The claim step finds nothing about pets in either (`None`), so
 there is nothing to compare (`relevant: -`), and Python routes to "I don't know". A question that
-is clearly off (for example "What is the dress code?", best score 0.571, under the cutoff 0.58;
-eval question Q31) is stopped at the search and costs nothing.
+is clearly off (for example "Who won the football match last night?", best score 0.469, under the
+cutoff 0.58; eval question Q31) is stopped at the search and makes no model call.
 
 ## Why it "admits it doesn't know"
 
@@ -356,16 +361,17 @@ eval question Q31) is stopped at the search and costs nothing.
 ## Known limits
 
 - **A replaced document that is the only one to answer.** If D07 answers the question and D08,
-  which replaces it, says nothing about it, the rules still move D07 to "outdated" and answer
-  from D08. The result is an answer that says the information is missing, with D07's old claim
-  in the outdated note. Example: "Is the HQ office open on weekends?".
+  which replaces it, says nothing about it, the result is "I don't know" with D07's old claim in
+  the outdated note. Example: "Is the HQ office open on weekends?". The old value is shown as
+  outdated, never as the answer.
 - **One model reads everything.** The LLM decides relevance and same / different. There is no
   second opinion and no probability; the eval (run twice after a change) is the guard.
-- **Tested on this corpus only.** 40 documents and 34 questions (see `evaluation.md`).
+- **Tested on three datasets only.** Helios (40 documents, 35 questions), Brightwater (30, 26)
+  and Larkfield (28, 20); see `evaluation.md` and `datasets.md`.
 
 The open items are tracked in `STATUS.md`.
 
-## Tracing and cost
+## Tracing
 
 Every step and every LLM call are sent to LangSmith when `LANGSMITH_TRACING=true` (off by
 default; see `setup.md`). With tracing off, nothing is sent and nothing changes. One `ask` shows
@@ -382,7 +388,6 @@ ask
 └─ conflict_report         (or answer, with two more ChatOpenAI calls: answer and check; or abstain)
 ```
 
-A full run of the five demo questions costs about $0.0011 (measured 2026-09-29, 13 LLM calls):
-four calls per answered question (claims, compare, answer, check; six if the answer is retried),
+Model calls per question: four per answered question (claims, compare, answer, check; six if the answer is retried),
 two per disputed question, one when no document gives a claim, none for a question that is
 dropped at retrieval.

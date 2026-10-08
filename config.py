@@ -52,9 +52,6 @@ LLM_MAX_RETRIES = env("LLM_MAX_RETRIES", 3, int)
 LLM_REQUIRE_PARAMETERS = env("LLM_REQUIRE_PARAMETERS", True, _bool)
 LLM_APP_TITLE = env("LLM_APP_TITLE", "rag-conflicts")
 LLM_HTTP_REFERER = env("LLM_HTTP_REFERER", "local-demo")
-# Used to work out the cost when OpenRouter does not report it (USD per million tokens).
-LLM_PRICE_IN_PER_M = env("LLM_PRICE_IN_PER_M", 0.10, float)
-LLM_PRICE_OUT_PER_M = env("LLM_PRICE_OUT_PER_M", 0.50, float)
 
 # --- embeddings ------------------------------------------------------------------------------
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
@@ -93,10 +90,6 @@ EVAL_JUDGE_MODEL = env("EVAL_JUDGE_MODEL", "") or LLM_MODEL
 # --- output ----------------------------------------------------------------------------------
 SHOW_SCORES = env("SHOW_SCORES", True, _bool)
 LOG_LEVEL = env("LOG_LEVEL", "INFO").upper() or "INFO"
-
-# --- budget ----------------------------------------------------------------------------------
-BUDGET_USD = env("BUDGET_USD", 4.0, float)
-SPEND_FILE = _path(env("SPEND_FILE", "./.spend.json"))  # running total of money spent by this app
 
 # --- dataset ---------------------------------------------------------------------------------
 # A dataset is a folder data/<name>/ with corpus/ (the documents) and questions.json. Each one has

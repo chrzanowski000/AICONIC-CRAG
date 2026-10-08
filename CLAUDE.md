@@ -82,7 +82,7 @@ main.py            CLI
 eval.py            evaluation
 langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
 data/<name>/       one dataset: corpus/ (the documents) and questions.json (Q1-Q5 are the demo);
-                   helios (40 docs, 34 questions, docs/corpus.md), brightwater (30 docs, 26
+                   helios (40 docs, 35 questions, docs/corpus.md), brightwater (30 docs, 26
                    questions, docs/datasets.md), larkfield (28 docs, 20 questions,
                    docs/datasets.md)
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,
@@ -101,8 +101,6 @@ STATUS.md          what is done, what is next, known issues, money spent
   `[doc_id] source (created date)`; "What differs" and the outdated note as `[doc_id] (created
   date)`; the closest docs of "I don't know" as `Dxx (created date, score ...)`.
 - Pin versions in `requirements.txt`.
-- Keep the budget in mind: about $4 of OpenRouter credit. Print token use and cost per run.
-  The running total is kept in `.spend.json` (not committed); copy it into `STATUS.md`.
 - After changing a document, a prompt, a threshold or the model: run `python eval.py` twice
   on each dataset it touches (`--dataset <name>`; a prompt, threshold or model touches all three)
   (the LLM can answer differently from run to run); both runs must pass.

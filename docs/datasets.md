@@ -83,7 +83,7 @@ This shows the dataset (`DATASET`), the folder (`CORPUS_DIR`), the Qdrant collec
 ### What happens by itself
 
 - **Index.** The first time you use a dataset, its index is built (by `index`, `search`, `ask`,
-  `demo`, `eval.py` or Studio, whichever runs first). It takes a few seconds and costs nothing. After that it is reused, and it is rebuilt only if one of that
+  `demo`, `eval.py` or Studio, whichever runs first). It takes a few seconds and makes no model call. After that it is reused, and it is rebuilt only if one of that
   dataset's documents changes. Switching never rebuilds or touches the other dataset.
 - **LangSmith.** `LANGSMITH_TRACING=true python eval.py --dataset brightwater` uses
   `rag-conflicts-brightwater-<fingerprint>`; without the flag it uses

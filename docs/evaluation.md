@@ -1,12 +1,12 @@
 # Evaluation
 
 `python eval.py` runs every question of the dataset (`data/larkfield/questions.json` by default)
-through the full pipeline and checks the result. It needs no LangSmith account. It prints one PASS/FAIL line per question, a summary, and
-the tokens and cost. It exits with code 1 if any question fails, so it can be used in a script.
+through the full pipeline and checks the result. It needs no LangSmith account. It prints one PASS/FAIL line per question and a summary.
+It exits with code 1 if any question fails, so it can be used in a script.
 
 ```bash
 python eval.py                        # Larkfield Motors, 20 questions (the default)
-python eval.py --dataset helios       # Helios Dynamics, 34 questions
+python eval.py --dataset helios       # Helios Dynamics, 35 questions
 python eval.py --dataset brightwater  # Brightwater Ferries, 26 questions
 ```
 
@@ -18,7 +18,7 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 ## The questions
 
-34 questions. Q1–Q5 are the demo questions (`python main.py --dataset helios demo`); the rest are
+35 questions. Q1–Q5 are the demo questions (`python main.py --dataset helios demo`); the rest are
 extra checks (`python main.py --dataset helios demo --all` runs all of them without the checks). The `note` field in
 `data/helios/questions.json` says what each question tests.
 
@@ -32,9 +32,9 @@ extra checks (`python main.py --dataset helios demo --all` runs all of them with
 | Q6 | What is the Kestrel X2 flight time? | replaced doc | one answer; cites D10; outdated D09 → D10; contains "45" |
 | Q7 | Where is the headquarters located? | replaced doc | one answer; cites D08; outdated D07 → D08; contains "400 Meridian" |
 | Q8 | How often do I need to change my password? | real dispute, in words not numbers | `dispute: true`; D11 and D12 |
-| Q9 | How much does the Kestrel X2 weigh? | docs agree | one answer; cites D10 **and** D18; contains "1.2" |
-| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | one answer; cites D10 **and** D18; contains "300" |
-| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "adopt"; does **not** contain "16" or "12" |
+| Q9 | How much does the Kestrel X2 weigh? | docs agree | one answer; cites D10 **and** D18; outdated D09 → D10; contains "1.2" or "1.2kg" |
+| Q10 | What is the maximum payload of the Kestrel X2? | docs agree | one answer; cites D10 **and** D18; outdated D09 → D10; contains "300" or "300g" |
+| Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "adoption", "adopted", "adopt" or "adopting"; does **not** contain "16" or "12" |
 | Q12 | Is multi-factor sign-in required? | docs agree | one answer; cites D11 **and** D12; contains "required" or "yes" |
 | Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
 | Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
@@ -46,18 +46,19 @@ extra checks (`python main.py --dataset helios demo --all` runs all of them with
 | Q20 | What is the yearly learning budget per employee? | real dispute, three documents | `dispute: true`; D23, D24 and D25, each with a date; no answer |
 | Q21 | When do I need a doctor's note for sick leave? | only one doc answers | one answer; cites D26; contains "three" or "3" |
 | Q22 | How many days of annual leave do employees get per year? | chain of three replaced docs | one answer; cites D29; outdated D27 → D29 and D28 → D29; contains "30" |
-| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | one answer; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months" or "1 year" |
+| Q23 | How long is the Kestrel X2 warranty? | three docs agree in different words ("12 months", "one year") | one answer; cites D18, D30 **and** D31; contains "one year", "one-year", "12 months", "12-month", "1 year", "twelve months" or "a year" |
 | Q24 | How often does engineering ship a release? | real dispute, in words and days | `dispute: true`; D32 and D33 |
 | Q25 | How long are customer support tickets kept? | real dispute | `dispute: true`; D34 and D35 |
 | Q26 | Does Helios Dynamics pay for public transport to work? | only one doc answers | one answer; cites D36; contains "100%", "yes" or "full" |
-| Q27 | When is the summer party? | only one doc answers | one answer; cites D37; contains "20 June" |
+| Q27 | When is the summer party? | only one doc answers | one answer; cites D37; contains "20 June", "June 20", "June 20th" or "20th June" |
 | Q28 | How long do I have to submit an expense claim? | docs agree | one answer; cites D38 **and** D39; contains "30" |
 | Q29 | Does Helios Dynamics offer a gym membership? | no answer, near a real topic (benefits) | `no_answer: true` |
 | Q30 | How many paid sick days do employees get per year? | no answer, near a real topic (sick leave) | `no_answer: true` |
-| Q31 | What is the dress code? | no answer, stopped at the search (no model call) | `no_answer: true`, at the search |
+| Q31 | Who won the football match last night? | no answer, stopped at the search (no model call) | `no_answer: true`, at the search |
 | Q32 | How long is maternity leave? | real dispute, question reworded | `dispute: true`; D03 and D04 |
-| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | one answer; cites D14; contains "2" or "two" |
+| Q33 | Who needs to approve my PR? | only one doc answers, question reworded | one answer; cites D14; contains "2", "two", "owns" or "owning" |
 | Q34 | Who is the CEO of Helios Dynamics? | no answer, near a real topic (the company overview is found) | `no_answer: true` |
+| Q35 | Is the HQ office open on weekends? | only a replaced doc answers (the newer doc says nothing) | `no_answer: true`; outdated D07 → D08 |
 
 The questions by case (details in `corpus.md`, "The cases"):
 
@@ -66,7 +67,7 @@ The questions by case (details in `corpus.md`, "The cases"):
 | documents agree → answered, citing every agreeing document | Q9, Q10, Q12, Q19, Q23, Q28 |
 | documents disagree → disputed | Q3, Q4, Q8, Q20 (three documents), Q24, Q25 |
 | one document answers → answered | Q1, Q16, Q17, Q21, Q26, Q27 |
-| no document answers → abstained | Q5, Q29, Q30, Q34 (after reading the documents); Q31 (stopped at the search) |
+| no document answers → abstained | Q5, Q29, Q30, Q34 (after reading the documents); Q31 (stopped at the search); Q35 (only a replaced doc answers, shown as outdated) |
 | replaced document → answered with an outdated note | Q2, Q6, Q7, Q18, Q22 (a chain of three) |
 | disputed pair that agrees on what is asked → answered | Q11, Q13, Q14 |
 | docs add different facts → answered | Q15 |
@@ -130,12 +131,13 @@ Rules that are not part of the output go in `checks`: `answer_contains`, `answer
 {"id": "Q27", "question": "When is the summer party?",
  "expected": {"status": "answered", "answer": "On Friday 20 June 2025 [D37].",
               "citations": [{"doc_id": "D37"}], "dispute": false, "no_answer": false,
-              "checks": {"answer_contains": ["20 June"], "also_fine": "from 16:00, at Pirita beach."}}}
+              "checks": {"answer_contains": ["20 June", "June 20", "June 20th", "20th June"],
+                         "also_fine": "from 16:00, at Pirita beach."}}}
 {"id": "Q20", "question": "What is the yearly learning budget per employee?",
  "expected": {"status": "disputed", "answer": null,
               "versions": [{"doc_id": "D23"}, {"doc_id": "D24"}, {"doc_id": "D25"}],
               "dispute": true, "no_answer": false}}
-{"id": "Q31", "question": "What is the dress code?",
+{"id": "Q31", "question": "Who won the football match last night?",
  "expected": {"status": "abstained", "answer": null, "dispute": false, "no_answer": true,
               "checks": {"at_search": true}}}
 ```
@@ -182,14 +184,14 @@ Checked by hand before trusting it (2026-09-30), on outputs with a known verdict
 | Q15 only the on-call rotation | partly correct |
 
 The grader model is `EVAL_JUDGE_MODEL`, by default the same model as the system
-(`openai/gpt-6-luna`). That is cheap, but a model grading output like its own can be too kind;
+(`openai/gpt-6-luna`). That is simple, but a model grading output like its own can be too kind;
 set another model (for example `EVAL_JUDGE_MODEL=z-ai/glm-5.3-flash python eval.py`) for a second
 opinion. The grader adds one LLM call per question with one answer (22 per run).
 
 ## Unit tests
 
 `python -m pytest` runs the tests in `tests/` (needs `requirements-dev.txt`). They make no model
-calls, cost nothing and take about 2 seconds. They use the real corpus.
+calls and take about 2 seconds. They use the real corpus.
 
 | file | what it checks |
 |---|---|
@@ -244,7 +246,6 @@ Q32 PASS  disputed  dispute: true, linked ['D03', 'D04'], each with date and cla
 Q33 PASS  answered  cited ['D14']; contains '2'; correct
 Q34 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
 Summary: all passed.
-LLM: 128 calls, 89724 in / 8044 out tokens. This run: $0.010989.
 ```
 
 Run after the review clean-up (same day): **33/34**, flags right for all 34. Q14 failed
@@ -289,8 +290,8 @@ When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
    block, which has the shape of the output, so reference and output line up in the compare view;
    split: `one_answer`, `dispute` or `no_answer`, to filter by outcome in the UI);
 2. runs `client.evaluate(...)` with the same eight checks as evaluators (the grader included),
-   experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time: the cost
-   counter is not thread safe);
+   experiment prefix `rag-conflicts-<name>`, `max_concurrency=1` (one question at a time, so fewer
+   rate limits);
 3. prints the experiment name and URL, and how many examples passed every check.
 
 To run only an experiment on a LangSmith dataset that already exists (no local run, nothing
@@ -313,7 +314,5 @@ The graph runs are traced with `run_name="ask"`, the tag `eval`, and metadata `q
 new dataset instead of grading against old examples. The old dataset is not deleted: it stays in
 LangSmith as a copy, with its experiments.
 
-## Cost
-
-One full eval (34 questions, 40 documents, with the grader) costs about $0.011. The LangSmith
-eval runs the pipeline a second time, so it doubles that.
+The LangSmith eval runs the pipeline a second time, so a run with tracing on makes twice as many
+model calls.

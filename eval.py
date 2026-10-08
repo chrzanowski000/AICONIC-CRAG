@@ -305,7 +305,7 @@ def run_langsmith(client, name: str) -> bool:
         data=name,
         evaluators=CHECKS,
         experiment_prefix=config.EVAL_EXPERIMENT_PREFIX,
-        max_concurrency=1,  # one question at a time: the cost counter is not thread safe
+        max_concurrency=1,  # one question at a time (fewer rate limits)
         metadata={"llm": config.LLM_MODEL, "dataset": config.DATASET},
     )
     print(f"LangSmith experiment: {results.experiment_name} (LangSmith dataset '{name}')")
@@ -367,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
     except known_errors() as err:
         print(f"ERROR ({type(err).__name__}): {err}", file=sys.stderr)
     finally:
-        finish_run()  # cost and traces, also when the run stops early
+        finish_run()  # send queued traces, also when the run stops early
     return 0 if ok else 1
 
 

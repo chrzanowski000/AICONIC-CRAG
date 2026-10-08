@@ -129,7 +129,7 @@ source it came from.
 | `eval.py` | Runs the questions of one dataset (`data/<name>/questions.json`), checks each result, prints PASS/FAIL. Optionally runs the same checks as a LangSmith experiment. |
 | `src/load_docs.py` | Reads the markdown files and their frontmatter. Checks ids, dates, `supersedes` targets, and that a document and the one it replaces share a topic. Gives `doc_map()` (id → document) and the corpus hash. |
 | `src/embeddings.py` | A small LangChain `Embeddings` class around FastEmbed (`BAAI/bge-small-en-v1.5`, CPU). |
-| `src/vectorstore.py` | One Qdrant client per process. Builds the collection, or reuses it while the corpus hash is unchanged. `retrieve()`: search, score cutoff and margin, add every doc on the same topics, cap at 10. |
+| `src/vectorstore.py` | One Qdrant client per process. Builds the collection, or reuses it while the corpus hash is unchanged. `retrieve()`: search, score cutoff and margin, add every doc on the same topics, cap at 10 without splitting a topic. |
 | `src/llm.py` | The `ChatOpenAI` client for OpenRouter. `structured(schema, messages)` asks for a Pydantic object (strict JSON schema). Counts tokens and cost; `record_spend()` keeps the running total in `.spend.json`. |
 | `src/prompts.py` | The four prompts: extract claims, compare, answer, check the answer. |
 | `src/schemas.py` | Pydantic models: what the LLM must return (`Claims`, `Comparison`, `Answer`, `AnswerCheck`) and the final output (`FinalOutput` with `Citation` and `OutdatedNote`). |
@@ -214,6 +214,6 @@ The OpenRouter key is read from `LLM_API_OR`.
 - **Unit tests** (`python -m pytest`, free, no model calls): the rules in `reconcile`, reading the
   LLM's comparison, the "replaces" chains, finding citations, the dates in the output, and the
   corpus checks. They use the real corpus.
-- **Eval** (`python eval.py --dataset helios`, live, about $0.011): all 34 questions through the full pipeline,
+- **Eval** (`python eval.py --dataset helios`, live, about $0.011): all 35 questions through the full pipeline,
   checking the `dispute` and `no_answer` flags and the linked documents, and, for questions with
   one answer, an LLM grader that compares the answer with a reference answer written by hand. See [`evaluation.md`](evaluation.md).

@@ -1,9 +1,9 @@
 # Status
 
-Last update: 2026-10-08. The system works end to end on `main`: 40 documents, 34 eval questions,
-34/34 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
+Last update: 2026-10-08. The system works end to end: Helios has 40 documents and 35 eval questions,
+35/35 PASS, and two more separate datasets, Brightwater Ferries (30 documents, 26 questions,
 26/26 PASS) and Larkfield Motors (a factory: 28 documents, 20 questions, 20/20 PASS), with a
-switch between them (`--dataset` or `DATASET`; default `larkfield`). 46 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
+switch between them (`--dataset` or `DATASET`; default `larkfield`). 54 unit tests pass. Read `docs/architecture.md` for how it works. Detailed history of
 every round is in the git log.
 
 ## What is done
@@ -130,19 +130,27 @@ every round is in the git log.
   Checked: `pytest` 46 passed; eval twice on each dataset, all passed (Larkfield 20/20, Helios
   34/34, Brightwater 26/26). One earlier Brightwater run failed Q10 (see Known issues).
 
+- **Pipeline rules** (2026-10-08, branch `fix-pipeline-rules`), from a full review:
+  - Doc ids the LLM writes with brackets (`[D04]`) in the compare step are now read right.
+  - A newer document answers only if the LLM marked it relevant. If only a replaced document
+    answers, the result is "I don't know" with the outdated note (new Helios Q35, "Is the HQ
+    office open on weekends?").
+  - The retry shows the model its first answer; ids that are not allowed and still there after
+    the retry are named, with dates, in a note under the answer.
+  - When the answer step gives up, the "I don't know" shows the closest documents and the
+    outdated notes, and the route is `abstain`.
+  - The 10-document cap never splits a topic, so both ends of a link and both sides of a dispute
+    stay together.
+  - Helios Q15's reference keeps only the two key facts; the details are "also fine".
+  Checked: `pytest` 54 passed; eval twice on each dataset, all passed (Larkfield 20/20, Helios
+  35/35, Brightwater 26/26).
+
 ## Next steps
 
-1. Decide and fix the "newer doc is silent" case (see Known issues), then add that question to
-   the eval.
-2. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
+1. Optional: run the eval with another grader model (`EVAL_JUDGE_MODEL`) for a second opinion.
 
 ## Known issues
 
-- If only a replaced document answers the question and the document that replaces it says
-  nothing about it, the result is an answer that says the information is missing, with the
-  source line "(no claim extracted)". Seen with "Is the HQ office open on weekends?" (D07
-  answers, D08 replaces it and is silent). Cause: `reconcile` adds the newest document of a
-  chain even when it has no claim.
 - Q14 ("Do I keep my salary during parental leave?") can still repeat D04's "12 weeks": D04's
   claim keeps the whole sentence. The answer check catches it and asks again; if the second try
   still has it, the answer is shown with a note and the eval fails Q14. Seen once in about 11
@@ -186,6 +194,7 @@ every round is in the git log.
 | 2026-10-01 | third dataset: Larkfield evals (3 runs, 1 stopped early; one with LangSmith) (from `.spend.json`) | 0.01919 |
 | 2026-10-01 | expected-output format: evals on all three datasets, one Helios run with LangSmith, one stopped run (from `.spend.json`) | 0.05122 |
 | 2026-10-08 | full review: eval on all three datasets, eval-question fixes (8 more eval runs), Q10 probes, llm-test (from `.spend.json`) | 0.12147 |
-| **total** | | **0.60861** |
+| 2026-10-08 | pipeline rules: eval twice on all three datasets, Helios Q15/Q35 runs, probes (from `.spend.json`) | 0.11595 |
+| **total** | | **0.72456** |
 
-Budget: $4.00. Left: about $3.39.
+Budget: $4.00. Left: about $3.28.

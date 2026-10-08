@@ -82,7 +82,7 @@ main.py            CLI
 eval.py            evaluation
 langgraph.json     Studio config: graph `helios_rag` = src/studio.py:graph
 data/<name>/       one dataset: corpus/ (the documents) and questions.json (Q1-Q5 are the demo);
-                   helios (40 docs, 34 questions, docs/corpus.md), brightwater (30 docs, 26
+                   helios (40 docs, 35 questions, docs/corpus.md), brightwater (30 docs, 26
                    questions, docs/datasets.md), larkfield (28 docs, 20 questions,
                    docs/datasets.md)
 src/               load_docs, embeddings, vectorstore, llm, schemas, prompts, graph, render,

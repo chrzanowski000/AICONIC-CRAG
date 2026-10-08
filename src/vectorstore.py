@@ -165,10 +165,20 @@ def retrieve(question: str) -> dict:
 
     # Add every other doc on the same topics. A doc and the doc it replaces always share a
     # topic (load_docs checks this), so this also brings in both ends of a "replaces" link.
-    seen = {h["doc_id"] for h in kept}
-    topics = {h["topic"] for h in kept}
-    added = [_to_retrieved(doc, None) for doc_id, doc in doc_map().items()
-             if doc.metadata["topic"] in topics and doc_id not in seen]
+    # Topics go in whole, best hit first, so the cap never splits a topic: a topic that would go
+    # over MAX_CONTEXT_DOCS is left out, with its hits. The topic of the best hit always goes in.
+    hits_by_topic: dict[str, list[RetrievedDoc]] = {}
+    for h in kept:
+        hits_by_topic.setdefault(h["topic"], []).append(h)
+    kept_ids = {h["doc_id"] for h in kept}
+    taken, added = [], []
+    for topic, topic_hits in hits_by_topic.items():
+        others = [_to_retrieved(doc, None) for doc_id, doc in doc_map().items()
+                  if doc.metadata["topic"] == topic and doc_id not in kept_ids]
+        if taken and len(taken) + len(added) + len(topic_hits) + len(others) > config.MAX_CONTEXT_DOCS:
+            continue
+        taken += topic_hits
+        added += others
     added.sort(key=lambda d: d["date"], reverse=True)
-    retrieved = (kept + added)[: config.MAX_CONTEXT_DOCS]
-    return {"retrieved": retrieved, "closest": closest}
+    taken.sort(key=lambda d: d["score"], reverse=True)
+    return {"retrieved": taken + added, "closest": closest}

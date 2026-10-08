@@ -105,7 +105,7 @@ are printed after every run. LangSmith tracing is optional and off by default
 ## Evaluation
 
 `python eval.py` runs every question of a dataset through the pipeline and checks it: Larkfield
-20/20, Helios 34/34, Brightwater 26/26. Disputes and "I don't know" are checked in code (the
+20/20, Helios 35/35, Brightwater 26/26. Disputes and "I don't know" are checked in code (the
 `dispute` and `no_answer` flags and the linked documents); answers also by an LLM grader against
 the reference answer. The reference has the same shape as the output, so in LangSmith the two
 line up side by side, and each LangSmith dataset is split by outcome (`one_answer`, `dispute`,

@@ -1,9 +1,13 @@
 """Tests for the plain-Python rules in src/graph.py that use the real corpus (no model calls)."""
 
+import pytest
+from langchain_core.messages import AIMessage
+
+from src import graph
 from src.graph import (abstain, conflict_report, find_citations, newest_in_chain,
                        pairs_to_compare, read_comparison, reconcile, with_agreeing)
 from src.load_docs import doc_map
-from src.schemas import Comparison, DocAssessment, PairComparison
+from src.schemas import Answer, AnswerCheck, Comparison, DocAssessment, PairComparison
 from src.vectorstore import _to_retrieved
 
 
@@ -153,3 +157,67 @@ def test_a_dispute_still_shows_the_outdated_note():
     result = conflict_report({**state, **out})["result"]
     assert [v["doc_id"] for v in result["versions"]] == ["D02", "D03"]
     assert [(o["old_id"], o["new_id"]) for o in result["outdated"]] == [("D01", "D02")]
+
+
+def test_read_comparison_cleans_ids_written_with_brackets():
+    out = Comparison(
+        docs=[DocAssessment(doc_id="[D03]", relevant=True), DocAssessment(doc_id=" D04", relevant=True)],
+        pairs=[PairComparison(doc_a="[D03]", doc_b="[D04]", verdict="different", what_differs="x")],
+    )
+    relevance, pairs = read_comparison(out, ["D03", "D04"], [("D03", "D04")])
+    assert relevance == {"D03": True, "D04": True}
+    assert pairs == [_pair("D03", "D04", "different", "x")]
+
+
+@pytest.mark.parametrize("d08_claim", [None, "Open from 7:00 to 20:00 on weekdays."])
+def test_a_newer_doc_that_does_not_answer_is_not_used_as_the_answer(d08_claim):
+    # D07 answers (weekends); D08 replaces it but says nothing about it, or is marked not relevant
+    state = _state({"D07": "The office is closed on weekends.", "D08": d08_claim}, {"D07"})
+    out = reconcile(state)
+    assert out["route"] == "abstain"
+    assert out["relevant_ids"] == []
+    assert [(o["old_id"], o["new_id"]) for o in out["outdated"]] == [("D07", "D08")]
+    result = abstain({**state, **out, "closest": []})["result"]
+    assert "Only replaced documents say something about it" in result["reason"]
+    assert [o["old_id"] for o in result["outdated"]] == ["D07"]
+
+
+class _FakeLLM:
+    """Replies in order: Answer, AnswerCheck, Answer, AnswerCheck. Keeps the messages it got."""
+
+    def __init__(self, answers, problems):
+        self.answers, self.problems, self.seen = list(answers), list(problems), []
+
+    def __call__(self, schema, messages):
+        self.seen.append(messages)
+        if schema is Answer:
+            return Answer(answer=self.answers.pop(0))
+        return AnswerCheck(problems=self.problems.pop(0))
+
+
+def _answer_state():
+    state = _state({"D10": "It weighs 1.2 kg.", "D09": "It weighs 1.2 kg."}, {"D09", "D10"})
+    state.update(reconcile(state))  # D09 is replaced by D10
+    state["closest"] = [{"doc_id": "D10", "date": "2025-07-20", "score": 0.81}]
+    return state
+
+
+def test_the_retry_shows_the_first_answer_and_a_wrong_id_is_noted(monkeypatch):
+    fake = _FakeLLM(["It weighs 1.2 kg [D09].", "It weighs 1.2 kg [D10] [D09]."], [[], []])
+    monkeypatch.setattr(graph, "structured", fake)
+    result = graph.answer(_answer_state())["result"]
+    retry = fake.seen[2]  # the second Answer call
+    assert isinstance(retry[-2], AIMessage) and retry[-2].content == "It weighs 1.2 kg [D09]."
+    assert result["status"] == "answered"
+    assert [c["doc_id"] for c in result["citations"]] == ["D10"]
+    assert "[D09] (created 2024-11-05)" in result["reason"]
+
+
+def test_an_answer_without_a_citation_is_an_i_dont_know_with_the_closest_docs(monkeypatch):
+    monkeypatch.setattr(graph, "structured", _FakeLLM(["About a kilo.", "About a kilo."], [[], []]))
+    out = graph.answer(_answer_state())
+    assert out["route"] == "abstain"
+    assert out["result"]["status"] == "abstained"
+    assert "could not be tied to the documents" in out["result"]["reason"]
+    assert "D10 (created 2025-07-20, score 0.810)" in out["result"]["reason"]
+    assert [o["old_id"] for o in out["result"]["outdated"]] == ["D09"]

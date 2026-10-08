@@ -6,7 +6,7 @@ the tokens and cost. It exits with code 1 if any question fails, so it can be us
 
 ```bash
 python eval.py                        # Larkfield Motors, 20 questions (the default)
-python eval.py --dataset helios       # Helios Dynamics, 34 questions
+python eval.py --dataset helios       # Helios Dynamics, 35 questions
 python eval.py --dataset brightwater  # Brightwater Ferries, 26 questions
 ```
 
@@ -18,7 +18,7 @@ threshold, a document or the model, run it twice; both runs must pass.
 
 ## The questions
 
-34 questions. Q1–Q5 are the demo questions (`python main.py --dataset helios demo`); the rest are
+35 questions. Q1–Q5 are the demo questions (`python main.py --dataset helios demo`); the rest are
 extra checks (`python main.py --dataset helios demo --all` runs all of them without the checks). The `note` field in
 `data/helios/questions.json` says what each question tests.
 
@@ -58,6 +58,7 @@ extra checks (`python main.py --dataset helios demo --all` runs all of them with
 | Q32 | How long is maternity leave? | real dispute, question reworded | `dispute: true`; D03 and D04 |
 | Q33 | Who needs to approve my PR? | only one doc answers, question reworded | one answer; cites D14; contains "2", "two", "owns" or "owning" |
 | Q34 | Who is the CEO of Helios Dynamics? | no answer, near a real topic (the company overview is found) | `no_answer: true` |
+| Q35 | Is the HQ office open on weekends? | only a replaced doc answers (the newer doc says nothing) | `no_answer: true`; outdated D07 → D08 |
 
 The questions by case (details in `corpus.md`, "The cases"):
 
@@ -66,7 +67,7 @@ The questions by case (details in `corpus.md`, "The cases"):
 | documents agree → answered, citing every agreeing document | Q9, Q10, Q12, Q19, Q23, Q28 |
 | documents disagree → disputed | Q3, Q4, Q8, Q20 (three documents), Q24, Q25 |
 | one document answers → answered | Q1, Q16, Q17, Q21, Q26, Q27 |
-| no document answers → abstained | Q5, Q29, Q30, Q34 (after reading the documents); Q31 (stopped at the search) |
+| no document answers → abstained | Q5, Q29, Q30, Q34 (after reading the documents); Q31 (stopped at the search); Q35 (only a replaced doc answers, shown as outdated) |
 | replaced document → answered with an outdated note | Q2, Q6, Q7, Q18, Q22 (a chain of three) |
 | disputed pair that agrees on what is asked → answered | Q11, Q13, Q14 |
 | docs add different facts → answered | Q15 |

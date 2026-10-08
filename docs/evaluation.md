@@ -36,10 +36,10 @@ extra checks (`python main.py --dataset helios demo --all` runs all of them with
 | Q10 | What is the maximum payload of the Kestrel X2? | docs agree | one answer; cites D10 **and** D18; outdated D09 → D10; contains "300" or "300g" |
 | Q11 | Does parental leave cover adoption? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "adoption", "adopted", "adopt" or "adopting"; does **not** contain "16" or "12" |
 | Q12 | Is multi-factor sign-in required? | docs agree | one answer; cites D11 **and** D12; contains "required" or "yes" |
-| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "split", "block" or "yes"; does **not** contain "16" or "12" |
+| Q13 | Can I split my parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "split", "splitting", "block", "blocks" or "yes"; does **not** contain "16" or "12" |
 | Q14 | Do I keep my salary during parental leave? | disputed pair agrees on the point asked | one answer; cites D03 **and** D04; contains "full" or "100%"; does **not** contain "16" or "12" |
 | Q15 | What should I do during a Sev1 incident and who is on call? | docs add different facts (a question in two parts) | one answer; cites D15 **and** D20 |
-| Q16 | Do I keep my health insurance during parental leave? | only one doc answers | one answer; cites D04; contains "yes" or "continue" |
+| Q16 | Do I keep my health insurance during parental leave? | only one doc answers | one answer; cites D04; contains "yes", "continue" or "continues" |
 | Q17 | How long must passwords be? | only one doc answers | one answer; cites D11; contains "14" |
 | Q18 | What are the HQ office opening hours? | replaced doc with the same value | one answer; cites D08; outdated D07 → D08; contains "7:00" |
 | Q19 | How often are company laptops replaced? | docs agree | one answer; cites D21 **and** D22; contains "3" or "three" |
@@ -68,7 +68,8 @@ The questions by case (details in `corpus.md`, "The cases"):
 | documents disagree → disputed | Q3, Q4, Q8, Q20 (three documents), Q24, Q25 |
 | one document answers → answered | Q1, Q16, Q17, Q21, Q26, Q27 |
 | no document answers → abstained | Q5, Q29, Q30, Q34 (after reading the documents); Q31 (stopped at the search); Q35 (only a replaced doc answers, shown as outdated) |
-| replaced document → answered with an outdated note | Q2, Q6, Q7, Q18, Q22 (a chain of three) |
+| replaced document → answered with an outdated note | Q2, Q6, Q7, Q18, Q22 (a chain of three); also Q9, Q10 (with agreeing documents) |
+| only a replaced document answers → abstained with the outdated note | Q35 |
 | disputed pair that agrees on what is asked → answered | Q11, Q13, Q14 |
 | docs add different facts → answered | Q15 |
 | question reworded | Q32 (dispute), Q33 (one document) |
@@ -195,75 +196,68 @@ calls and take about 2 seconds. They use the real corpus.
 
 | file | what it checks |
 |---|---|
-| `tests/test_graph_rules.py` | the "replaces" chains; `reconcile` (replaced doc → outdated, a chain of three, `different` pair → dispute with the LLM's sentence, a three-way dispute, `same` → answer, a pair with a doc that is not relevant is ignored, nothing relevant → abstain, a dispute that also has an outdated note); which pairs are sent to the LLM; reading the LLM's comparison (pairs in any order, a left-out pair counts as unrelated); citing every agreeing document; finding citations in the answer; `conflict_report` and `abstain` show the creation dates |
+| `tests/test_graph_rules.py` | the "replaces" chains; `reconcile` (replaced doc → outdated, a chain of three, `different` pair → dispute with the LLM's sentence, a three-way dispute, `same` → answer, a pair with a doc that is not relevant is ignored, nothing relevant → abstain, a dispute that also has an outdated note); which pairs are sent to the LLM; reading the LLM's comparison (pairs in any order, a left-out pair counts as unrelated); citing every agreeing document; finding citations in the answer; `conflict_report` and `abstain` show the creation dates; ids written with brackets are read; a newer doc that does not answer is not used, so the result is "I don't know" with the outdated note; the answer retry shows the first answer and a wrong id gets a dated note; an answer with no allowed citation is "I don't know" with the closest documents |
 | `tests/test_render.py` | every source line, every version of a dispute ("Both" or "All 3 versions"), "What differs" and the outdated note show "created YYYY-MM-DD"; "I don't know" has no sources |
 | `tests/test_load_docs.py` | the real corpus loads; a missing `supersedes` target, a link across topics, a duplicate id, a bad date and a document that replaces itself are refused; every dataset's questions name real documents, and every `expected` block has the shape of the output |
 | `tests/test_eval_checks.py` | the eval's own checks: whole-word matching, citations (more are fine, each with a date), every version of a three-way dispute, outdated notes for a chain of three, "I don't know" at the search or after reading, contains / excludes |
-| `tests/test_retrieval.py` | the score cutoff and the margin below the best hit |
+| `tests/test_retrieval.py` | the score cutoff and the margin below the best hit; the 10-document cap never splits a topic; the best hit's topic always goes in; nothing is kept under the cutoff |
 | `tests/test_llm.py` | a reply that holds an error instead of an answer is retried, then stops with a clear error; other errors are not hidden |
 
 The unit tests cover the plain-code rules. What the LLM says can only be checked by the eval.
 
-## Results (2026-09-30, on `main`)
+## Results (2026-10-08, on `main`)
 
-`python eval.py --dataset helios`: **34/34 PASS**. The flags were right for all 34 (22 one answer, 7 disputes, 5
-no answer), and every output was also read by hand against the documents. `python -m pytest`: 40
-unit tests pass.
+`python eval.py --dataset helios`: **35/35 PASS** (22 one answer, 7 disputes, 6 no answer).
+`python -m pytest`: 54 unit tests pass. The same day, every dataset passed two runs in a row
+(Larkfield 20/20, Helios 35/35, Brightwater 26/26).
 
 ```
-Q1  PASS  answered  cited ['D14']; contains '2'; correct
-Q2  PASS  answered  cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'; correct
-Q3  PASS  disputed  dispute: true, linked ['D03', 'D04'], each with date and claim
-Q4  PASS  disputed  dispute: true, linked ['D05', 'D06'], each with date and claim
-Q5  PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
-Q6  PASS  answered  cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'; correct
-Q7  PASS  answered  cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'; correct
-Q8  PASS  disputed  dispute: true, linked ['D11', 'D12'], each with date and claim
-Q9  PASS  answered  cited ['D10', 'D18']; contains '1.2'; correct
-Q10 PASS  answered  cited ['D10', 'D18']; contains '300'; correct
-Q11 PASS  answered  cited ['D03', 'D04']; contains 'adoption'; avoids ['16', '12']; correct
-Q12 PASS  answered  cited ['D11', 'D12', 'D13']; contains 'required'; correct
-Q13 PASS  answered  cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']; correct
-Q14 PASS  answered  cited ['D03', 'D04']; contains '100%'; avoids ['16', '12']; correct
-Q15 PASS  answered  cited ['D15', 'D20']; correct
-Q16 PASS  answered  cited ['D04']; contains 'yes'; correct
-Q17 PASS  answered  cited ['D11']; contains '14'; correct
-Q18 PASS  answered  cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'; correct
-Q19 PASS  answered  cited ['D21', 'D22']; contains '3'; correct
-Q20 PASS  disputed  dispute: true, linked ['D23', 'D24', 'D25'], each with date and claim
-Q21 PASS  answered  cited ['D26']; contains 'three'; correct
-Q22 PASS  answered  cited ['D29']; D27(2023-01-01)->D29(2025-01-01), D28(2024-01-01)->D29(2025-01-01); contains '30'; correct
-Q23 PASS  answered  cited ['D18', 'D30', 'D31']; contains 'one year'; correct
-Q24 PASS  disputed  dispute: true, linked ['D32', 'D33'], each with date and claim
-Q25 PASS  disputed  dispute: true, linked ['D34', 'D35'], each with date and claim
-Q26 PASS  answered  cited ['D36']; contains '100%'; correct
-Q27 PASS  answered  cited ['D37']; contains '20 June'; correct
-Q28 PASS  answered  cited ['D38', 'D39']; contains '30'; correct
-Q29 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
-Q30 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
-Q31 PASS  abstained no_answer: true, nothing that looks like an answer (at the search)
-Q32 PASS  disputed  dispute: true, linked ['D03', 'D04'], each with date and claim
-Q33 PASS  answered  cited ['D14']; contains '2'; correct
-Q34 PASS  abstained no_answer: true, nothing that looks like an answer (after reading the documents)
+Local eval: dataset helios, 35 questions, model openai/gpt-6-luna
+Q1  PASS  answered  expected one answer, got one answer; cited ['D14']; contains '2'; correct: It correctly states that a pull request needs 2 approvals before merging.
+Q2  PASS  answered  expected one answer, got one answer; cited ['D02']; D01(2024-03-01)->D02(2025-06-15); contains 'three'; correct: It states that employees may work remotely up to three days per week.
+Q3  PASS  disputed  expected dispute, got dispute; linked ['D03', 'D04'], each with date and claim
+Q4  PASS  disputed  expected dispute, got dispute; linked ['D05', 'D06'], each with date and claim
+Q5  PASS  abstained expected no answer, got no answer; nothing that looks like an answer (after reading the documents)
+Q6  PASS  answered  expected one answer, got one answer; cited ['D10']; D09(2024-11-05)->D10(2025-07-20); contains '45'; correct: It states that the Kestrel X2 flies up to 45 minutes, and the no-payload detail is also acceptable.
+Q7  PASS  answered  expected one answer, got one answer; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '400 Meridian'; correct: It gives the headquarters address as 400 Meridian Avenue, Tallinn.
+Q8  PASS  disputed  expected dispute, got dispute; linked ['D11', 'D12'], each with date and claim
+Q9  PASS  answered  expected one answer, got one answer; cited ['D10', 'D18']; D09(2024-11-05)->D10(2025-07-20); contains '1.2'; correct: It correctly states that the Kestrel X2 weighs 1.2 kg.
+Q10 PASS  answered  expected one answer, got one answer; cited ['D10', 'D18']; D09(2024-11-05)->D10(2025-07-20); contains '300'; correct: It correctly states that the Kestrel X2’s maximum payload is 300 g.
+Q11 PASS  answered  expected one answer, got one answer; cited ['D03', 'D04']; contains 'adoption'; avoids ['16', '12']; correct: It confirms that adoption is covered by parental leave and notes that adoption, birth, and surrogacy are treated the same way.
+Q12 PASS  answered  expected one answer, got one answer; cited ['D11', 'D12', 'D13']; contains 'required'; correct: It correctly states that multi-factor sign-in is required, consistent with the reference answer.
+Q13 PASS  answered  expected one answer, got one answer; cited ['D03', 'D04']; contains 'split'; avoids ['16', '12']; correct: It confirms parental leave can be split and includes the optional details about two blocks and agreeing dates with the manager.
+Q14 PASS  answered  expected one answer, got one answer; cited ['D03', 'D04']; contains '100%'; avoids ['16', '12']; correct: It states that parental leave is paid at 100% of base salary, matching the reference answer.
+Q15 PASS  answered  expected one answer, got one answer; cited ['D15', 'D20']; correct: It gives the Sev1 steps and identifies the on-call engineer, with consistent details about the rotation.
+Q16 PASS  answered  expected one answer, got one answer; cited ['D04']; contains 'yes'; correct: It states that health insurance continues during parental leave.
+Q17 PASS  answered  expected one answer, got one answer; cited ['D11', 'D12']; contains '14'; correct: It correctly states that passwords must be at least 14 characters long.
+Q18 PASS  answered  expected one answer, got one answer; cited ['D08']; D07(2024-09-01)->D08(2025-08-01); contains '7:00'; correct: It gives the HQ office opening hours as 7:00 to 20:00 on weekdays.
+Q19 PASS  answered  expected one answer, got one answer; cited ['D21', 'D22']; contains '3'; correct: The output states that company laptops are replaced every three years.
+Q20 PASS  disputed  expected dispute, got dispute; linked ['D23', 'D24', 'D25'], each with date and claim
+Q21 PASS  answered  expected one answer, got one answer; cited ['D26']; contains 'three'; correct: It states that a doctor's note is required when you are sick for more than three days in a row.
+Q22 PASS  answered  expected one answer, got one answer; cited ['D29']; D27(2023-01-01)->D29(2025-01-01), D28(2024-01-01)->D29(2025-01-01); contains '30'; correct: It states that employees receive 30 days of paid annual leave per year.
+Q23 PASS  answered  expected one answer, got one answer; cited ['D18', 'D30', 'D31']; contains 'one year'; correct: It states that the warranty lasts one year (12 months), matching the reference answer.
+Q24 PASS  disputed  expected dispute, got dispute; linked ['D32', 'D33'], each with date and claim
+Q25 PASS  disputed  expected dispute, got dispute; linked ['D34', 'D35'], each with date and claim
+Q26 PASS  answered  expected one answer, got one answer; cited ['D36']; contains 'yes'; correct: It states that the company pays for the monthly public transport pass, matching the reference answer.
+Q27 PASS  answered  expected one answer, got one answer; cited ['D37']; contains '20 June'; correct: It gives the correct date, and the extra time detail does not contradict the reference answer.
+Q28 PASS  answered  expected one answer, got one answer; cited ['D38', 'D39']; contains '30'; correct: It states the 30-day deadline and the optional Finance lead approval detail for older claims.
+Q29 PASS  abstained expected no answer, got no answer; nothing that looks like an answer (after reading the documents)
+Q30 PASS  abstained expected no answer, got no answer; nothing that looks like an answer (after reading the documents)
+Q31 PASS  abstained expected no answer, got no answer; nothing that looks like an answer (at the search)
+Q32 PASS  disputed  expected dispute, got dispute; linked ['D03', 'D04'], each with date and claim
+Q33 PASS  answered  expected one answer, got one answer; cited ['D14']; contains 'two'; correct: It states that every pull request needs two approvals, including at least one from the team that owns the code.
+Q34 PASS  abstained expected no answer, got no answer; nothing that looks like an answer (after reading the documents)
+Q35 PASS  abstained expected no answer, got no answer; D07(2024-09-01)->D08(2025-08-01); nothing that looks like an answer (after reading the documents)
 Summary: all passed.
+LangSmith eval skipped (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY to run it).
 ```
 
-Run after the review clean-up (same day): **33/34**, flags right for all 34. Q14 failed
-`answer_excludes`: the answer repeated D04's "12 weeks"; the answer check caught it on both tries,
-so the answer was shown with a note, and the eval failed it as it should. This had passed in
-about 10 runs before (see `STATUS.md`, Known issues).
-
-The last word of each answered line is the grader's verdict. Q15 is graded with the current
-reference answer: the run itself used an older reference that also asked for a "weekly"
-rotation, which the question does not ask about; that word was removed and the same answer was
-graded again.
+Each line has the outcome check first ("expected …, got …"), then the other checks that apply:
+the cited documents, the outdated notes (`D09(2024-11-05)->D10(2025-07-20)`), the words found or
+avoided, and for answered questions the grader's verdict with its reason (`correct: …`).
 
 ## What the questions do not cover
 
-- **A replaced document that is the only one to answer.** "Is the HQ office open on weekends?":
-  D07 answers, D08 replaces it and says nothing about weekends. Today the result is an answer
-  that says the information is missing, with D07 in the outdated note. The right result is not
-  decided yet (see `STATUS.md`), so there is no question for it.
 - **A replaced document and a dispute in the same question.** No documents in the corpus make
   this case; the rules handle it (the outdated note is shown with the dispute), and a unit test
   checks that, but no eval question does.
@@ -285,7 +279,7 @@ shown by code every time.
 When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, `eval.py` also:
 
 1. reads the LangSmith dataset `rag-conflicts-<name>-<fingerprint>` of the dataset in use (for
-   example `rag-conflicts-helios-536567d3`), or creates it from `data/<name>/questions.json` if
+   example `rag-conflicts-helios-f24db897`), or creates it from `data/<name>/questions.json` if
    it does not exist (inputs: `question`, `id`; outputs: the `expected`
    block, which has the shape of the output, so reference and output line up in the compare view;
    split: `one_answer`, `dispute` or `no_answer`, to filter by outcome in the UI);
@@ -300,7 +294,7 @@ run stops before any model call:
 
 ```bash
 LANGSMITH_TRACING=true python eval.py --langsmith-dataset larkfield_small_reformated
-LANGSMITH_TRACING=true python eval.py --dataset helios --langsmith-dataset rag-conflicts-helios-536567d3_reformated
+LANGSMITH_TRACING=true python eval.py --dataset helios --langsmith-dataset <a helios LangSmith dataset>
 ```
 
 ```bash

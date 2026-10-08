@@ -156,7 +156,7 @@ Reasons:
 
 | option | what it would add | why we left it out |
 |---|---|---|
-| Cross-encoder reranker [26] | better order of the top hits; rerankers do best on BEIR, at a high compute cost [27] | we have 40 short documents and already add every same-topic document after the search; a reranker reorders hits but cannot add the missing side of a conflict; one more model on CPU |
+| Cross-encoder reranker [26] | better order of the top hits; rerankers do best on BEIR, at a high compute cost [27] | each dataset has 28 to 40 short documents and already add every same-topic document after the search; a reranker reorders hits but cannot add the missing side of a conflict; one more model on CPU |
 | BM25 or hybrid search [27, 28] | exact word matches; BM25 is a strong baseline [27] | the documents are short, with clear topics, and dense search plus the topic filter already finds both sides; hybrid adds a second index and score fusion to tune |
 | NLI model for contradictions [29, 30] | a local contradiction score per sentence pair (a possible cheap second opinion next to the LLM) | it does not see the question, so it cannot say "unrelated"; NLI models tested on quantity reasoning did, on average, no better than always guessing the most common label [29], and most of our disputes are numbers; NLI filters can also drop useful passages [20]; one more model to install |
 | Web search (as in CRAG [12]) | more sources when retrieval fails | closed, made-up corpus; web results cannot answer and cannot be cited as `[Dxx]`; we abstain instead |

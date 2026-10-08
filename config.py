@@ -84,7 +84,7 @@ os.environ["LANGSMITH_TRACING"] = "true" if TRACING_ON else "false"
 
 # --- eval ------------------------------------------------------------------------------------
 # The model that grades answers against the reference answers. Default: the same as LLM_MODEL
-# (cheap, but a model grading its own kind of output is biased; set another model to avoid that).
+# (a model grading its own kind of output can be biased; set another model to avoid that).
 EVAL_JUDGE_MODEL = env("EVAL_JUDGE_MODEL", "") or LLM_MODEL
 
 # --- output ----------------------------------------------------------------------------------

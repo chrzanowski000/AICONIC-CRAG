@@ -1,13 +1,13 @@
 # How the pipeline works
 
-The system answers a question from 40 internal documents. It never pretends to know more than
+The system answers a question from one dataset of internal documents (28 to 40 per dataset). It never pretends to know more than
 the documents say. There are three possible outcomes:
 
 | outcome | when | what the user sees |
 |---|---|---|
 | **answered** | the documents give one current answer | the answer, each sentence cited `[Dxx]`, the sources with their creation dates, plus a note if an older, replaced version of the fact exists |
 | **disputed** | two current documents give different answers and neither one officially replaces the other | both versions with document id, source and creation date, a line saying what differs, and *no* answer |
-| **abstained** | no document answers the question | a short "I don't know" plus the closest documents it looked at, with dates and scores |
+| **abstained** | no document answers the question | a short "I don't know" plus the closest documents it looked at, with dates and scores, and the outdated note if only a replaced document answers |
 
 The main rule: **only an explicit `supersedes` link in the document metadata can make one source
 win.** A newer date, a more official-looking source, or the language model's opinion never does.
@@ -22,6 +22,7 @@ win.** A newer date, a more official-looking source, or the language model's opi
 | two documents disagree on something, but agree on what is asked | claims keep only the part that answers the question, so the LLM sees `same` | **answered**; the answer check keeps the disputed detail out |
 | nothing close enough to the question | every search score is under the cutoff | **abstained**, no model call |
 | documents found, but none answers the question | every claim is `null`, or the LLM marks none relevant | **abstained** |
+| only an old document answers; the one that replaces it says nothing about it | the LLM marks only the replaced document relevant | **abstained**, with the "Outdated" note showing the old claim |
 
 Dates never decide anything. They are shown so the reader can see how old each version is.
 
@@ -40,7 +41,7 @@ flowchart TD
     RC{"<b>4 · reconcile</b><br/>supersedes links<br/>disputes · route"}:::code
     AN["<b>5a · answer</b><br/>cited answer from the claims<br/>+ answer check"]:::llm
     CR["<b>5b · conflict_report</b><br/>every version with its date<br/>+ what differs"]:::code
-    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents"]:::code
+    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents<br/>+ outdated note"]:::code
     O1(["<b>answered</b><br/>dispute: false · no_answer: false"]):::out
     O2(["<b>disputed</b><br/>dispute: true"]):::out
     O3(["<b>no answer</b><br/>no_answer: true"]):::out
@@ -51,8 +52,9 @@ flowchart TD
     EC --> CP --> RC
     RC -- "one current answer" --> AN
     RC -- "current documents disagree" --> CR
-    RC -- "no relevant document" --> AB
-    AN --> O1
+    RC -- "no relevant current document" --> AB
+    AN -- "cited" --> O1
+    AN -- "no allowed citation after the retry" --> O3
     CR --> O2
     AB --> O3
 
@@ -81,20 +83,21 @@ second model and no regex number parser (see `decisions.md` 10).
 
 ## The state
 
-One dictionary flows through the graph. Each step adds to it.
+One dictionary flows through the graph. Each step adds to it. The graph's input is only the
+question (`RAGInput`, which is also Studio's input form).
 
 ```python
-class RAGState(TypedDict):
+class RAGState(TypedDict, total=False):
     question: str
     retrieved: list[RetrievedDoc]      # docs in context: id, title, source, date, topic, supersedes, text, score
     closest: list[dict]                # top search hits before the cutoff: {doc_id, date, score}, for "I don't know"
     claims: dict[str, str | None]      # doc_id -> one-sentence claim, or None if the doc says nothing
     relevance: dict[str, bool]         # doc_id -> does its claim answer the question (LLM)
     pairs: list[dict]                  # {doc_a, doc_b, verdict, what_differs} for each compared pair
-    relevant_ids: list[str]            # after reconcile
+    relevant_ids: list[str]            # relevant and current (not replaced), set by reconcile
     outdated: list[dict]               # {old_id, old_date, old_claim, new_id, new_date}
     disputes: list[dict]               # {doc_a, doc_b, description}
-    route: Literal["answer", "conflict", "abstain"]
+    route: Literal["answer", "conflict", "abstain"]  # set by reconcile; "abstain" if answer gives up
     answer_problems: list[str]         # what the check on the answer found (after the last try)
     result: dict | None                # FinalOutput
     output: str                        # the result as text, the same as the CLI prints
@@ -113,7 +116,8 @@ class RAGState(TypedDict):
    found by similarity). A document and the one it `supersedes` must share a topic (the corpus
    loader stops with an error otherwise), so both ends of a `supersedes` link come in this way.
 4. Keep at most 10 (`MAX_CONTEXT_DOCS`) without ever splitting a topic: topics go in whole,
-   starting with the topic of the best hit, which always goes in. A topic that would go over 10
+   starting with the topic of the best hit, which always goes in whole (even if it alone has more
+   than 10). A later topic that would go over 10
    is left out, together with its hits, so both ends of a link and both sides of a dispute stay
    together. Order: hits first (best first), then the added ones (newest first).
 
@@ -149,6 +153,10 @@ Output, checked by Pydantic:
 The prompt tells the model not to answer the question and not to judge which document is right.
 It only asks for a short, literal restatement per document, with numbers copied as written.
 These sentences are what the user sees in a dispute report, so they must be short and exact.
+
+Python cleans the reply: an id written as `[D03]` or with spaces is read as `D03`, and a claim of
+`""`, `null`, `none`, `n/a` or `no claim` counts as no claim. A document the model leaves out
+gets no claim.
 
 The claim keeps **only the part that answers the question**. This matters because D03 and D04
 agree on many things (adoption is covered, pay is 100%, leave can be split) and disagree on one
@@ -186,7 +194,8 @@ The prompt asks the model to compare the claims **only as answers to the questio
 Details the question does not ask about do not make a pair different, and a newer date settles
 nothing. The model never says which document is right.
 
-Python then reads the reply (`read_comparison`): a pair given in the other order still matches,
+Python then reads the reply (`read_comparison`): ids with brackets or spaces (`[D03]`) are cleaned
+first, a document the model leaves out counts as not relevant, a pair given in the other order still matches,
 a pair that was not listed is ignored, and a listed pair the model left out counts as
 `unrelated` (with a warning in the log).
 
@@ -202,7 +211,7 @@ This is where "outdated" and "disputed" are told apart. On purpose, this is not 
    nothing current answers, and the result is "I don't know" with the outdated note.
 3. `disputes` = pairs with verdict `different` where both documents are relevant and current.
    The description of the dispute is the LLM's `what_differs` sentence.
-4. Route: no relevant document → `abstain`; any dispute → `conflict`; otherwise `answer`.
+4. Route: no relevant current document → `abstain`; any dispute → `conflict`; otherwise `answer`.
 
 Disputes in numbers ("16 vs 12 weeks", "$60 vs $75") and in words (Q8, passwords: "every 90
 days" vs "no fixed schedule") are both found by the same step, because the LLM reads the claims
@@ -265,8 +274,16 @@ alone does not settle it."
 
 ### 5c. `abstain` (Python)
 
-No model. Says the documents do not cover the question and lists the closest documents with their
-creation dates and scores, so a badly tuned cutoff is easy to spot.
+No model. Says the documents do not answer the question, and why:
+
+- no document was close enough (with the best score and the cutoff);
+- only replaced documents say something about it, and the ones that replace them do not;
+- none of the documents found says anything that answers it.
+
+It lists up to 3 closest documents with their creation dates and scores, so a badly tuned cutoff
+is easy to spot, and adds any outdated notes. The `answer` step uses the same output when its
+answer cites no allowed document after the retry (reason: "An answer was written but could not be
+tied to the documents, so it is not shown.").
 
 ## Three worked examples
 
@@ -375,7 +392,7 @@ The open items are tracked in `STATUS.md`.
 
 Every step and every LLM call are sent to LangSmith when `LANGSMITH_TRACING=true` (off by
 default; see `setup.md`). With tracing off, nothing is sent and nothing changes. One `ask` shows
-up in the project `rag-conflicts` as one trace (tag `ask`, metadata `question_id`, `llm`):
+up in the project `rag-conflicts` as one trace (tag `ask`, metadata `question_id`, `llm`, `dataset`):
 
 ```
 ask
@@ -388,6 +405,10 @@ ask
 └─ conflict_report         (or answer, with two more ChatOpenAI calls: answer and check; or abstain)
 ```
 
-Model calls per question: four per answered question (claims, compare, answer, check; six if the answer is retried),
-two per disputed question, one when no document gives a claim, none for a question that is
-dropped at retrieval.
+Model calls per question:
+
+- answered: four (claims, compare, answer, check), or six if the answer is retried;
+- disputed: two;
+- "I don't know" after reading: two when claims exist but none is relevant and current, one when
+  no document gives a claim, six when the retried answer still cites no allowed document;
+- dropped at retrieval: none.

@@ -26,7 +26,7 @@ flowchart TB
         VS["<b>src/vectorstore.py</b><br/>index and search"]:::local
         EMB["<b>FastEmbed</b><br/>bge-small, CPU"]:::local
         QD[("<b>Qdrant</b><br/>./qdrant_data")]:::local
-        DOCS[("<b>data/&lt;dataset&gt;/corpus</b><br/>helios: 40 · brightwater: 30")]:::local
+        DOCS[("<b>data/&lt;dataset&gt;/corpus</b><br/>larkfield: 28 · helios: 40 · brightwater: 30")]:::local
     end
     LLM["<b>src/llm.py</b><br/>client · retry"]:::llm
     R["<b>src/render.py</b><br/>text the user sees"]:::code
@@ -70,7 +70,7 @@ flowchart TD
     RC{"<b>4 · reconcile</b><br/>supersedes links<br/>disputes · route"}:::code
     AN["<b>5a · answer</b><br/>cited answer from the claims<br/>+ answer check"]:::llm
     CR["<b>5b · conflict_report</b><br/>every version with its date<br/>+ what differs"]:::code
-    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents"]:::code
+    AB["<b>5c · abstain</b><br/>I don't know<br/>+ closest documents<br/>+ outdated note"]:::code
     O1(["<b>answered</b><br/>dispute: false · no_answer: false"]):::out
     O2(["<b>disputed</b><br/>dispute: true"]):::out
     O3(["<b>no answer</b><br/>no_answer: true"]):::out
@@ -81,8 +81,9 @@ flowchart TD
     EC --> CP --> RC
     RC -- "one current answer" --> AN
     RC -- "current documents disagree" --> CR
-    RC -- "no relevant document" --> AB
-    AN --> O1
+    RC -- "no relevant current document" --> AB
+    AN -- "cited" --> O1
+    AN -- "no allowed citation after the retry" --> O3
     CR --> O2
     AB --> O3
 
@@ -110,7 +111,7 @@ The system keeps reading (a model's job) apart from deciding (plain code's job).
 | say if a claim answers the question, and if two claims give the same answer | LLM (`compare`) | – |
 | say *what* differs between two claims | LLM (`compare`), one sentence | – |
 | decide which document wins | Python, from `supersedes` links only | any model |
-| decide the outcome (answered / disputed / abstained) | Python (`reconcile`) | any model |
+| decide the outcome (answered / disputed / abstained) | Python (`reconcile`; `answer` turns into "I don't know" if no allowed id is cited after the retry) | any model |
 | dispute report, outdated note, "I don't know", all dates | Python | any model |
 | final cited answer | LLM, from the claims only | – |
 | check the answer | Python (citations) + a second LLM call (facts) | – |
@@ -141,7 +142,8 @@ source it came from.
 How a command flows through the code: `main.py ask` → `vectorstore.ensure_index()` →
 `graph.run(question)` → the steps in `graph.py`, which call `vectorstore.retrieve()`,
 `llm.structured()` with the prompts from `prompts.py` and the schemas from `schemas.py` → the last
-step builds a `FinalOutput` and `render.render()` turns it into text → `main.py` prints it.
+step builds a `FinalOutput` and `render.render()` turns it into text → `main.py` prints it with
+`render.show()` (plus the trace when `SHOW_SCORES=true`).
 
 ## Data
 
@@ -168,30 +170,31 @@ Every run ends in one `FinalOutput`:
 | `citations` | the cited docs, plus every doc that agrees with one of them: id, source, created date, claim | – | – |
 | `versions` | – | each side: id, source, created date, claim | – |
 | `differences` | – | "[D03] (created …) vs [D04] (created …): what differs" | – |
-| `outdated` | replaced docs: old id and date, old claim, new id and date | same | – |
+| `outdated` | replaced docs: old id and date, old claim, new id and date | same | same, if a replaced doc was relevant (for example when only a replaced doc answers) |
 | `dispute` | false | **true** | false |
 | `no_answer` | false | false | **true** |
-| `reason` | a note if the answer check still found a problem | "Neither document is marked as replacing the other…" | why, and the closest docs with dates and scores |
+| `reason` | a note if the answer check still found a problem, and a note naming any ids that are not allowed, with their dates | "Neither document is marked as replacing the other…" | why, and the closest docs with dates and scores |
 
 The same result is also kept as text in the state field `output`, which is what the CLI prints
 and what Studio shows.
 
 ## Settings
 
-All in `config.py`; each one can be set in `.env` or the shell with the same name.
+All in `config.py`; each one can be set in `.env` or the shell with the same name (the key and
+the per-dataset values are the exceptions, see below).
 `python main.py config` prints them all with the values in use.
 
 | group | settings (default) |
 |---|---|
-| LLM | `LLM_MODEL` (`openai/gpt-6-luna`), `LLM_REASONING_EFFORT` (`low`), `LLM_MAX_TOKENS` (1500), `LLM_TIMEOUT_S` (90), `LLM_MAX_RETRIES` (3), `LLM_REQUIRE_PARAMETERS` (true) |
-| retrieval | `TOP_K` (6), `SCORE_THRESHOLD` (0.58), `SCORE_MARGIN` (0.10), `MAX_CONTEXT_DOCS` (10), `EMBEDDING_MODEL` |
+| LLM | `LLM_MODEL` (`openai/gpt-6-luna`), `LLM_BASE_URL` (`https://openrouter.ai/api/v1`), `LLM_REASONING_EFFORT` (`low`), `LLM_TEMPERATURE` (empty: not sent), `LLM_MAX_TOKENS` (1500), `LLM_TIMEOUT_S` (90), `LLM_MAX_RETRIES` (3), `LLM_REQUIRE_PARAMETERS` (true), `LLM_APP_TITLE` (`rag-conflicts`), `LLM_HTTP_REFERER` (`local-demo`) |
+| retrieval | `TOP_K` (6), `SCORE_THRESHOLD` (0.58), `SCORE_MARGIN` (0.10), `MAX_CONTEXT_DOCS` (10), `EMBEDDING_MODEL` (`BAAI/bge-small-en-v1.5`), `MODELS_CACHE_DIR` (`./models`) |
 | dataset | `DATASET` (`larkfield`); sets the corpus folder, the questions file, the Qdrant collection and the LangSmith dataset name |
-| Qdrant | `QDRANT_MODE` (`embedded` or `server`), `QDRANT_PATH`, `QDRANT_URL` |
-| LangSmith | `LANGSMITH_TRACING` (false), `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` |
+| Qdrant | `QDRANT_MODE` (`embedded` or `server`), `QDRANT_PATH` (`./qdrant_data`), `QDRANT_URL` (`http://localhost:6333`), `QDRANT_API_KEY` |
+| LangSmith | `LANGSMITH_TRACING` (false), `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` (`rag-conflicts`) |
 | eval | `EVAL_JUDGE_MODEL` (the grader's model; default: `LLM_MODEL`) |
-| output | `SHOW_SCORES` (true: print the trace), `LOG_LEVEL` |
+| output | `SHOW_SCORES` (true: print the trace), `LOG_LEVEL` (`INFO`) |
 
-The OpenRouter key is read from `LLM_API_OR`.
+The OpenRouter key is read from `LLM_API_OR` (or `OPENROUTER_API_KEY` if that is not set).
 
 ## Failure handling
 
@@ -199,8 +202,9 @@ The OpenRouter key is read from `LLM_API_OR`.
 |---|---|
 | no document scores above the cutoff | abstain at once, no model call |
 | no retrieved document has a claim | abstain, no compare call |
+| only replaced docs answer (the docs that replace them say nothing about it) | "I don't know" with the outdated note |
 | the LLM leaves a pair out of its comparison | the pair counts as unrelated, with a warning |
-| the answer cites no allowed doc, or a doc that is not allowed | ask once more; then leave out the ids that are not allowed, and abstain if no allowed id is left |
+| the answer cites no allowed doc, or a doc that is not allowed | ask once more; then leave the ids that are not allowed out of the sources and add a note naming them with their dates; if no allowed id is left, "I don't know" with the closest docs and any outdated note |
 | the answer check finds a problem | ask once more with the problems as the fix; then keep the answer with a note that lists them |
 | OpenRouter answers HTTP 200 with an error inside instead of a reply (e.g. a short upstream rate limit) | wait and try again (2, 4, 8 s); then as below |
 | the LLM reply cannot be parsed, or the LLM call fails | the run stops with a one-line `ERROR (...)` message (exit code 2 from `main.py`, 1 from `eval.py`) |
